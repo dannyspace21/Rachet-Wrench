@@ -282,6 +282,7 @@ The desktop app *is* the existing server plus web app, packaged to run on a PC. 
   - In the packaged app, the PDF helper runs as `RatchetWrench --pdf-worker`, because there's no separate Python.
   - Shared files are found through `RW_ASSET_DIR`.
 - **Builds:** CI builds Windows, macOS (Apple silicon) and Linux. It smoke-tests each build on its own OS, then publishes a GitHub Release `desktop-v1.0.N` with checksums. Desktop releases are **not** marked "Latest", so Obtainium keeps tracking the Android releases.
+- **Python 3.14 for desktop builds (the Docker server uses 3.15):** on Windows, the Python 3.15 wheel of argon2-cffi-bindings uses the new "abi3t" stable ABI and needs `python3t.dll`. Standard Windows Python 3.15 doesn't ship that file, so the packaged app couldn't start. On 3.14 the long-established abi3 wheel is used. The same hash-locked requirements cover both versions.
 - **Not code-signed:** Apple/Microsoft certificates cost money, so users see a one-time warning; DESKTOP.md explains it.
 - **Intel Macs:** GitHub's macOS runners are Apple silicon. An Intel build can be added with a `macos-13` runner if needed.
 - **Tesseract** isn't bundled: it's large and platform-specific. Sticker OCR on the desktop is optional (install Tesseract), and the phone reads stickers on-device anyway.
