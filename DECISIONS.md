@@ -321,3 +321,10 @@ The desktop app *is* the existing server plus web app, packaged to run on a PC. 
   - **The install-result receiver** isn't exported, so the confirm screen it opens can only come from Android's installer.
   - **Permission:** `REQUEST_INSTALL_PACKAGES` is required for this.
 - **Desktop app:** it doesn't update itself yet. You download new versions from Releases (see docs/DESKTOP.md).
+
+### D49. Crash fix: keep ML Kit intact in release builds, and a check
+- **The crash:** on a real phone, tapping **Scan barcode** crashed v1.0.9. Inspecting the APK showed that R8's full mode (the AGP 9 default) had removed the no-argument constructors of ML Kit's four `ComponentRegistrar` classes. ML Kit creates those by name when the scanner starts, so the app crashed. The door-sticker reader had the same defect.
+- **Ruled out first:** code shrinking removing manifest classes, the removed telemetry backend (it fails gracefully), missing native libraries, and 16 KB page alignment.
+- **Fix:** keep rules in `app/proguard-rules.pro` that keep ML Kit, including the classes its native code calls by name. This adds about 1 MB.
+- **Regression guard:** `android/check_apk.py` runs in the release workflow and fails if any component that Android or ML Kit creates by name lacks its constructor. It was verified to flag the published v1.0.9 APK and to pass the fixed build.
+- **Local crash details:** the app saves the stack trace of any crash *on the phone only* (`last_crash.txt` in its private storage). On the next launch it offers **Copy details**. Nothing is sent anywhere, so problems can be reported precisely without adding telemetry.

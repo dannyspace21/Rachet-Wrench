@@ -19,9 +19,38 @@ import com.ratchetwrench.app.ui.AppRoot
 class RatchetApp : Application() {
     override fun onCreate() {
         super.onCreate()
+        CrashLog.install(this)
         ReminderWorker.createChannel(this)
         ReminderWorker.schedule(this)
         SyncWorker.schedulePeriodic(this)
+    }
+}
+
+/**
+ * If the app ever crashes, the error details are saved ON THE PHONE
+ * (never sent anywhere).  The next time you open the app it offers to copy
+ * them, so you can share the exact error when reporting a problem.
+ */
+object CrashLog {
+    private const val FILE = "last_crash.txt"
+
+    fun install(app: Application) {
+        val previous = Thread.getDefaultUncaughtExceptionHandler()
+        Thread.setDefaultUncaughtExceptionHandler { thread, error ->
+            runCatching {
+                val text = "Ratchet Wrench ${BuildConfig.VERSION_NAME} (Android ${android.os.Build.VERSION.RELEASE}, " +
+                    "${android.os.Build.MANUFACTURER} ${android.os.Build.MODEL})\n\n" + error.stackTraceToString().take(20_000)
+                java.io.File(app.filesDir, FILE).writeText(text)
+            }
+            previous?.uncaughtException(thread, error)
+        }
+    }
+
+    fun read(context: android.content.Context): String? =
+        java.io.File(context.filesDir, FILE).takeIf { it.isFile }?.readText()
+
+    fun clear(context: android.content.Context) {
+        java.io.File(context.filesDir, FILE).delete()
     }
 }
 

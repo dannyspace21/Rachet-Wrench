@@ -85,6 +85,11 @@ jobs:
           RW_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
         run: ./gradlew --no-daemon testDebugUnitTest lintRelease assembleRelease
 
+      - name: Check components created by name survived code shrinking
+        run: |
+          TOOLS=$(ls -d "$ANDROID_HOME"/build-tools/* | sort -V | tail -1)
+          python3 android/check_apk.py android/app/build/outputs/apk/release/app-release.apk "$TOOLS"
+
       - name: Verify the APK is signed with the permanent key
         run: |
           rm -f "$RUNNER_TEMP/release.jks"

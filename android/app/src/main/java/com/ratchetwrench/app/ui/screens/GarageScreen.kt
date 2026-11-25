@@ -37,6 +37,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavHostController
+import com.ratchetwrench.app.CrashLog
 import com.ratchetwrench.app.domain.Catalog
 import com.ratchetwrench.app.domain.Reminders
 import com.ratchetwrench.app.sync.SyncEngine
@@ -87,6 +88,24 @@ fun GarageScreen(nav: NavHostController) {
         syncError = try { withContext(Dispatchers.IO) { SyncEngine(ctx).run() }; null } catch (e: Exception) { "Offline — showing saved data. (${e.message})" }
         refreshing = false
     }
+    // Crash details saved last time (if the app closed unexpectedly).
+    var crash by remember { mutableStateOf(CrashLog.read(ctx)) }
+    crash?.let { details ->
+        androidx.compose.material3.AlertDialog(
+            onDismissRequest = { CrashLog.clear(ctx); crash = null },
+            title = { Text("Ratchet Wrench closed unexpectedly") },
+            text = { Text("Sorry about that. The error details were saved on this phone only. Tap “Copy details” and paste them to whoever helps you fix it.") },
+            confirmButton = {
+                androidx.compose.material3.TextButton({
+                    val clip = ctx.getSystemService(android.content.ClipboardManager::class.java)
+                    clip?.setPrimaryClip(android.content.ClipData.newPlainText("Ratchet Wrench crash", details))
+                    CrashLog.clear(ctx); crash = null
+                }) { Text("Copy details") }
+            },
+            dismissButton = { androidx.compose.material3.TextButton({ CrashLog.clear(ctx); crash = null }) { Text("Dismiss") } },
+        )
+    }
+
     LaunchedEffect(Unit) {
         Updater.autoCheck(ctx) // app updates (at most every 6 hours)
         refresh()
