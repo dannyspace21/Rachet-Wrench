@@ -3,7 +3,8 @@
 *.db
 *.db-wal
 *.db-shm
-data/
+/data/
+/server/data/
 Caddyfile
 
 # Python / Node build leftovers
