@@ -147,9 +147,12 @@ Every significant choice made while building Ratchet Wrench, and why. Written fo
 - **Tests:** every type has a well-formed, unique icon. One test caught a real bug: titles containing "&" weren't escaped.
 
 ### D27. Logo
-- An original flat design: a white ratchet wrench (gear-toothed head, square drive, direction switch, hang hole) set diagonally on an orange (#EA580C) rounded tile.
-- The tile carries its own background, so the same mark works on light and dark pages, in browser tabs and as an Android adaptive icon (with a monochrome layer for themed icons).
-- The geometry is computed in `brand/build_brand.py` and written as plain paths, so browsers, fpdf2 and Android all render it identically.
+- An original flat design: a **ratchet and an open-end wrench crossed like an "X"**, in white on an orange (#EA580C) rounded tile.
+  - The **ratchet** runs bottom-left to top-right: a round head with a toothed ratchet gear, a square drive, a direction switch, and a hang hole in the handle.
+  - The **wrench** runs top-left to bottom-right: an open jaw at the top and a hexagonal box end at the bottom.
+- The ratchet sits on top, with a thin orange "gap" outline where the tools overlap, so both shapes stay distinct even at 16 px (favicon size).
+- The tile carries its own background, so the same mark works on light and dark pages, in browser tabs and as an Android adaptive icon. The monochrome themed icon keeps only the white shapes.
+- The geometry is computed in `brand/build_brand.py` as an ordered list of layers and written as plain paths, so browsers, fpdf2 (PDF report) and Android all render it identically.
 
 ### D28. Web app structure
 - `web/index.html` holds only the shell. `web/theme.js` applies the saved theme before first paint. `web/js/app.js` is a hash router, and `web/js/views/*` contain one file per area.
