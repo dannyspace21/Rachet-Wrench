@@ -147,6 +147,11 @@ Everything else stays on your server and your phone:
   - text and barcode recognition run on the phone
   - **ML Kit's Google usage-logging upload backend is removed** from the app manifest (verified in the final APK)
   - AI vision is optional, off unless the server owner enables it, and shows a third-party warning before anything is sent
+- **Release signing and updates:**
+  - releases are signed with one permanent RSA-4096 key
+  - the key exists only as encrypted GitHub secrets plus your offline backup, never in the repository
+  - the release workflow runs only for `main` (never for pull requests, so secrets can't be exposed), refuses to publish a debug-signed APK, and lists the certificate fingerprint and SHA-256 checksums with every release
+  - Android itself rejects any update signed with a different key
 - **Code hardening (M7):** release builds are shrunk and obfuscated with R8, and Android lint is run with errors treated as failures.
 
 ---

@@ -1,7 +1,24 @@
-# android.yml — builds the Android app on GitHub and offers the APK as a
-# download (Actions tab -> latest "Android APK" run -> Artifacts).
-# Also runs the unit tests and Android lint.  Actions are pinned to commits.
-name: Android APK
+# android.yml — builds, signs and PUBLISHES the Android app.
+#
+# On every push to main that changes the app (and when run by hand), this:
+#   1. runs the unit tests and Android lint,
+#   2. builds the release APK signed with the PERMANENT signing key, restored
+#      from encrypted repository secrets (never stored in the repository),
+#   3. checks the signature,
+#   4. publishes a GitHub Release "v1.0.<number>" with the APK and its
+#      SHA-256 checksum.
+# Phones running Obtainium watch these releases and update automatically
+# (see docs/ANDROID-UPDATES.md).  Each release gets a higher version number,
+# which Android requires for an update.
+#
+# Security:
+#   * Runs only for main (never for pull requests, so secrets are never
+#     exposed to proposed changes, including Dependabot's).
+#   * Only this job may write (to create the release); everything else is read-only.
+#   * If the signing secrets are missing it FAILS instead of publishing an
+#     APK signed with a throwaway key (which phones couldn't install as an update).
+#   * Actions are pinned to exact commits.
+name: Android release
 
 on:
   push:
@@ -12,22 +29,89 @@ on:
 permissions:
   contents: read
 
+# Never build two releases at the same time.
+concurrency:
+  group: android-release
+  cancel-in-progress: false
+
 jobs:
-  build:
+  release:
     runs-on: ubuntu-latest
+    permissions:
+      contents: write   # needed to create the GitHub Release
+    env:
+      RW_VERSION_CODE: ${{ github.run_number }}000
+      RW_VERSION_NAME: 1.0.${{ github.run_number }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
+
       - uses: actions/setup-java@d1374f8ac74474200d16ef8ecee22c7ae7a51880 # v6.3.0
         with:
           distribution: temurin
           java-version: "21"
-      - name: Build, test and lint
+
+      - name: Check the signing key is configured
+        env:
+          KEYSTORE_B64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+        run: |
+          missing=""
+          [ -n "$KEYSTORE_B64" ] || missing="$missing ANDROID_KEYSTORE_BASE64"
+          [ -n "$KEYSTORE_PASSWORD" ] || missing="$missing ANDROID_KEYSTORE_PASSWORD"
+          [ -n "$KEY_ALIAS" ] || missing="$missing ANDROID_KEY_ALIAS"
+          [ -n "$KEY_PASSWORD" ] || missing="$missing ANDROID_KEY_PASSWORD"
+          if [ -n "$missing" ]; then
+            echo "::error::Missing repository secrets:$missing. Follow docs/ANDROID-UPDATES.md (step 1) to create the signing key and add the secrets."
+            exit 1
+          fi
+
+      - name: Restore the signing key (temporary file, deleted when the job ends)
+        env:
+          KEYSTORE_B64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+        run: |
+          umask 077
+          printf '%s' "$KEYSTORE_B64" | base64 --decode > "$RUNNER_TEMP/release.jks"
+
+      - name: Test, lint and build the signed release APK
         working-directory: android
+        env:
+          RW_KEYSTORE_FILE: ${{ runner.temp }}/release.jks
+          RW_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          RW_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          RW_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
         run: ./gradlew --no-daemon testDebugUnitTest lintRelease assembleRelease
-      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
-        with:
-          name: ratchet-wrench-apk
-          path: android/app/build/outputs/apk/release/app-release.apk
-          retention-days: 30
+
+      - name: Verify the APK is signed with the permanent key
+        run: |
+          rm -f "$RUNNER_TEMP/release.jks"
+          APKSIGNER=$(ls -d "$ANDROID_HOME"/build-tools/*/apksigner | sort -V | tail -1)
+          APK=android/app/build/outputs/apk/release/app-release.apk
+          "$APKSIGNER" verify --print-certs "$APK" | tee signing.txt
+          if grep -qi "CN=Android Debug" signing.txt; then
+            echo "::error::APK is signed with a debug key; refusing to publish."; exit 1
+          fi
+          mkdir -p dist
+          cp "$APK" "dist/ratchet-wrench-$RW_VERSION_NAME.apk"
+          (cd dist && sha256sum ./*.apk > SHA256SUMS.txt && cat SHA256SUMS.txt)
+
+      - name: Publish the GitHub Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          CERT=$(grep -m1 "certificate SHA-256 digest" signing.txt | awk -F': ' '{print $2}')
+          cat > notes.md <<EOF
+          Ratchet Wrench for Android, version $RW_VERSION_NAME.
+
+          Built automatically from commit ${GITHUB_SHA::7}.
+
+          - **Install / auto-update:** see [docs/ANDROID-UPDATES.md](https://github.com/${GITHUB_REPOSITORY}/blob/main/docs/ANDROID-UPDATES.md) (Obtainium).
+          - **Signing certificate SHA-256:** \`$CERT\`
+          - **Checksums:** see \`SHA256SUMS.txt\`.
+          EOF
+          gh release create "v$RW_VERSION_NAME" dist/*.apk dist/SHA256SUMS.txt \
+            --repo "$GITHUB_REPOSITORY" --target "$GITHUB_SHA" \
+            --title "Ratchet Wrench $RW_VERSION_NAME" --notes-file notes.md --latest

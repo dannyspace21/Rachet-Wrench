@@ -27,3 +27,5 @@ android/app/release/
 .idea/
 *.iml
 scan-results/
+*.jks
+*.keystore

@@ -99,22 +99,21 @@ Your database and photos live in the Docker volume `ratchet-data`. Back it up re
 
 The app needs **Android 10 or newer**.
 
-**Option A — download the APK built by GitHub (no tools needed)**
-1. On GitHub, open the repository → **Actions** → **Android APK** → the latest green run → download **ratchet-wrench-apk** under *Artifacts*. If there is no run yet, click **Run workflow**.
-2. Unzip it and copy `app-release.apk` to your phone, or open the download page on the phone.
-3. Tap the APK. Android will ask you to allow installing apps from this source; allow it once.
-4. Open **Ratchet Wrench** and sign in:
-   - **Server address:** your HTTPS address, e.g. `https://garage.your-tailnet.ts.net`
-   - your username and password
-   - Only if you have no HTTPS yet: tick "Allow plain HTTP on my home network" and use `http://192.168.x.x:8000`.
-5. When asked, allow **notifications** (for reminders) and the **camera** (the first time you scan).
+**Recommended: install with automatic updates (Obtainium)**
+1. Install **[Obtainium](https://github.com/ImranR98/Obtainium)**, a free, open-source app updater.
+2. In Obtainium, tap **Add App**, paste `https://github.com/dannyspace21/Rachet-Wrench`, and tap **Add**, then **Install**.
+3. That's it: every new version published on GitHub installs automatically.
 
-**Option B — build it yourself.** Install Android Studio, open the `android` folder, and press *Run*. Or from a terminal:
-```bash
-cd android && ./gradlew assembleRelease
-```
+Full instructions, including the one-time signing-key setup the owner does first, are in **[docs/ANDROID-UPDATES.md](docs/ANDROID-UPDATES.md)**.
 
-**Use your own signing key before sharing the APK.** Out of the box, the release APK is signed with a standard debug key so it installs easily. That's fine for your own phone. If you share the APK with anyone, create your own key with Android Studio (*Build → Generate Signed App Bundle/APK*).
+**Signing in:** open **Ratchet Wrench** and enter:
+- **Server address:** your HTTPS address, e.g. `https://garage.your-tailnet.ts.net`
+- your username and password
+- Only if you have no HTTPS yet: tick "Allow plain HTTP on my home network" and use `http://192.168.x.x:8000`.
+
+When asked, allow **notifications** (for reminders) and the **camera** (the first time you scan).
+
+**Alternatively, build it yourself:** open the `android` folder in Android Studio, or run `cd android && ./gradlew assembleRelease`. A build made on your own computer without the permanent key uses a temporary key and can't update an installed copy.
 
 **How offline mode works:** everything you add on the phone is saved on the phone first. When you're online again, the app syncs with your server automatically (pull down on the Garage screen to sync right away). Photos upload in the background. Reminder notifications work with no connection at all.
 

@@ -235,3 +235,23 @@ Every significant choice made while building Ratchet Wrench, and why. Written fo
 
 ### D41. Docker Compose project name fixed to `ratchet-wrench`
 - This keeps the data volume name (`ratchet-wrench_ratchet-data`) the same whatever folder you cloned into, so the backup command in the README always works.
+
+## Automatic Android updates
+
+### D42. Permanent signing key + GitHub Releases + Obtainium
+- **Goal:** users shouldn't have to download each APK by hand.
+- **Why a permanent key:** Android only installs an update signed with the same key as the installed app, and CI's debug keys change on every run.
+- **How the key is handled:**
+  - It's created once by `scripts/create-android-signing-key.sh` on the owner's own machine, using the official `keytool` inside a digest-pinned `eclipse-temurin` image with no network access: RSA-4096, valid 30 years, PKCS12, random 32-character password.
+  - It's **not** generated in this build session, so the private key never passed through it.
+  - GitHub holds it as four encrypted repository secrets.
+- **The release workflow:**
+  - **Runs only for `main`**, so Dependabot pull requests and other proposed changes never get access to the secrets.
+  - **Uses the key safely:** it restores the key to a temporary file and deletes it right after the build.
+  - **Checks before publishing:** it verifies the signature, refuses to publish a debug-signed APK, and fails clearly if the secrets are missing.
+  - **Versions every release:** version code = run number × 1000, so it always increases, and the name is `1.0.<run>`.
+  - **Publishes** a GitHub Release with the APK, `SHA256SUMS.txt` and the certificate fingerprint in the notes.
+- **Why Obtainium and not an in-app update checker:**
+  - **Obtainium** is a widely used open-source app that installs and updates apps straight from GitHub Releases.
+  - An **in-app checker** would add a new outbound connection from Ratchet Wrench itself, against the "documented outbound connections only" rule, and duplicate what Obtainium already does well.
+- **Local builds** without the key still fall back to the debug key, so they install for testing, but they can't update a release-signed install.

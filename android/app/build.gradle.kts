@@ -17,8 +17,30 @@ android {
         applicationId = "com.ratchetwrench.app"
         minSdk = 29          // Android 10+: scoped storage, modern TLS, photo picker backport
         targetSdk = 37
-        versionCode = 1
-        versionName = "1.0.0"
+        // Every published release must have a HIGHER versionCode than the one
+        // before, or phones won't install it as an update.  The GitHub release
+        // workflow passes its run number in RW_VERSION_CODE; local builds use 1.
+        versionCode = (System.getenv("RW_VERSION_CODE") ?: "1").toInt()
+        versionName = System.getenv("RW_VERSION_NAME") ?: "1.0.0-local"
+    }
+
+    // PERMANENT RELEASE SIGNING KEY
+    // Android only installs an update if it is signed with the SAME key as
+    // the installed app.  The key itself is never stored in this repository:
+    // the GitHub workflow restores it from encrypted repository secrets into
+    // a temporary file and passes its location and passwords in these
+    // environment variables.  (Create the key with
+    // scripts/create-android-signing-key.sh — see docs/ANDROID-UPDATES.md.)
+    val releaseKeystore = System.getenv("RW_KEYSTORE_FILE")?.let { file(it) }?.takeIf { it.isFile }
+    signingConfigs {
+        if (releaseKeystore != null) {
+            create("release") {
+                storeFile = releaseKeystore
+                storePassword = System.getenv("RW_KEYSTORE_PASSWORD")
+                keyAlias = System.getenv("RW_KEY_ALIAS")
+                keyPassword = System.getenv("RW_KEY_PASSWORD")
+            }
+        }
     }
 
     buildTypes {
@@ -28,9 +50,11 @@ android {
             isMinifyEnabled = true
             isShrinkResources = true
             proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
-            // Signed with the debug key ONLY if no release key is configured,
-            // so a release APK can be built for side-loading.  See README.
-            signingConfig = signingConfigs.getByName("debug")
+            // Use the permanent key when available.  Without it (e.g. a local
+            // build on your own computer) fall back to the debug key so the
+            // APK still installs; the GitHub release workflow REFUSES to
+            // publish anything not signed with the permanent key.
+            signingConfig = signingConfigs.findByName("release") ?: signingConfigs.getByName("debug")
         }
     }
     compileOptions {
