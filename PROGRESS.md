@@ -8,8 +8,8 @@ A new session can read this file and continue where the last one stopped.
 |---|---|---|
 | 1 | Server, database, API for all features | ✅ Done |
 | 2 | Logo, icon set, web app | ✅ Done |
-| 3 | Android app (offline sync, VIN barcode, sticker scan, local notifications) | ⏳ Next |
-| 4 | Final security review, README, screenshots | ⏳ |
+| 3 | Android app (offline sync, VIN barcode, sticker scan, local notifications) | ✅ Done (not run on a device: no emulator in build sandbox) |
+| 4 | Final security review, README, screenshots | ⏳ Next |
 
 ## Phase 1 — done
 - FastAPI server in `server/app` (see the top-of-file comments in each module).
@@ -26,6 +26,12 @@ A new session can read this file and continue where the last one stopped.
 - Tests: 55 passing (adds icon/web checks). All scans passing.
 - Dev server: `cd server && RW_DATA_DIR=/tmp/rwdev RW_ADMIN_PASSWORD=demo-password-123 RW_COOKIE_SECURE=false RW_SEED_SAMPLE_DATA=true uvicorn app.main:app --port 8077`
 
+## Phase 3 — done
+- `android/` — Kotlin + Compose app: sign-in (server URL, HTTPS-only unless home-network HTTP opted in), garage, vehicle tabs (history, specs with source labels, reminders, parts + official links, odometer), add/edit vehicle with VIN barcode scan (ML Kit) + NHTSA decode, add/edit entry with camera/gallery photos (offline queue), entry detail, door-sticker scan (ML Kit OCR on device -> review -> "From door sticker"; optional AI vision with warning), report PDF download, settings (theme, units, notifications, sync, sign out).
+- Offline: Room DB + WorkManager sync (push/upload/pull) + local reminder notifications.
+- Build: `cd android && ANDROID_HOME=<sdk> ./gradlew assembleRelease lintRelease testDebugUnitTest` — all passing; 5 unit tests.
+- SDK in this sandbox: copied from the `cimg/android:2026.11.4` image to `/opt/android-sdk` (platforms 37.0/37.2, build-tools 37.0.0).
+
 ## How to run things (for the next session)
 ```bash
 # tests
@@ -39,5 +45,4 @@ python3 catalog/build_catalog.py
 Build-sandbox notes: the sandbox blocks dl.google.com, api.osv.dev, semgrep.dev and vpic.nhtsa.dot.gov. Workarounds used: OSV offline DB (`OSV_OFFLINE=1`), local semgrep-rules clone (`SEMGREP_RULES_DIR`), Trivy with `TRIVY_DOCKER_OPTS` proxy settings, Android SDK copied from the `cimg/android` Docker image. Docker builds there need a temporary Dockerfile copy that routes apt through the proxy (not committed).
 
 ## Next steps
-1. Phase 3: Android app in `android/`.
-2. Phase 4: README with screenshots, SECURITY.md, final scans.
+1. Phase 4: README with screenshots, SECURITY.md, final scans.

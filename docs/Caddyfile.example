@@ -1,0 +1,19 @@
+# Caddyfile.example — copy to ../Caddyfile and replace the address.
+# Caddy gets and renews an HTTPS certificate automatically.
+#
+# Option A: a real domain that points at your home (needs ports 80/443 open):
+#   garage.example.com {
+#       reverse_proxy ratchet-wrench:8000
+#   }
+#
+# Option B (recommended): only reachable on your Tailscale network.  Use the
+# Tailscale method in docs/HTTPS.md instead of Caddy, or a LAN-only name with
+# Caddy's internal certificate authority:
+garage.home.arpa {
+    tls internal
+    reverse_proxy ratchet-wrench:8000
+    # Uploads can be large (photos, PDFs).
+    request_body {
+        max_size 130MB
+    }
+}

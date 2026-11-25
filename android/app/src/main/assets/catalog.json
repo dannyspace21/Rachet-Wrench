@@ -1,0 +1,939 @@
+{
+  "version": 1,
+  "types": [
+    {
+      "key": "oil_change",
+      "label": "Oil change",
+      "category": "Engine",
+      "applies_to": "both",
+      "icon": "oil_change.svg"
+    },
+    {
+      "key": "oil_filter",
+      "label": "Oil filter",
+      "category": "Engine",
+      "applies_to": "both",
+      "icon": "oil_filter.svg"
+    },
+    {
+      "key": "air_filter",
+      "label": "Engine air filter",
+      "category": "Engine",
+      "applies_to": "both",
+      "icon": "air_filter.svg"
+    },
+    {
+      "key": "cabin_filter",
+      "label": "Cabin air filter",
+      "category": "Interior",
+      "applies_to": "car",
+      "icon": "cabin_filter.svg"
+    },
+    {
+      "key": "fuel_filter",
+      "label": "Fuel filter",
+      "category": "Fuel system",
+      "applies_to": "both",
+      "icon": "fuel_filter.svg"
+    },
+    {
+      "key": "spark_plugs",
+      "label": "Spark plugs",
+      "category": "Ignition",
+      "applies_to": "both",
+      "icon": "spark_plugs.svg"
+    },
+    {
+      "key": "ignition_coils",
+      "label": "Ignition coils",
+      "category": "Ignition",
+      "applies_to": "both",
+      "icon": "ignition_coils.svg"
+    },
+    {
+      "key": "serpentine_belt",
+      "label": "Serpentine / drive belt",
+      "category": "Engine",
+      "applies_to": "car",
+      "icon": "serpentine_belt.svg"
+    },
+    {
+      "key": "timing_belt",
+      "label": "Timing belt",
+      "category": "Engine",
+      "applies_to": "both",
+      "icon": "timing_belt.svg"
+    },
+    {
+      "key": "timing_chain",
+      "label": "Timing chain",
+      "category": "Engine",
+      "applies_to": "both",
+      "icon": "timing_chain.svg"
+    },
+    {
+      "key": "valve_adjustment",
+      "label": "Valve adjustment / desmo service",
+      "category": "Engine",
+      "applies_to": "both",
+      "icon": "valve_adjustment.svg"
+    },
+    {
+      "key": "pcv_valve",
+      "label": "PCV valve",
+      "category": "Engine",
+      "applies_to": "car",
+      "icon": "pcv_valve.svg"
+    },
+    {
+      "key": "throttle_body",
+      "label": "Throttle body cleaning / sync",
+      "category": "Fuel system",
+      "applies_to": "both",
+      "icon": "throttle_body.svg"
+    },
+    {
+      "key": "fuel_system_cleaning",
+      "label": "Fuel system / injector cleaning",
+      "category": "Fuel system",
+      "applies_to": "both",
+      "icon": "fuel_system_cleaning.svg"
+    },
+    {
+      "key": "engine_mounts",
+      "label": "Engine / transmission mounts",
+      "category": "Engine",
+      "applies_to": "car",
+      "icon": "engine_mounts.svg"
+    },
+    {
+      "key": "coolant",
+      "label": "Coolant flush / top-up",
+      "category": "Cooling",
+      "applies_to": "both",
+      "icon": "coolant.svg"
+    },
+    {
+      "key": "radiator",
+      "label": "Radiator",
+      "category": "Cooling",
+      "applies_to": "both",
+      "icon": "radiator.svg"
+    },
+    {
+      "key": "water_pump",
+      "label": "Water pump",
+      "category": "Cooling",
+      "applies_to": "both",
+      "icon": "water_pump.svg"
+    },
+    {
+      "key": "thermostat",
+      "label": "Thermostat",
+      "category": "Cooling",
+      "applies_to": "both",
+      "icon": "thermostat.svg"
+    },
+    {
+      "key": "hoses",
+      "label": "Hoses",
+      "category": "Cooling",
+      "applies_to": "both",
+      "icon": "hoses.svg"
+    },
+    {
+      "key": "transmission_fluid",
+      "label": "Transmission fluid",
+      "category": "Fluids",
+      "applies_to": "both",
+      "icon": "transmission_fluid.svg"
+    },
+    {
+      "key": "brake_fluid",
+      "label": "Brake fluid",
+      "category": "Brakes",
+      "applies_to": "both",
+      "icon": "brake_fluid.svg"
+    },
+    {
+      "key": "clutch_fluid",
+      "label": "Clutch fluid",
+      "category": "Fluids",
+      "applies_to": "both",
+      "icon": "clutch_fluid.svg"
+    },
+    {
+      "key": "power_steering_fluid",
+      "label": "Power steering fluid",
+      "category": "Fluids",
+      "applies_to": "car",
+      "icon": "power_steering_fluid.svg"
+    },
+    {
+      "key": "differential_fluid",
+      "label": "Differential fluid",
+      "category": "Fluids",
+      "applies_to": "car",
+      "icon": "differential_fluid.svg"
+    },
+    {
+      "key": "transfer_case_fluid",
+      "label": "Transfer case fluid",
+      "category": "Fluids",
+      "applies_to": "car",
+      "icon": "transfer_case_fluid.svg"
+    },
+    {
+      "key": "final_drive_oil",
+      "label": "Final drive oil",
+      "category": "Fluids",
+      "applies_to": "motorcycle",
+      "icon": "final_drive_oil.svg"
+    },
+    {
+      "key": "washer_fluid",
+      "label": "Washer fluid",
+      "category": "Fluids",
+      "applies_to": "car",
+      "icon": "washer_fluid.svg"
+    },
+    {
+      "key": "tire_rotation",
+      "label": "Tire rotation",
+      "category": "Tires & wheels",
+      "applies_to": "car",
+      "icon": "tire_rotation.svg"
+    },
+    {
+      "key": "tire_tread_depth",
+      "label": "Tire tread depth",
+      "category": "Tires & wheels",
+      "applies_to": "both",
+      "icon": "tire_tread_depth.svg"
+    },
+    {
+      "key": "tire_pressure",
+      "label": "Tire pressure",
+      "category": "Tires & wheels",
+      "applies_to": "both",
+      "icon": "tire_pressure.svg"
+    },
+    {
+      "key": "tire_replacement",
+      "label": "Tire replacement",
+      "category": "Tires & wheels",
+      "applies_to": "both",
+      "icon": "tire_replacement.svg"
+    },
+    {
+      "key": "tire_repair",
+      "label": "Flat / puncture repair",
+      "category": "Tires & wheels",
+      "applies_to": "both",
+      "icon": "tire_repair.svg"
+    },
+    {
+      "key": "wheel_alignment",
+      "label": "Wheel alignment",
+      "category": "Tires & wheels",
+      "applies_to": "car",
+      "icon": "wheel_alignment.svg"
+    },
+    {
+      "key": "wheel_balance",
+      "label": "Wheel balancing",
+      "category": "Tires & wheels",
+      "applies_to": "both",
+      "icon": "wheel_balance.svg"
+    },
+    {
+      "key": "tpms_sensor",
+      "label": "TPMS sensor",
+      "category": "Tires & wheels",
+      "applies_to": "both",
+      "icon": "tpms_sensor.svg"
+    },
+    {
+      "key": "wheel_bearings",
+      "label": "Wheel bearings",
+      "category": "Tires & wheels",
+      "applies_to": "both",
+      "icon": "wheel_bearings.svg"
+    },
+    {
+      "key": "brake_pads",
+      "label": "Brake pads",
+      "category": "Brakes",
+      "applies_to": "both",
+      "icon": "brake_pads.svg"
+    },
+    {
+      "key": "brake_rotors",
+      "label": "Brake rotors / discs",
+      "category": "Brakes",
+      "applies_to": "both",
+      "icon": "brake_rotors.svg"
+    },
+    {
+      "key": "brake_calipers",
+      "label": "Brake calipers",
+      "category": "Brakes",
+      "applies_to": "both",
+      "icon": "brake_calipers.svg"
+    },
+    {
+      "key": "brake_lines",
+      "label": "Brake lines / hoses",
+      "category": "Brakes",
+      "applies_to": "both",
+      "icon": "brake_lines.svg"
+    },
+    {
+      "key": "battery",
+      "label": "Battery",
+      "category": "Electrical",
+      "applies_to": "both",
+      "icon": "battery.svg"
+    },
+    {
+      "key": "alternator",
+      "label": "Alternator / charging",
+      "category": "Electrical",
+      "applies_to": "both",
+      "icon": "alternator.svg"
+    },
+    {
+      "key": "starter",
+      "label": "Starter motor",
+      "category": "Electrical",
+      "applies_to": "both",
+      "icon": "starter.svg"
+    },
+    {
+      "key": "lights_bulbs",
+      "label": "Lights / bulbs",
+      "category": "Electrical",
+      "applies_to": "both",
+      "icon": "lights_bulbs.svg"
+    },
+    {
+      "key": "fuses",
+      "label": "Fuses / relays",
+      "category": "Electrical",
+      "applies_to": "both",
+      "icon": "fuses.svg"
+    },
+    {
+      "key": "diagnostics",
+      "label": "Diagnostics / check engine light",
+      "category": "Electrical",
+      "applies_to": "both",
+      "icon": "diagnostics.svg"
+    },
+    {
+      "key": "suspension",
+      "label": "Suspension",
+      "category": "Suspension & steering",
+      "applies_to": "both",
+      "icon": "suspension.svg"
+    },
+    {
+      "key": "shocks_struts",
+      "label": "Shocks / struts",
+      "category": "Suspension & steering",
+      "applies_to": "car",
+      "icon": "shocks_struts.svg"
+    },
+    {
+      "key": "steering",
+      "label": "Steering / tie rods",
+      "category": "Suspension & steering",
+      "applies_to": "car",
+      "icon": "steering.svg"
+    },
+    {
+      "key": "cv_axles",
+      "label": "CV axles / boots",
+      "category": "Drivetrain",
+      "applies_to": "car",
+      "icon": "cv_axles.svg"
+    },
+    {
+      "key": "clutch",
+      "label": "Clutch",
+      "category": "Drivetrain",
+      "applies_to": "both",
+      "icon": "clutch.svg"
+    },
+    {
+      "key": "exhaust",
+      "label": "Exhaust / muffler",
+      "category": "Exhaust",
+      "applies_to": "both",
+      "icon": "exhaust.svg"
+    },
+    {
+      "key": "catalytic_converter",
+      "label": "Catalytic converter",
+      "category": "Exhaust",
+      "applies_to": "both",
+      "icon": "catalytic_converter.svg"
+    },
+    {
+      "key": "ac_service",
+      "label": "A/C service / recharge",
+      "category": "Climate",
+      "applies_to": "car",
+      "icon": "ac_service.svg"
+    },
+    {
+      "key": "wipers",
+      "label": "Wiper blades",
+      "category": "Body & glass",
+      "applies_to": "car",
+      "icon": "wipers.svg"
+    },
+    {
+      "key": "glass",
+      "label": "Windshield / glass",
+      "category": "Body & glass",
+      "applies_to": "car",
+      "icon": "glass.svg"
+    },
+    {
+      "key": "body_paint",
+      "label": "Body / paint repair",
+      "category": "Body & glass",
+      "applies_to": "both",
+      "icon": "body_paint.svg"
+    },
+    {
+      "key": "detailing",
+      "label": "Detailing / wash",
+      "category": "Body & glass",
+      "applies_to": "both",
+      "icon": "detailing.svg"
+    },
+    {
+      "key": "locks_keys",
+      "label": "Locks / keys / fob battery",
+      "category": "Body & glass",
+      "applies_to": "both",
+      "icon": "locks_keys.svg"
+    },
+    {
+      "key": "chain_adjustment",
+      "label": "Chain adjustment",
+      "category": "Motorcycle",
+      "applies_to": "motorcycle",
+      "icon": "chain_adjustment.svg"
+    },
+    {
+      "key": "chain_lube",
+      "label": "Chain clean & lube",
+      "category": "Motorcycle",
+      "applies_to": "motorcycle",
+      "icon": "chain_lube.svg"
+    },
+    {
+      "key": "chain_replacement",
+      "label": "Chain replacement",
+      "category": "Motorcycle",
+      "applies_to": "motorcycle",
+      "icon": "chain_replacement.svg"
+    },
+    {
+      "key": "sprockets",
+      "label": "Sprockets",
+      "category": "Motorcycle",
+      "applies_to": "motorcycle",
+      "icon": "sprockets.svg"
+    },
+    {
+      "key": "shock_maintenance",
+      "label": "Rear shock service",
+      "category": "Motorcycle",
+      "applies_to": "motorcycle",
+      "icon": "shock_maintenance.svg"
+    },
+    {
+      "key": "fork_oil",
+      "label": "Fork oil",
+      "category": "Motorcycle",
+      "applies_to": "motorcycle",
+      "icon": "fork_oil.svg"
+    },
+    {
+      "key": "fork_seals",
+      "label": "Fork seals",
+      "category": "Motorcycle",
+      "applies_to": "motorcycle",
+      "icon": "fork_seals.svg"
+    },
+    {
+      "key": "steering_head_bearings",
+      "label": "Steering head bearings",
+      "category": "Motorcycle",
+      "applies_to": "motorcycle",
+      "icon": "steering_head_bearings.svg"
+    },
+    {
+      "key": "cables",
+      "label": "Clutch / throttle cables",
+      "category": "Motorcycle",
+      "applies_to": "motorcycle",
+      "icon": "cables.svg"
+    },
+    {
+      "key": "brake_lever",
+      "label": "Levers / controls",
+      "category": "Motorcycle",
+      "applies_to": "motorcycle",
+      "icon": "brake_lever.svg"
+    },
+    {
+      "key": "inspection",
+      "label": "Inspection",
+      "category": "Paperwork",
+      "applies_to": "both",
+      "icon": "inspection.svg"
+    },
+    {
+      "key": "emissions",
+      "label": "Emissions test",
+      "category": "Paperwork",
+      "applies_to": "both",
+      "icon": "emissions.svg"
+    },
+    {
+      "key": "registration",
+      "label": "Registration",
+      "category": "Paperwork",
+      "applies_to": "both",
+      "icon": "registration.svg"
+    },
+    {
+      "key": "insurance",
+      "label": "Insurance",
+      "category": "Paperwork",
+      "applies_to": "both",
+      "icon": "insurance.svg"
+    },
+    {
+      "key": "recall",
+      "label": "Recall / service campaign",
+      "category": "Paperwork",
+      "applies_to": "both",
+      "icon": "recall.svg"
+    },
+    {
+      "key": "accident_damage",
+      "label": "Accident / damage repair",
+      "category": "Repairs",
+      "applies_to": "both",
+      "icon": "accident_damage.svg"
+    },
+    {
+      "key": "general_repair",
+      "label": "General repair",
+      "category": "Repairs",
+      "applies_to": "both",
+      "icon": "general_repair.svg"
+    },
+    {
+      "key": "custom",
+      "label": "Custom / other",
+      "category": "Other",
+      "applies_to": "both",
+      "icon": "custom.svg"
+    }
+  ],
+  "specs": [
+    {
+      "key": "engine",
+      "label": "Engine",
+      "group": "Engine & oil",
+      "hint": ""
+    },
+    {
+      "key": "displacement_l",
+      "label": "Displacement",
+      "group": "Engine & oil",
+      "hint": "L"
+    },
+    {
+      "key": "cylinders",
+      "label": "Cylinders",
+      "group": "Engine & oil",
+      "hint": ""
+    },
+    {
+      "key": "fuel_type",
+      "label": "Fuel type",
+      "group": "Engine & oil",
+      "hint": ""
+    },
+    {
+      "key": "oil_type",
+      "label": "Engine oil type / viscosity",
+      "group": "Engine & oil",
+      "hint": "e.g. 0W-20 full synthetic"
+    },
+    {
+      "key": "oil_capacity",
+      "label": "Engine oil capacity (with filter)",
+      "group": "Engine & oil",
+      "hint": "qt or L"
+    },
+    {
+      "key": "oil_filter_part",
+      "label": "Oil filter part number",
+      "group": "Engine & oil",
+      "hint": ""
+    },
+    {
+      "key": "coolant_type",
+      "label": "Coolant type",
+      "group": "Fluids & capacities",
+      "hint": ""
+    },
+    {
+      "key": "coolant_capacity",
+      "label": "Coolant capacity",
+      "group": "Fluids & capacities",
+      "hint": "qt or L"
+    },
+    {
+      "key": "transmission_fluid_type",
+      "label": "Transmission fluid type",
+      "group": "Fluids & capacities",
+      "hint": ""
+    },
+    {
+      "key": "transmission_fluid_capacity",
+      "label": "Transmission fluid capacity",
+      "group": "Fluids & capacities",
+      "hint": "qt or L"
+    },
+    {
+      "key": "brake_fluid_type",
+      "label": "Brake fluid type",
+      "group": "Fluids & capacities",
+      "hint": "e.g. DOT 4"
+    },
+    {
+      "key": "differential_fluid_type",
+      "label": "Differential fluid type",
+      "group": "Fluids & capacities",
+      "hint": ""
+    },
+    {
+      "key": "power_steering_fluid_type",
+      "label": "Power steering fluid type",
+      "group": "Fluids & capacities",
+      "hint": ""
+    },
+    {
+      "key": "fork_oil_type",
+      "label": "Fork oil type",
+      "group": "Fluids & capacities",
+      "hint": ""
+    },
+    {
+      "key": "fuel_capacity",
+      "label": "Fuel tank capacity",
+      "group": "Fluids & capacities",
+      "hint": "gal or L"
+    },
+    {
+      "key": "tire_size_front",
+      "label": "Tire size — front",
+      "group": "Tires & wheels",
+      "hint": "e.g. 235/40R19 96W"
+    },
+    {
+      "key": "tire_size_rear",
+      "label": "Tire size — rear",
+      "group": "Tires & wheels",
+      "hint": "e.g. 265/35R19 98W"
+    },
+    {
+      "key": "tire_size_spare",
+      "label": "Tire size — spare",
+      "group": "Tires & wheels",
+      "hint": ""
+    },
+    {
+      "key": "tire_pressure_front",
+      "label": "Tire pressure — front (cold)",
+      "group": "Tires & wheels",
+      "hint": "psi"
+    },
+    {
+      "key": "tire_pressure_rear",
+      "label": "Tire pressure — rear (cold)",
+      "group": "Tires & wheels",
+      "hint": "psi"
+    },
+    {
+      "key": "tire_pressure_spare",
+      "label": "Tire pressure — spare (cold)",
+      "group": "Tires & wheels",
+      "hint": "psi"
+    },
+    {
+      "key": "rim_size_front",
+      "label": "Rim size — front",
+      "group": "Tires & wheels",
+      "hint": "in"
+    },
+    {
+      "key": "rim_size_rear",
+      "label": "Rim size — rear",
+      "group": "Tires & wheels",
+      "hint": "in"
+    },
+    {
+      "key": "lug_nut_torque",
+      "label": "Lug nut torque",
+      "group": "Tires & wheels",
+      "hint": "ft-lb"
+    },
+    {
+      "key": "body_style",
+      "label": "Body style",
+      "group": "Body & build",
+      "hint": ""
+    },
+    {
+      "key": "drive_type",
+      "label": "Drive type",
+      "group": "Body & build",
+      "hint": "e.g. RWD"
+    },
+    {
+      "key": "transmission",
+      "label": "Transmission",
+      "group": "Body & build",
+      "hint": ""
+    },
+    {
+      "key": "trim",
+      "label": "Trim",
+      "group": "Body & build",
+      "hint": ""
+    },
+    {
+      "key": "trim_code",
+      "label": "Trim / option code",
+      "group": "Body & build",
+      "hint": ""
+    },
+    {
+      "key": "paint_code",
+      "label": "Paint code",
+      "group": "Body & build",
+      "hint": ""
+    },
+    {
+      "key": "paint_color",
+      "label": "Paint color name",
+      "group": "Body & build",
+      "hint": ""
+    },
+    {
+      "key": "build_date",
+      "label": "Build date",
+      "group": "Body & build",
+      "hint": "MM/YY"
+    },
+    {
+      "key": "plant",
+      "label": "Assembly plant",
+      "group": "Body & build",
+      "hint": ""
+    },
+    {
+      "key": "gvwr",
+      "label": "GVWR (gross vehicle weight rating)",
+      "group": "Body & build",
+      "hint": "lb"
+    },
+    {
+      "key": "gawr_front",
+      "label": "GAWR — front axle",
+      "group": "Body & build",
+      "hint": "lb"
+    },
+    {
+      "key": "gawr_rear",
+      "label": "GAWR — rear axle",
+      "group": "Body & build",
+      "hint": "lb"
+    },
+    {
+      "key": "seating_capacity",
+      "label": "Seating capacity",
+      "group": "Body & build",
+      "hint": ""
+    },
+    {
+      "key": "battery_group",
+      "label": "Battery group size",
+      "group": "Electrical",
+      "hint": ""
+    },
+    {
+      "key": "wiper_size_driver",
+      "label": "Wiper size — driver",
+      "group": "Electrical",
+      "hint": "in"
+    },
+    {
+      "key": "wiper_size_passenger",
+      "label": "Wiper size — passenger",
+      "group": "Electrical",
+      "hint": "in"
+    },
+    {
+      "key": "spark_plug_part",
+      "label": "Spark plug part number",
+      "group": "Electrical",
+      "hint": ""
+    },
+    {
+      "key": "chain_size",
+      "label": "Drive chain size",
+      "group": "Motorcycle",
+      "hint": "e.g. 520 x 108"
+    },
+    {
+      "key": "sprocket_front",
+      "label": "Front sprocket teeth",
+      "group": "Motorcycle",
+      "hint": ""
+    },
+    {
+      "key": "sprocket_rear",
+      "label": "Rear sprocket teeth",
+      "group": "Motorcycle",
+      "hint": ""
+    },
+    {
+      "key": "chain_slack",
+      "label": "Chain slack",
+      "group": "Motorcycle",
+      "hint": "mm"
+    }
+  ],
+  "spec_sources": {
+    "vin": "From VIN",
+    "sticker": "From door sticker",
+    "user": "Entered by me",
+    "unverified": "Unverified",
+    "provider": "From VIN spec service",
+    "carfax": "From Carfax"
+  },
+  "makes": {
+    "Acura": {
+      "parts": null,
+      "owners": "https://owners.acura.com/"
+    },
+    "Audi": {
+      "parts": "https://parts.audiusa.com/",
+      "owners": "https://www.audiusa.com/us/web/en/myaudi.html"
+    },
+    "BMW": {
+      "parts": "https://www.bmwusa.com/parts-and-accessories.html",
+      "owners": "https://www.bmwusa.com/owners.html"
+    },
+    "Chevrolet": {
+      "parts": "https://www.gmparts.com/",
+      "owners": "https://www.chevrolet.com/support"
+    },
+    "Ducati": {
+      "parts": "https://www.ducati.com/us/en/service-maintenance/spare-parts",
+      "owners": "https://www.ducati.com/us/en/service-maintenance/owner-manuals"
+    },
+    "Ford": {
+      "parts": "https://parts.ford.com/",
+      "owners": "https://www.ford.com/support/"
+    },
+    "GMC": {
+      "parts": "https://www.gmparts.com/",
+      "owners": "https://www.gmc.com/support"
+    },
+    "Harley-Davidson": {
+      "parts": "https://www.harley-davidson.com/us/en/shop/c/motorcycle-parts",
+      "owners": "https://www.harley-davidson.com/us/en/owners/index.html"
+    },
+    "Honda": {
+      "parts": null,
+      "owners": "https://owners.honda.com/"
+    },
+    "Hyundai": {
+      "parts": null,
+      "owners": "https://owners.hyundaiusa.com/"
+    },
+    "Infiniti": {
+      "parts": "https://parts.infinitiusa.com/",
+      "owners": "https://owners.infinitiusa.com/"
+    },
+    "Kawasaki": {
+      "parts": "https://www.kawasaki.com/en-us/parts",
+      "owners": "https://www.kawasaki.com/en-us/owner-center"
+    },
+    "Kia": {
+      "parts": null,
+      "owners": "https://owners.kia.com/"
+    },
+    "Lexus": {
+      "parts": "https://parts.lexus.com/",
+      "owners": "https://www.lexus.com/owners"
+    },
+    "Mazda": {
+      "parts": "https://www.mazdausa.com/owners/parts-and-accessories",
+      "owners": "https://www.mazdausa.com/owners"
+    },
+    "Mercedes-Benz": {
+      "parts": "https://www.mbusa.com/en/owners/parts-and-accessories",
+      "owners": "https://www.mbusa.com/en/owners"
+    },
+    "Nissan": {
+      "parts": "https://parts.nissanusa.com/",
+      "owners": "https://owners.nissanusa.com/"
+    },
+    "Porsche": {
+      "parts": "https://www.porsche.com/usa/accessoriesandservice/",
+      "owners": "https://www.porsche.com/usa/accessoriesandservice/"
+    },
+    "Subaru": {
+      "parts": "https://parts.subaru.com/",
+      "owners": "https://www.subaru.com/owners.html"
+    },
+    "Suzuki": {
+      "parts": "https://suzukicycles.com/parts",
+      "owners": "https://suzukicycles.com/owners"
+    },
+    "Tesla": {
+      "parts": "https://www.tesla.com/shop",
+      "owners": "https://www.tesla.com/support"
+    },
+    "Toyota": {
+      "parts": "https://parts.toyota.com/",
+      "owners": "https://www.toyota.com/owners/"
+    },
+    "Triumph": {
+      "parts": "https://www.triumphmotorcycles.com/accessories",
+      "owners": "https://www.triumphmotorcycles.com/owners"
+    },
+    "Volkswagen": {
+      "parts": "https://parts.vw.com/",
+      "owners": "https://www.vw.com/en/owners-and-services.html"
+    },
+    "Yamaha": {
+      "parts": "https://www.yamahamotorsports.com/parts",
+      "owners": "https://www.yamahamotorsports.com/owner-center"
+    }
+  }
+}

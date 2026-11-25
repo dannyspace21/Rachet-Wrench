@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Network security: trust ONLY the phone's built-in (system) certificate
+  authorities — certificates installed by users or other apps are ignored.
+  Cleartext is permitted at this level only so a user can opt in to a
+  plain-http server on their HOME network; the app itself blocks every
+  http:// request unless that setting is on AND the address is private
+  (see UrlPolicy in data/Api.kt).
+-->
+<network-security-config xmlns:tools="http://schemas.android.com/tools">
+    <base-config cleartextTrafficPermitted="true" tools:ignore="InsecureBaseConfiguration">
+        <trust-anchors>
+            <certificates src="system" />
+        </trust-anchors>
+    </base-config>
+</network-security-config>

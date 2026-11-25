@@ -158,3 +158,61 @@ Every significant choice made while building Ratchet Wrench, and why. Written fo
 - **Review screens:** the door sticker, Carfax and VIN flows never save until you press Save. Every field can be kept, edited or rejected.
 - **Spec fields** that can't apply to the vehicle type are hidden (e.g. chain size on a car), unless they already hold a value.
 - **Photos:** a single picker handles camera, gallery and computer upload. Files are previewed locally and uploaded only after the entry is saved, so they can be linked to it.
+
+## Phase 3 — Android app
+
+### D29. Android stack
+- **Language and UI:** Kotlin with Jetpack Compose (Material 3).
+- **Data:** Room (on-phone SQLite) for offline storage, WorkManager for background sync and reminder checks, CameraX for the camera, and ML Kit for barcodes and text. Networking uses OkHttp, and JSON uses kotlinx.serialization.
+- **No other libraries.** There's no image-loading library (thumbnails use OkHttp + `BitmapFactory` with an in-memory cache), no dependency-injection framework, and no analytics or crash reporting.
+- **Versions:** SDK 29+ (Android 10). The app targets and compiles against API 37 (Android 17, `compileSdkMinor = 2`, required by the newest Compose libraries). Versions are pinned exactly. `app/gradle.lockfile` records every resolved library across all configurations, including build tools.
+- **Repositories:** limited to `google()` (only `com.android.*`, `com.google.*` and `androidx.*` groups) and `mavenCentral()`. The Gradle Plugin Portal is not used.
+- The Gradle wrapper (9.9.2) checks the distribution's SHA-256.
+
+### D30. Offline-first sync
+- Every screen reads from Room. Every change is written to Room first, marked `dirty`, and a sync is queued.
+- A sync run does three things in order:
+  1. **Push** dirty records (`POST /api/sync`). Only the fields the server accepts are sent; it rejects unknown fields.
+  2. **Upload** queued photos with phone-made UUIDs, so retries are idempotent.
+  3. **Pull** changes since the last bookmark. A newer unsent local edit is never overwritten.
+- The phone mirrors two server rules offline: logging maintenance advances matching reminders, and higher mileage updates the vehicle.
+- When the server merges a record into an existing one (e.g. a spec for the same field), the phone replaces its copy with the server's ID.
+
+### D31. Login token in encrypted storage
+- The token is encrypted with an AES-256-GCM key generated inside the Android Keystore and never exported.
+- The `androidx.security:security-crypto` library was *not* used: it is deprecated, and a 30-line Keystore wrapper is simpler to audit.
+- App data is excluded from cloud backup and device transfer (`allowBackup=false`, `dataExtractionRules`).
+
+### D32. Cleartext HTTP policy
+- The platform network security config trusts **system CAs only** and permits cleartext *at the platform level*. That is the only way to let a user opt in for a home server whose IP isn't known at build time, because Android's config can't express IP ranges.
+- The app then enforces the real rule on **every request** (`UrlPolicy` + an OkHttp interceptor). `http://` is refused unless the user ticked "Allow plain HTTP on my home network" **and** the host is private (RFC 1918, loopback, Tailscale 100.64/10, link-local, `*.local`, `*.lan`, `*.home.arpa`).
+- Requests can only go to the configured server, and redirects are never followed.
+- Lint's `InsecureBaseConfiguration` warning is suppressed with this explanation. Unit tests cover the policy.
+
+### D33. Permissions and exported components
+- **Requested:** INTERNET, CAMERA, POST_NOTIFICATIONS.
+- **Kept from WorkManager:** ACCESS_NETWORK_STATE, WAKE_LOCK and RECEIVE_BOOT_COMPLETED, needed for "sync when online" and to survive reboots.
+- **Removed:** FOREGROUND_SERVICE.
+- **Exported:** only `MainActivity` (the launcher) and WorkManager's `SystemJobService`, which is guarded by `BIND_JOB_SERVICE` so only Android can call it.
+- **Also removed:** unused library components — the foreground service, WorkManager's diagnostics receiver and the profile-installer receiver.
+- **No storage permission:** gallery access uses Android's photo picker, and the report is saved through MediaStore Downloads.
+
+### D34. ML Kit telemetry blocked
+- ML Kit bundles Google's `datatransport` logger, which would upload anonymous usage statistics.
+- Excluding the upload library made R8 report that ML Kit references it directly, so removing it would risk a crash.
+- Instead, the app manifest removes the `cct` backend's registration from `TransportBackendDiscovery`. The library then has nowhere to send events. The final APK manifest was checked: `CctBackendFactory` is absent.
+- Bundled (offline) models are used for both barcode and text recognition, so no model downloads happen.
+
+### D35. Vulnerable transitive libraries forced to patched versions
+- OSV-Scanner found older Guava in the app's runtime classpath (GHSA-xxph-c9ww-hj94), plus commons-lang3, httpclient and Bouncy Castle in Android's lint tool.
+- A `resolutionStrategy` forces patched versions: Guava 33.8.0, commons-lang3 3.22.0, httpclient 4.5.14 and Bouncy Castle 1.87.
+- The rescan is clean.
+
+### D36. Release signing
+- To make side-loading possible out of the box, the release build is signed with the debug key unless you configure your own. The README explains how to create your own key; do that before sharing the APK with anyone.
+
+### D37. Testing limits in the build environment
+- The build sandbox has no hardware virtualization (no `/dev/kvm`), so an Android emulator could not run.
+- What was verified: the app compiles (debug and release, with R8 shrinking), lint passes with zero errors, and unit tests pass. These cover the sticker parser — which is checked against the same sample as the server's parser — VIN rules, reminder logic and the HTTP policy.
+- What was *not* verified: the app was not run on a device or emulator, so there are no Android screenshots. Please try it on your phone; see the README.
+- **APK download:** the GitHub workflow `.github/workflows/android.yml` builds the APK on GitHub and offers it as a download.

@@ -249,6 +249,10 @@ def main() -> None:
     }
     out = HERE / "catalog.json"
     out.write_text(json.dumps(catalog, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
+    # The Android app bundles the same catalog (used offline).
+    android_assets = HERE.parent / "android" / "app" / "src" / "main" / "assets"
+    if android_assets.is_dir():
+        (android_assets / "catalog.json").write_text(out.read_text(encoding="utf-8"), encoding="utf-8")
     print(f"wrote {out} ({len(TYPES)} types, {len(SPECS)} spec fields, {len(MAKES)} makes)")
 
 
