@@ -71,6 +71,16 @@ def main() -> None:
         data("server/app/static", "app/static"),
         data("desktop/icon.png", "desktop"),
     ]
+    if sys.platform.startswith("win"):
+        # Some compiled packages (e.g. argon2's _ffi.pyd for Python 3.15) use
+        # Python's "stable ABI" and load python3.dll / python3t.dll, which
+        # PyInstaller doesn't collect by itself.  Without them the Windows
+        # app fails with "DLL load failed while importing _ffi".
+        for dll in ("python3.dll", "python3t.dll"):
+            path = Path(sys.base_prefix) / dll
+            if path.is_file():
+                args.append(f"--add-binary={path}{SEP}.")
+                print("bundling", path)
     print("Building Ratchet Wrench desktop for", sys.platform)
     PyInstaller.__main__.run(args)
 
