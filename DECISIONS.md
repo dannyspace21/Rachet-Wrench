@@ -255,3 +255,55 @@ Every significant choice made while building Ratchet Wrench, and why. Written fo
   - **Obtainium** is a widely used open-source app that installs and updates apps straight from GitHub Releases.
   - An **in-app checker** would add a new outbound connection from Ratchet Wrench itself, against the "documented outbound connections only" rule, and duplicate what Obtainium already does well.
 - **Local builds** without the key still fall back to the debug key, so they install for testing, but they can't update a release-signed install.
+
+## Phone-only, computer-only and phone ⇄ computer sync
+
+### D43. Three ways to use it, one codebase
+- **Phone only:** the Android app with no server.
+- **Computer only:** a desktop app.
+- **Phone + computer:** the phone syncs with the desktop app.
+- **Home server (Docker):** still supported, unchanged.
+
+The desktop app *is* the existing server plus web app, packaged to run on a PC. The phone therefore syncs with the computer through exactly the same, already-tested sync API it uses with a home server. There's no second sync system to maintain or secure.
+
+### D44. Desktop app = server + web app packaged with PyInstaller
+- **Why PyInstaller:** it's the most widely used tool to bundle a Python program with its own Python. The user installs nothing, needs no Docker, and double-clicks one app. Its license (GPL with a bootloader exception) allows distributing the apps it builds.
+- **The launcher** (`desktop/launcher.py`, standard library only, using tkinter for the window):
+  - stores data in the OS's normal app-data folder
+  - runs the server on **127.0.0.1** by default, and opens the browser
+  - shows a small window with **Open**, **Allow my phone to sync** and **Quit**
+  - when phone sync is ticked, restarts the server on `0.0.0.0` and shows the computer's LAN addresses to type into the phone
+  - starting the app a second time just opens the browser
+- **Why a browser UI rather than a native window:** it reuses the existing web app unchanged, including its strict CSP. A native wrapper (Electron/Tauri) would add a large new dependency tree.
+- **Cookies:** `RW_COOKIE_SECURE=false`, because the desktop app is plain HTTP on the computer and LAN. Use Tailscale for encryption over the network.
+- **Platform fixes:**
+  - Windows has no `resource` module, so CPU/memory caps apply only where available and the wall-clock timeout always applies.
+  - Windows helper processes get `SYSTEMROOT`, which Windows programs can't start without.
+  - In the packaged app, the PDF helper runs as `RatchetWrench --pdf-worker`, because there's no separate Python.
+  - Shared files are found through `RW_ASSET_DIR`.
+- **Builds:** CI builds Windows, macOS (Apple silicon) and Linux. It smoke-tests each build on its own OS, then publishes a GitHub Release `desktop-v1.0.N` with checksums. Desktop releases are **not** marked "Latest", so Obtainium keeps tracking the Android releases.
+- **Not code-signed:** Apple/Microsoft certificates cost money, so users see a one-time warning; DESKTOP.md explains it.
+- **Intel Macs:** GitHub's macOS runners are Apple silicon. An Intel build can be added with a `macos-13` runner if needed.
+- **Tesseract** isn't bundled: it's large and platform-specific. Sticker OCR on the desktop is optional (install Tesseract), and the phone reads stickers on-device anyway.
+
+### D45. First-run setup page with a one-time code
+- Docker users still set the first admin password in `.env`. Desktop users shouldn't have to edit files.
+- The launcher creates a random 32-character code on every start (`RW_SETUP_TOKEN`) and opens `/#/setup?code=…`.
+- `POST /api/auth/setup` creates the first account **only** if no account exists **and** the code matches (constant-time comparison). It's rate-limited.
+- A server without a setup code (Docker) never offers the page.
+
+### D46. Android phone-only mode
+- **First launch:** the app asks "Use on this phone only" or "Connect to my computer or home server", and stores the choice in `mode`.
+- **Phone-only:**
+  - the sync engine does nothing
+  - VIN decoding calls NHTSA directly from the phone (the same documented outbound host, sending only the VIN, never following redirects)
+  - the history report is built on the phone with Android's built-in `PdfDocument`, with the same layout as the server's
+  - AI sticker vision (a server feature) is hidden
+- **Connecting later:** every local record is marked "needs upload" before the first sync, and photos taken on the phone are already queued, so nothing is lost.
+- **Disconnecting:** you can keep the data on the phone (switching back to phone-only) or sign out and wipe it.
+- Older installs that already have a login are treated as "connected", so nothing changes for them.
+- **Tests:** a unit test checks the phone's NHTSA parsing against the server's test sample.
+
+### D47. Lock files now cover every platform
+- `server/requirements.txt` is now compiled with `--universal`, so the same hash-locked file works on Linux (Docker), Windows and macOS (desktop builds).
+- The only new entry, `httpx2-jsfetch`, is marked for browser-Python (emscripten) only and is never installed on these platforms.

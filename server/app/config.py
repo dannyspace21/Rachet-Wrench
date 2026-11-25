@@ -100,6 +100,12 @@ class Settings:
     # Server-side text recognition for sticker photos uploaded on the web.
     ocr_enabled: bool = field(default_factory=lambda: _bool("RW_OCR_ENABLED", True))
 
+    # One-time code that allows creating the first account from the web page
+    # (used by the desktop app, which generates a random code each start and
+    # opens the setup page with it).  Empty = setup page disabled; the first
+    # admin then comes from RW_ADMIN_USERNAME / RW_ADMIN_PASSWORD (Docker).
+    setup_token: str = field(default_factory=lambda: os.environ.get("RW_SETUP_TOKEN", ""))
+
     # Fill the database with sample vehicles on first start (demo/screenshots).
     seed_sample_data: bool = field(default_factory=lambda: _bool("RW_SEED_SAMPLE_DATA", False))
 
@@ -118,6 +124,26 @@ class Settings:
     def ai_vision_ready(self) -> bool:
         """AI vision is usable only if switched on AND a key is configured."""
         return self.ai_vision_enabled and bool(self.ai_vision_api_key)
+
+
+def asset_roots() -> list[Path]:
+    """Folders that may hold the shared files (web/, icons/, brand/, catalog/):
+    RW_ASSET_DIR (set by the packaged desktop app), the repository root,
+    and /app (the Docker image)."""
+    roots = []
+    if os.environ.get("RW_ASSET_DIR"):
+        roots.append(Path(os.environ["RW_ASSET_DIR"]))
+    roots += [Path(__file__).resolve().parents[2], Path("/app")]
+    return roots
+
+
+def asset_path(*parts: str) -> Path:
+    """First existing location of a shared file or folder (or the repo path)."""
+    for root in asset_roots():
+        candidate = root.joinpath(*parts)
+        if candidate.exists():
+            return candidate
+    return asset_roots()[0].joinpath(*parts)
 
 
 @lru_cache(maxsize=1)

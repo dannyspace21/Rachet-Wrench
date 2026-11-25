@@ -20,7 +20,10 @@ from __future__ import annotations
 
 import base64
 import json
-import resource
+try:  # Linux/macOS only (see uploads.py)
+    import resource
+except ImportError:
+    resource = None  # type: ignore[assignment]
 import shutil
 import subprocess
 import tempfile
@@ -30,6 +33,7 @@ from PIL import Image
 
 from .config import get_settings
 from .sticker_parser import parse_sticker_text
+from .uploads import minimal_env
 
 TESSERACT_TIMEOUT_S = 30
 
@@ -82,8 +86,8 @@ def ocr_image_file(path: Path) -> str:
                     [exe, str(clean), "stdout", "--psm", psm, "-l", "eng"],
                     capture_output=True,
                     timeout=TESSERACT_TIMEOUT_S,
-                    preexec_fn=_limit_ocr_resources,  # noqa: PLW1509
-                    env={"PATH": "/usr/bin:/bin", "OMP_THREAD_LIMIT": "1"},
+                    preexec_fn=_limit_ocr_resources if resource is not None else None,  # noqa: PLW1509
+                    env=minimal_env(OMP_THREAD_LIMIT="1"),
                     check=False,
                 )
             except subprocess.TimeoutExpired:

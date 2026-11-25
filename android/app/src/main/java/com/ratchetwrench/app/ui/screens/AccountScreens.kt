@@ -55,8 +55,38 @@ import kotlinx.coroutines.withContext
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
 
+/** First launch: use the app on this phone only, or connect to a computer/server. */
 @Composable
-fun LoginScreen(onSignedIn: () -> Unit) {
+fun WelcomeScreen(onPhoneOnly: () -> Unit, onConnect: () -> Unit) {
+    Scaffold { pad ->
+        Column(Modifier.fillMaxSize().padding(pad).verticalScroll(rememberScrollState()).padding(24.dp),
+            horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(16.dp)) {
+            Spacer(Modifier.height(24.dp))
+            AppLogo(96.dp)
+            Text("Ratchet Wrench", style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.Bold)
+            Text("Your vehicles' maintenance & repair log", color = MaterialTheme.colorScheme.onSurfaceVariant)
+            Spacer(Modifier.height(8.dp))
+            Column(Modifier.widthIn(max = 480.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
+                SectionCard {
+                    Text("Use on this phone only", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                    Text("No computer or server needed. Everything is stored privately on this phone and works offline. " +
+                        "You can connect to your computer later — everything you've added will be copied over.",
+                        color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    PrimaryButton("Start on this phone", "check", Modifier.fillMaxWidth()) { onPhoneOnly() }
+                }
+                SectionCard {
+                    Text("Connect to my computer or home server", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                    Text("Sync with the Ratchet Wrench desktop app on your computer, or with your own home server, " +
+                        "so the phone and the computer show the same records.", color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    SecondaryButton("Connect", "sync", Modifier.fillMaxWidth()) { onConnect() }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+fun LoginScreen(onSignedIn: () -> Unit, onBack: (() -> Unit)? = null) {
     val repo = LocalRepo.current
     val appContext = LocalContext.current.applicationContext
     val scope = rememberCoroutineScope()
@@ -67,15 +97,18 @@ fun LoginScreen(onSignedIn: () -> Unit) {
     var busy by remember { mutableStateOf(false) }
     var error by remember { mutableStateOf<String?>(null) }
 
-    Scaffold { pad ->
+    Scaffold(topBar = { if (onBack != null) TopBar("Connect", onBack = onBack) }) { pad ->
         Column(Modifier.fillMaxSize().padding(pad).imePadding().verticalScroll(rememberScrollState()).padding(24.dp),
             horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(14.dp)) {
             Spacer(Modifier.height(24.dp))
             AppLogo(84.dp)
             Text("Ratchet Wrench", style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.Bold)
-            Text("Sign in to your own server", color = MaterialTheme.colorScheme.onSurfaceVariant)
+            Text("Connect to your computer or home server", color = MaterialTheme.colorScheme.onSurfaceVariant)
+            Text("Desktop app: tick “Allow my phone to sync” in its window and type the address it shows " +
+                "(like http://192.168.1.20:8077), then tick “Allow plain HTTP on my home network” below.",
+                style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
             Column(Modifier.widthIn(max = 480.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                Field("Server address", server, { server = it.trim() }, hint = "e.g. https://garage.your-tailnet.ts.net")
+                Field("Computer or server address", server, { server = it.trim() }, hint = "e.g. http://192.168.1.20:8077 or https://garage.your-tailnet.ts.net")
                 Field("Username", user, { user = it })
                 Field("Password", pass, { pass = it }, password = true)
                 Row(verticalAlignment = Alignment.CenterVertically) {
@@ -101,7 +134,10 @@ fun LoginScreen(onSignedIn: () -> Unit) {
                                 repo.store.serverAiVision = me["server"]?.jsonObject?.get("ai_vision_available")?.jsonPrimitive?.content == "true"
                                 me["settings"]?.jsonObject?.get("theme")?.jsonPrimitive?.content?.let { repo.store.theme = it }
                                 repo.store.lastSince = null
-                                SyncEngine(appContext).run() // first full download
+                                // Coming from phone-only mode: upload everything made on this phone.
+                                if (repo.store.mode == "local") repo.db.markEverythingForUpload()
+                                repo.store.mode = "server"
+                                SyncEngine(appContext).run() // first full upload + download
                             }
                             pass = ""
                             onSignedIn()
@@ -161,19 +197,36 @@ fun SettingsScreen(nav: NavHostController, onSignedOut: () -> Unit) {
             }
             SectionCard {
                 Text("Sync", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
-                Text("Server: ${repo.store.serverUrl}", color = MaterialTheme.colorScheme.onSurfaceVariant)
-                Text("Last successful sync: ${repo.store.lastSyncOk ?: "never"}", color = MaterialTheme.colorScheme.onSurfaceVariant)
-                SecondaryButton("Sync now", "sync") {
-                    scope.launch {
-                        message = try { withContext(Dispatchers.IO) { SyncEngine(ctx).run() }; "Synced." } catch (e: Exception) { "Sync failed: ${e.message}" }
+                if (repo.store.mode == "server") {
+                    Text("Connected to: ${repo.store.serverUrl}", color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    Text("Last successful sync: ${repo.store.lastSyncOk ?: "never"}", color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    SecondaryButton("Sync now", "sync") {
+                        scope.launch {
+                            message = try { withContext(Dispatchers.IO) { SyncEngine(ctx).run() }; "Synced." } catch (e: Exception) { "Sync failed: ${e.message}" }
+                        }
                     }
+                } else {
+                    Text("This phone only — your data stays on this phone.", color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    Text("Connect to the desktop app on your computer (or a home server) to sync. Everything you've added is copied over.",
+                        color = MaterialTheme.colorScheme.onSurfaceVariant, style = MaterialTheme.typography.bodySmall)
+                    PrimaryButton("Connect to my computer or server", "sync") { nav.navigate("login") }
                 }
             }
             message?.let { Text(it, color = LocalExtra.current.muted) }
-            SectionCard {
+            if (repo.store.mode == "server") SectionCard {
                 Text("Account", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
                 Text("Signed in as ${repo.store.username}", color = MaterialTheme.colorScheme.onSurfaceVariant)
-                SecondaryButton("Sign out", "logout") {
+                SecondaryButton("Disconnect — keep my data on this phone", "logout") {
+                    scope.launch {
+                        withContext(Dispatchers.IO) {
+                            runCatching { SyncEngine(ctx).run() } // send last changes first
+                            Api(repo.store).logout()
+                            repo.store.disconnectKeepData()
+                        }
+                        message = "Disconnected. You're now using this phone only."
+                    }
+                }
+                SecondaryButton("Sign out and remove data from this phone", "trash") {
                     scope.launch {
                         withContext(Dispatchers.IO) {
                             Api(repo.store).logout()

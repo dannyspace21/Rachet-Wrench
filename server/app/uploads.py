@@ -27,7 +27,10 @@ import io
 import json
 import os
 import re
-import resource
+try:  # Linux/macOS: per-process memory & CPU limits for the PDF helper.
+    import resource
+except ImportError:  # Windows (desktop app): only the wall-clock timeout applies.
+    resource = None  # type: ignore[assignment]
 import secrets
 import subprocess
 import sys
@@ -179,6 +182,17 @@ def _limit_child_resources() -> None:  # pragma: no cover - runs in the child
     resource.setrlimit(resource.RLIMIT_NOFILE, (64, 64))
 
 
+def minimal_env(**extra: str) -> dict[str, str]:
+    """The smallest environment a helper process needs.  Windows can't start
+    programs without SYSTEMROOT; elsewhere a fixed PATH is enough."""
+    if os.name == "nt":
+        env = {"SYSTEMROOT": os.environ.get("SYSTEMROOT", r"C:\Windows")}
+    else:
+        env = {"PATH": "/usr/bin:/bin"}
+    env.update(extra)
+    return env
+
+
 def run_pdf_worker(data: bytes, mode: str, max_pages: int) -> dict:
     """Ask the sandboxed helper to read a PDF.
 
@@ -187,16 +201,22 @@ def run_pdf_worker(data: bytes, mode: str, max_pages: int) -> dict:
     friendly HTTP 400 error."""
     settings = get_settings()
     worker = Path(__file__).with_name("pdf_worker.py")
+    if getattr(sys, "frozen", False):
+        # Packaged desktop app: there is no separate Python interpreter, so
+        # the app's own executable runs the helper (see desktop/launcher.py).
+        argv = [sys.executable, "--pdf-worker", mode, str(max_pages)]
+    else:
+        argv = [sys.executable, "-I", str(worker), mode, str(max_pages)]
     try:
         # Reviewed: fixed argument list (our own script + two numbers we
         # generate), no shell, isolated interpreter (-I), empty environment.
         proc = subprocess.run(  # noqa: S603  # nosemgrep
-            [sys.executable, "-I", str(worker), mode, str(max_pages)],
+            argv,
             input=data,
             capture_output=True,
             timeout=settings.pdf_parse_timeout_s,
-            preexec_fn=_limit_child_resources,  # noqa: PLW1509
-            env={"PATH": "/usr/bin:/bin"},  # -I + empty env: no outside influence
+            preexec_fn=_limit_child_resources if resource is not None else None,  # noqa: PLW1509
+            env=minimal_env(),  # -I + almost-empty environment: no outside influence
             check=False,
         )
     except subprocess.TimeoutExpired:

@@ -12,7 +12,7 @@ Ratchet Wrench contains **no telemetry, analytics, crash reporting, ads or "phon
 
 | # | Where to | When | What is sent | How to turn off |
 |---|---|---|---|---|
-| 1 | `https://vpic.nhtsa.dot.gov` (US government VIN decoder) | You press **Decode VIN** | The VIN only | `RW_NHTSA_ENABLED=false` |
+| 1 | `https://vpic.nhtsa.dot.gov` (US government VIN decoder) | You press **Decode VIN**. The server or desktop app makes this call; in phone-only mode the phone calls it directly. | The VIN only | `RW_NHTSA_ENABLED=false` (server); in phone-only mode, just don't press Decode VIN |
 | 2 | **Your own** ntfy server (`RW_NTFY_URL`) | A reminder becomes due (if you turned push alerts on) | Reminder title, vehicle name, miles/days left | Leave `RW_NTFY_URL` empty (default) |
 | 3 | `https://api.anthropic.com` (Claude AI) | Only if the server owner enabled AI vision **and** you choose it for a sticker scan after a warning | The sticker photo | Off by default (`RW_AI_VISION_ENABLED=false`) |
 
@@ -103,6 +103,21 @@ Everything else stays on your server and your phone:
 - **Secrets** live only in `.env`, which git ignores. `.env.example` contains no real values.
 - **HTTPS:** use Tailscale (recommended) or Caddy in front — see [docs/HTTPS.md](docs/HTTPS.md). **Never forward port 8000 on your router.**
 
+### Desktop app (Windows, macOS, Linux)
+- It's the **same server code**, with every protection above, packaged with PyInstaller.
+- **By default it listens only on the computer itself (127.0.0.1).** Nothing else on the network can reach it.
+- Only when you tick **"Allow my phone to sync"** does it listen on your home network, so your phone can sync. Logins, lockout, rate limiting and per-user access control still apply. That traffic is plain HTTP on your LAN; use Tailscale for encryption (see [docs/HTTPS.md](docs/HTTPS.md)).
+- **First account:** the first account can only be created with a **one-time random setup code**. The app generates a new code each start and opens the setup page with it, so only the person at that computer can create the account. The setup page stops working once an account exists. Tests cover a wrong code, a weak password and a second attempt.
+- **Data** stays in your user's app-data folder.
+- **On Windows**, the PDF helper process and Tesseract run with the wall-clock timeout only, because Windows has no `resource` limits. They still run as separate processes with an almost-empty environment.
+- **Not code-signed:** the desktop builds aren't signed with paid Apple/Microsoft certificates, so Windows SmartScreen and macOS Gatekeeper warn on first launch. Every release lists SHA-256 checksums so you can check a download.
+- **Builds:** they're made on GitHub from hash-locked dependencies (`desktop/requirements-desktop.txt`), and each build is started once on its own operating system before it's published.
+
+### Android phone-only mode
+- Nothing leaves the phone except, when you press **Decode VIN**, the VIN, sent directly to NHTSA. That client is locked to `https://vpic.nhtsa.dot.gov` and never follows redirects.
+- The history report is generated on the phone.
+- When you later connect to a computer or server, everything on the phone is uploaded over the same authenticated sync.
+
 ---
 
 ## 3. Supply chain
@@ -152,6 +167,7 @@ Everything else stays on your server and your phone:
   - the key exists only as encrypted GitHub secrets plus your offline backup, never in the repository
   - the release workflow runs only for `main` (never for pull requests, so secrets can't be exposed), refuses to publish a debug-signed APK, and lists the certificate fingerprint and SHA-256 checksums with every release
   - Android itself rejects any update signed with a different key
+- **Phone-only mode:** see the end of §2. The sync engine does nothing unless you've connected.
 - **Code hardening (M7):** release builds are shrunk and obfuscated with R8, and Android lint is run with errors treated as failures.
 
 ---

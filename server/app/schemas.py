@@ -47,6 +47,14 @@ class LoginIn(Strict):
     client: Literal["web", "android"] = "web"
 
 
+class SetupIn(Strict):
+    """First-run account creation (desktop app)."""
+
+    token: Annotated[str, Field(min_length=16, max_length=200)]
+    username: Annotated[str, Field(min_length=3, max_length=64, pattern=r"^[a-zA-Z0-9_.-]+$")]
+    password: Annotated[str, Field(min_length=1, max_length=256)]
+
+
 class ChangePasswordIn(Strict):
     current_password: Annotated[str, Field(min_length=1, max_length=256)]
     new_password: Annotated[str, Field(min_length=1, max_length=256)]

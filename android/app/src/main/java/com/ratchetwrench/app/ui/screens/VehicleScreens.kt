@@ -47,11 +47,13 @@ import androidx.compose.ui.unit.dp
 import androidx.navigation.NavHostController
 import com.ratchetwrench.app.data.Api
 import com.ratchetwrench.app.data.JsonFormat
+import com.ratchetwrench.app.data.Nhtsa
 import com.ratchetwrench.app.data.Part
 import com.ratchetwrench.app.data.Reminder
 import com.ratchetwrench.app.data.Spec
 import com.ratchetwrench.app.data.Vehicle
 import com.ratchetwrench.app.domain.Catalog
+import com.ratchetwrench.app.report.LocalReport
 import com.ratchetwrench.app.domain.Reminders
 import com.ratchetwrench.app.domain.Vin
 import com.ratchetwrench.app.ui.Field
@@ -139,7 +141,14 @@ fun VehicleScreen(nav: NavHostController, id: String) {
                     SecondaryButton("Mileage", "gauge") { showMileage = true }
                     SecondaryButton("Door sticker", "sticker") { nav.navigate("sticker/$id") }
                     SecondaryButton("Report PDF", "download") {
-                        scope.launch { snack.showSnackbar(try { downloadReport(ctx, v) } catch (e: Exception) { "Needs a connection to the server: ${e.message}" }) }
+                        scope.launch {
+                            snack.showSnackbar(try {
+                                // Connected: the computer/server builds it (with all photos).
+                                // Phone only: build it right here on the phone.
+                                if (repo.store.mode == "server") downloadReport(ctx, v)
+                                else LocalReport.createAndSave(ctx, v, repo.store.currency)
+                            } catch (e: Exception) { "Could not create the report: ${e.message}" })
+                        }
                     }
                     if (partsUrl.isNotBlank()) SecondaryButton("Parts site", "external") { openLink(ctx, partsUrl) }
                     if (ownersUrl.isNotBlank()) SecondaryButton("Owner portal", "book") { openLink(ctx, ownersUrl) }
@@ -453,18 +462,31 @@ fun VehicleEditScreen(nav: NavHostController, id: String?) {
                 SecondaryButton("Decode VIN", "search") {
                     scope.launch {
                         try {
-                            val res = withContext(Dispatchers.IO) {
-                                JsonFormat.parseToJsonElement(Api(repo.store).send("POST", "/api/vin/decode", JsonObject(mapOf("vin" to JsonPrimitive(vin))))).jsonObject
+                            if (repo.store.mode == "server") {
+                                // Connected: ask the computer/server (it also checks a paid spec service if configured).
+                                val res = withContext(Dispatchers.IO) {
+                                    JsonFormat.parseToJsonElement(Api(repo.store).send("POST", "/api/vin/decode", JsonObject(mapOf("vin" to JsonPrimitive(vin))))).jsonObject
+                                }
+                                val veh = res["vehicle"]!!.jsonObject
+                                veh["year"]?.jsonPrimitive?.content?.let { year = it }
+                                veh["make"]?.jsonPrimitive?.content?.let { make = it }
+                                veh["model"]?.jsonPrimitive?.content?.let { model = it }
+                                veh["trim"]?.jsonPrimitive?.content?.let { trim = it }
+                                veh["kind"]?.jsonPrimitive?.content?.let { kind = it }
+                                decodedSpecs = res["specs"]!!.jsonArray.map { it.jsonObject["key"]!!.jsonPrimitive.content to it.jsonObject["value"]!!.jsonPrimitive.content }
+                            } else {
+                                // Phone only: ask NHTSA directly (only the VIN is sent).
+                                val r = withContext(Dispatchers.IO) { Nhtsa.decode(vin) }
+                                r.year?.let { year = it.toString() }
+                                r.make?.let { make = it }
+                                r.model?.let { model = it }
+                                r.trim?.let { trim = it }
+                                r.kind?.let { kind = it }
+                                decodedSpecs = r.specs.toList()
+                                r.warning?.let { snack.showSnackbar(it) }
                             }
-                            val veh = res["vehicle"]!!.jsonObject
-                            veh["year"]?.jsonPrimitive?.content?.let { year = it }
-                            veh["make"]?.jsonPrimitive?.content?.let { make = it }
-                            veh["model"]?.jsonPrimitive?.content?.let { model = it }
-                            veh["trim"]?.jsonPrimitive?.content?.let { trim = it }
-                            veh["kind"]?.jsonPrimitive?.content?.let { kind = it }
-                            decodedSpecs = res["specs"]!!.jsonArray.map { it.jsonObject["key"]!!.jsonPrimitive.content to it.jsonObject["value"]!!.jsonPrimitive.content }
                             snack.showSnackbar("Filled from VIN. ${decodedSpecs.size} spec(s) will be saved as “From VIN”. Check them before saving.")
-                        } catch (e: Exception) { snack.showSnackbar("VIN decoding needs a connection: ${e.message}") }
+                        } catch (e: Exception) { snack.showSnackbar("VIN decoding needs an internet connection: ${e.message}") }
                     }
                 }
             }

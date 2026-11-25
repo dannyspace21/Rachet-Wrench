@@ -8,7 +8,7 @@ from __future__ import annotations
 import secrets
 
 from fastapi import APIRouter, Depends, HTTPException, Request, Response, status
-from sqlalchemy import select, update
+from sqlalchemy import func, select, update
 from sqlalchemy.orm import Session
 
 from .. import schemas
@@ -77,14 +77,48 @@ def login(body: schemas.LoginIn, request: Request, response: Response, db: Sessi
     if body.client == "android":
         result["token"] = token
     else:
-        max_age = settings.token_ttl_hours * 3600
-        response.set_cookie(SESSION_COOKIE, token, max_age=max_age, httponly=True,
-                            secure=settings.cookie_secure, samesite="strict", path="/")
-        # The CSRF cookie is readable by our own JavaScript (not HttpOnly) so
-        # it can copy it into the X-CSRF-Token header.
-        response.set_cookie(CSRF_COOKIE, secrets.token_urlsafe(24), max_age=max_age, httponly=False,
-                            secure=settings.cookie_secure, samesite="strict", path="/")
+        # HttpOnly session cookie + a CSRF cookie our own JavaScript can read
+        # (it copies it into the X-CSRF-Token header).
+        _set_web_cookies(response, token)
     return result
+
+
+def _set_web_cookies(response: Response, token: str) -> None:
+    settings = get_settings()
+    max_age = settings.token_ttl_hours * 3600
+    response.set_cookie(SESSION_COOKIE, token, max_age=max_age, httponly=True,
+                        secure=settings.cookie_secure, samesite="strict", path="/")
+    response.set_cookie(CSRF_COOKIE, secrets.token_urlsafe(24), max_age=max_age, httponly=False,
+                        secure=settings.cookie_secure, samesite="strict", path="/")
+
+
+@router.get("/setup-status")
+def setup_status(db: Session = Depends(get_db)) -> dict:
+    """Does this server still need its first account created on the web?"""
+    no_users = db.scalar(select(func.count()).select_from(User)) == 0
+    return {"needs_setup": no_users and bool(get_settings().setup_token)}
+
+
+@router.post("/setup")
+def first_run_setup(body: schemas.SetupIn, request: Request, response: Response, db: Session = Depends(get_db)) -> dict:
+    """Create the FIRST account.  Only works while there are no accounts, and
+    only with the one-time setup code the desktop app generated (it opens
+    this page with the code, so only the person at that computer has it)."""
+    settings = get_settings()
+    if not login_limiter.allow(client_ip(request), settings.login_rate_per_minute):
+        raise HTTPException(status.HTTP_429_TOO_MANY_REQUESTS, "Too many attempts. Wait a minute and try again.")
+    if db.scalar(select(func.count()).select_from(User)) != 0:
+        raise HTTPException(status.HTTP_409_CONFLICT, "Setup is already complete. Please sign in.")
+    if not settings.setup_token or not secrets.compare_digest(body.token, settings.setup_token):
+        raise HTTPException(status.HTTP_403_FORBIDDEN, "Invalid setup code. Restart the Ratchet Wrench app and try again.")
+    username = body.username.lower()
+    validate_new_password(body.password, username)
+    user = User(username=username, password_hash=hash_password(body.password), is_admin=True)
+    db.add(user)
+    db.commit()
+    token, row = create_token(db, user, "web")
+    _set_web_cookies(response, token)
+    return {"user": user_out(db, user)}
 
 
 @router.post("/logout")

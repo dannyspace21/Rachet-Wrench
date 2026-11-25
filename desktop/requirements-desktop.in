@@ -1,0 +1,6 @@
+# requirements-desktop.in — extra tools needed ONLY to build the desktop app
+# (never installed in the Docker image).  Locked with hashes in
+# requirements-desktop.txt:
+#   uv pip compile requirements-desktop.in --universal --generate-hashes --python-version 3.15 -o requirements-desktop.txt
+-c ../server/requirements.txt
+pyinstaller==6.22.3

@@ -13,19 +13,18 @@ import os
 from functools import lru_cache
 from pathlib import Path
 
+from .config import asset_path
+
 
 def _catalog_path() -> Path:
-    """Find catalog.json: an explicit setting, the Docker location, or the
-    repository layout (server/app/ -> ../../catalog)."""
-    candidates = [
-        Path(os.environ.get("RW_CATALOG_PATH", "")) if os.environ.get("RW_CATALOG_PATH") else None,
-        Path(__file__).resolve().parents[2] / "catalog" / "catalog.json",
-        Path("/app/catalog/catalog.json"),
-    ]
-    for c in candidates:
-        if c and c.is_file():
-            return c
-    raise FileNotFoundError("catalog.json not found; run catalog/build_catalog.py")
+    """Find catalog.json: an explicit setting, else the repo/Docker/desktop copy."""
+    explicit = os.environ.get("RW_CATALOG_PATH")
+    if explicit and Path(explicit).is_file():
+        return Path(explicit)
+    path = asset_path("catalog", "catalog.json")
+    if not path.is_file():
+        raise FileNotFoundError("catalog.json not found; run catalog/build_catalog.py")
+    return path
 
 
 @lru_cache(maxsize=1)

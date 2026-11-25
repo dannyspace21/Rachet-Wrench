@@ -13,7 +13,7 @@
 
 import { getMe } from "./api.js";
 import { mount, loading, showError, setPrefs, applyTheme } from "./ui.js";
-import { loginView } from "./views/login.js";
+import { loginView, setupView } from "./views/login.js";
 import { dashboardView } from "./views/dashboard.js";
 import { vehicleView, vehicleFormView } from "./views/vehicle.js";
 import { entryFormView, entryDetailView } from "./views/entry.js";
@@ -23,6 +23,7 @@ import { settingsView, iconsView } from "./views/settings.js";
 const UUID = "([0-9a-fA-F-]{36})";
 const routes = [
   [/^\/login$/, loginView, { public: true }],
+  [/^\/setup$/, setupView, { public: true }],
   [/^\/$/, dashboardView, { nav: "home" }],
   [/^\/v\/new$/, vehicleFormView, { nav: "home" }],
   [new RegExp(`^/v/${UUID}/edit$`), vehicleFormView, { nav: "home" }],

@@ -68,6 +68,16 @@ class SecureStore(context: Context) {
             prefs.edit().putString("token_enc", Base64.encodeToString(out, Base64.NO_WRAP)).apply()
         }
 
+    /**
+     * How the app is used:
+     *   ""        not chosen yet (shows the welcome screen)
+     *   "local"   phone only — no server, nothing leaves the phone
+     *   "server"  connected to the desktop app or a home server (syncs)
+     */
+    var mode: String
+        get() = prefs.getString("mode", "") ?: ""
+        set(v) = prefs.edit().putString("mode", v).apply()
+
     /** Server address, e.g. https://garage.tailnet-name.ts.net */
     var serverUrl: String
         get() = prefs.getString("server_url", "") ?: ""
@@ -117,11 +127,19 @@ class SecureStore(context: Context) {
     fun lastNotified(reminderId: String): Long = prefs.getLong("notified_$reminderId", 0)
     fun setLastNotified(reminderId: String, whenMs: Long) = prefs.edit().putLong("notified_$reminderId", whenMs).apply()
 
-    /** Forget everything except the server address and theme. */
+    /** Forget everything except the server address and theme (data is wiped separately). */
     fun signOut() {
         val keep = serverUrl to theme
         prefs.edit().clear().apply()
         serverUrl = keep.first
         theme = keep.second
+    }
+
+    /** Stop syncing but keep using the app on this phone with the same data. */
+    fun disconnectKeepData() {
+        token = null
+        lastSince = null
+        serverAiVision = false
+        mode = "local"
     }
 }

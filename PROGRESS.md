@@ -50,7 +50,13 @@ python3 catalog/build_catalog.py
 ```
 Build-sandbox notes: the sandbox blocks dl.google.com, api.osv.dev, semgrep.dev and vpic.nhtsa.dot.gov. Workarounds used: OSV offline DB (`OSV_OFFLINE=1`), local semgrep-rules clone (`SEMGREP_RULES_DIR`), Trivy with `TRIVY_DOCKER_OPTS` proxy settings, Android SDK copied from the `cimg/android` Docker image. Docker builds there need a temporary Dockerfile copy that routes apt through the proxy (not committed).
 
+## After the four phases
+- Logo redesigned: ratchet and open-end wrench crossed in an X.
+- Android: permanent release signing + automatic GitHub Releases + Obtainium auto-updates (`docs/ANDROID-UPDATES.md`). The owner still has to add the 4 signing secrets.
+- Three ways to use it: phone only (Android phone-only mode), computer only (desktop app in `desktop/`, built for Windows/macOS/Linux by `.github/workflows/desktop.yml`), and phone ⇄ computer sync (phone connects to the desktop app). Home server (Docker) unchanged. See `docs/DESKTOP.md`.
+
 ## Ideas for later (not started)
+- Code-sign the desktop app (paid Apple/Microsoft certificates) to remove first-launch warnings; add an Intel-Mac build if needed.
 - Run the Android app on a real device/emulator and add phone screenshots to the README (no emulator was available in the build sandbox).
 - Database migrations with Alembic once the schema needs to change.
 - A specific paid VIN-spec provider class (plug-in point exists in `server/app/vin.py`).

@@ -29,3 +29,5 @@ android/app/release/
 scan-results/
 *.jks
 *.keystore
+desktop/build/
+desktop/dist/

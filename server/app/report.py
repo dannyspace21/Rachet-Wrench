@@ -26,6 +26,7 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from .catalog import load_catalog, spec_label, type_label
+from .config import asset_path
 from .models import Attachment, Entry, User, Vehicle, VehicleSpec
 from .uploads import file_path
 
@@ -38,11 +39,8 @@ REPAIR = (220, 38, 38)  # red for repairs
 
 
 def _repo_dir(name: str) -> Path:
-    """Locate /icons or /brand both in the repo layout and in Docker."""
-    for base in (Path(__file__).resolve().parents[2], Path("/app")):
-        if (base / name).is_dir():
-            return base / name
-    return Path(__file__).resolve().parents[2] / name
+    """Locate /icons or /brand — repo, Docker or desktop app."""
+    return asset_path(name)
 
 
 _REPLACEMENTS = {"—": "-", "–": "-", "‘": "'", "’": "'", "“": '"', "”": '"',

@@ -25,6 +25,7 @@ import com.ratchetwrench.app.ui.screens.SettingsScreen
 import com.ratchetwrench.app.ui.screens.StickerScreen
 import com.ratchetwrench.app.ui.screens.VehicleEditScreen
 import com.ratchetwrench.app.ui.screens.VehicleScreen
+import com.ratchetwrench.app.ui.screens.WelcomeScreen
 
 val LocalRepo = staticCompositionLocalOf<Repository> { error("no repository") }
 
@@ -47,12 +48,30 @@ fun AppRoot() {
     val repo = remember { Repository(context.applicationContext) }
     var theme by remember { mutableStateOf(repo.store.theme) }
     val nav = rememberNavController()
-    val start = if (repo.store.token == null) "login" else "garage"
+    // First screen: phone-only users and connected users go straight to the
+    // garage; a brand-new install shows the welcome choice.  (Installs from
+    // before phone-only mode existed are "server" if they have a login.)
+    val start = when {
+        repo.store.mode == "local" -> "garage"
+        repo.store.token != null -> { if (repo.store.mode.isEmpty()) repo.store.mode = "server"; "garage" }
+        else -> "welcome"
+    }
 
     CompositionLocalProvider(LocalRepo provides repo, LocalSetTheme provides { t: String -> repo.store.theme = t; theme = t }) {
         RatchetTheme(theme) {
             NavHost(nav, startDestination = start) {
-                composable("login") { LoginScreen(onSignedIn = { theme = repo.store.theme; nav.navigate("garage") { popUpTo("login") { inclusive = true } } }) }
+                composable("welcome") {
+                    WelcomeScreen(
+                        onPhoneOnly = { repo.store.mode = "local"; nav.navigate("garage") { popUpTo(0) } },
+                        onConnect = { nav.navigate("login") },
+                    )
+                }
+                composable("login") {
+                    LoginScreen(
+                        onSignedIn = { theme = repo.store.theme; nav.navigate("garage") { popUpTo(0) } },
+                        onBack = if (nav.previousBackStackEntry != null) ({ nav.popBackStack() }) else null,
+                    )
+                }
                 composable("garage") { GarageScreen(nav) }
                 composable("vehicle/{id}") { VehicleScreen(nav, it.arguments!!.getString("id")!!) }
                 composable("vehicle-edit/{id}") { VehicleEditScreen(nav, it.arguments!!.getString("id")!!.takeIf { id -> id != "new" }) }
@@ -64,7 +83,7 @@ fun AppRoot() {
                 composable("scan-vin") { VinScanScreen(onResult = { vin -> nav.returnResult("vin", vin) }, onCancel = { nav.popBackStack() }) }
                 composable("capture") { CaptureScreen(onDone = { paths -> nav.returnResult("photos", ArrayList(paths)) }, onCancel = { nav.popBackStack() }) }
                 composable("settings") {
-                    SettingsScreen(nav, onSignedOut = { nav.navigate("login") { popUpTo(0) } })
+                    SettingsScreen(nav, onSignedOut = { nav.navigate("welcome") { popUpTo(0) } })
                 }
             }
         }

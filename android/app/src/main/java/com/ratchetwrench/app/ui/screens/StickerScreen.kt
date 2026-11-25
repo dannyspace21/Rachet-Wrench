@@ -152,7 +152,7 @@ fun StickerScreen(nav: NavHostController, vehicleId: String) {
             }
             if (photos.isNotEmpty()) {
                 PrimaryButton("Read stickers (on this phone)", "scan", Modifier.fillMaxWidth(), enabled = !busy) { readOnPhone() }
-                if (repo.store.serverAiVision) SecondaryButton("Try AI vision instead…", "warning", Modifier.fillMaxWidth(), enabled = !busy) { askAi = true }
+                if (repo.store.mode == "server" && repo.store.serverAiVision) SecondaryButton("Try AI vision instead…", "warning", Modifier.fillMaxWidth(), enabled = !busy) { askAi = true }
             }
             status?.let { Text(it, color = LocalExtra.current.muted) }
 

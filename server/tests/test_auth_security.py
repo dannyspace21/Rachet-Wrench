@@ -161,3 +161,34 @@ def test_cross_site_simple_form_posts_are_rejected(client):
     for ctype in ("text/plain", "application/x-www-form-urlencoded"):
         r = client.post("/api/auth/login", content=body, headers={"Content-Type": ctype})
         assert r.status_code == 422, ctype
+
+
+def test_first_run_setup_needs_code_and_only_works_once(app_env, monkeypatch):
+    """Desktop first-run setup: requires the one-time code, only while there
+    are no accounts, and never when the server has no setup code at all."""
+    from fastapi.testclient import TestClient
+
+    from app import config
+    from app.main import create_app
+
+    monkeypatch.setenv("RW_ADMIN_PASSWORD", "")
+    monkeypatch.setenv("RW_SETUP_TOKEN", "s" * 32)
+    config.get_settings.cache_clear()
+    with TestClient(create_app()) as c:
+        assert c.get("/api/auth/setup-status").json() == {"needs_setup": True}
+        bad = c.post("/api/auth/setup", json={"token": "x" * 32, "username": "dan", "password": "a-long-password"})
+        assert bad.status_code == 403
+        weak = c.post("/api/auth/setup", json={"token": "s" * 32, "username": "dan", "password": "short"})
+        assert weak.status_code == 400
+        ok = c.post("/api/auth/setup", json={"token": "s" * 32, "username": "dan", "password": "a-long-password"})
+        assert ok.status_code == 200 and ok.json()["user"]["is_admin"]
+        assert "rw_session" in c.cookies
+        again = c.post("/api/auth/setup", json={"token": "s" * 32, "username": "eve", "password": "a-long-password"})
+        assert again.status_code == 409
+        assert c.get("/api/auth/setup-status").json() == {"needs_setup": False}
+
+
+def test_setup_disabled_without_code(client):
+    assert client.get("/api/auth/setup-status").json() == {"needs_setup": False}
+    r = client.post("/api/auth/setup", json={"token": "x" * 32, "username": "eve", "password": "a-long-password"})
+    assert r.status_code in (403, 409)

@@ -29,7 +29,7 @@ from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
 from .catalog import load_catalog
-from .config import get_settings
+from .config import asset_path, get_settings
 from .database import get_db, init_db, session_scope
 from .models import User
 from .routers import attachments, auth, items, sync, vehicles
@@ -40,11 +40,8 @@ logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name
 
 
 def _repo_path(name: str) -> Path:
-    """Find a top-level folder (web, icons, brand) in the repo or in Docker."""
-    for base in (Path(__file__).resolve().parents[2], Path("/app")):
-        if (base / name).is_dir():
-            return base / name
-    return Path(__file__).resolve().parents[2] / name
+    """Find a top-level folder (web, icons, brand) — repo, Docker or desktop app."""
+    return asset_path(name)
 
 
 STATIC_DIR = Path(__file__).with_name("static")
@@ -70,7 +67,10 @@ def bootstrap() -> None:
     with session_scope() as db:
         if db.scalar(select(func.count()).select_from(User)) == 0:
             if len(settings.admin_password) < 10:
-                log.warning("No users exist yet. Set RW_ADMIN_PASSWORD (10+ characters) in .env and restart.")
+                if settings.setup_token:
+                    log.info("No account yet: waiting for first-run setup in the browser.")
+                else:
+                    log.warning("No users exist yet. Set RW_ADMIN_PASSWORD (10+ characters) in .env and restart.")
                 return
             db.add(User(username=settings.admin_username.strip().lower(),
                         password_hash=hash_password(settings.admin_password), is_admin=True))

@@ -68,6 +68,21 @@ class LogicTest {
         assertEquals("ok", Reminders.status(r, 11000, LocalDate.of(2025, 2, 1)).status)
     }
 
+    @Test fun nhtsaParsingMatchesServer() {
+        // Same sample as server/tests/test_features.py (NHTSA_SAMPLE).
+        val json = com.ratchetwrench.app.data.JsonFormat.parseToJsonElement(
+            "{\"ModelYear\":\"2014\",\"Make\":\"KIA\",\"Model\":\"Forte\",\"Trim\":\"\",\"VehicleType\":\"PASSENGER CAR\"," +
+                "\"DisplacementL\":\"1.8\",\"EngineCylinders\":\"4\",\"EngineConfiguration\":\"In-Line\",\"FuelTypePrimary\":\"Gasoline\"," +
+                "\"BodyClass\":\"Sedan/Saloon\",\"DriveType\":\"FWD/Front-Wheel Drive\",\"ErrorCode\":\"0\",\"ErrorText\":\"\"}",
+        ) as kotlinx.serialization.json.JsonObject
+        val r = com.ratchetwrench.app.data.Nhtsa.parse(json, "1HGCM82633A004352")
+        assertEquals(2014, r.year); assertEquals("Kia", r.make); assertEquals("Forte", r.model); assertEquals("car", r.kind)
+        assertNull(r.trim) // empty = unknown, never guessed
+        assertTrue(r.specs.getValue("engine").startsWith("1.8L"))
+        assertNull(r.specs["oil_type"])
+        assertNull(r.warning)
+    }
+
     @Test fun httpOnlyForHomeNetwork() {
         assertNull(UrlPolicy.problem("https://garage.example.ts.net", false))
         assertNotNull(UrlPolicy.problem("http://192.168.1.10:8000", false))

@@ -11,7 +11,16 @@
 
 ## What it does
 
-Ratchet Wrench keeps the complete history of your vehicles on **your own home server**: no accounts with outside companies, no ads, no tracking. You use it from a **web browser** or the **Android app**, which also works offline.
+Ratchet Wrench keeps the complete history of your vehicles **on your own devices**: no accounts with outside companies, no ads, no tracking. Use it any of these ways:
+
+| How | What you need | Guide |
+|---|---|---|
+| 📱 **Phone only** | The Android app — choose "Use on this phone only" | [Installing the Android app](#installing-the-android-app) |
+| 💻 **Computer only** | The desktop app for Windows, macOS or Linux; no server or Docker | [docs/DESKTOP.md](docs/DESKTOP.md) |
+| 📱 ⇄ 💻 **Phone + computer, synced** | Both of the above; tick "Allow my phone to sync" in the desktop app | [docs/DESKTOP.md § Sync](docs/DESKTOP.md#3-sync-with-your-phone-optional) |
+| 🏠 **Home server** (always on, for the whole family) | A home server with Docker | [Running the server](#running-the-server-on-your-home-server-docker) |
+
+You can start with the phone alone and connect it to a computer or server later: everything you've added is copied over.
 
 - **Vehicles:** cars and motorcycles with year, make, model, nickname, VIN, mileage and a photo.
 - **VIN:** type it, or **scan the VIN barcode** with the phone camera. The free US government (NHTSA) decoder fills in what it knows.
@@ -49,6 +58,10 @@ All screenshots were captured automatically from the running web app with the sa
 > **Android screenshots:** the build machine couldn't run an Android emulator (no hardware virtualization), so there are no phone screenshots yet. The Android app has the same screens and colors. See [Installing the Android app](#installing-the-android-app).
 
 ---
+
+## Using it on your computer (desktop app)
+
+Download the desktop app for Windows, macOS or Linux from the **Releases** page, unzip it and open it. There's nothing else to install. Step-by-step instructions, including syncing with your phone, are in **[docs/DESKTOP.md](docs/DESKTOP.md)**.
 
 ## Running the server on your home server (Docker)
 
@@ -106,10 +119,11 @@ The app needs **Android 10 or newer**.
 
 Full instructions, including the one-time signing-key setup the owner does first, are in **[docs/ANDROID-UPDATES.md](docs/ANDROID-UPDATES.md)**.
 
-**Signing in:** open **Ratchet Wrench** and enter:
-- **Server address:** your HTTPS address, e.g. `https://garage.your-tailnet.ts.net`
-- your username and password
-- Only if you have no HTTPS yet: tick "Allow plain HTTP on my home network" and use `http://192.168.x.x:8000`.
+**First start:** choose one of:
+- **"Use on this phone only"**: no computer or server needed, works fully offline. Everything stays on the phone, and the history report PDF is made on the phone. You can connect later from *Settings*.
+- **"Connect to my computer or home server"**: enter the address and your username and password.
+  - **Desktop app:** use the address shown in its window, e.g. `http://192.168.1.20:8077`, and tick "Allow plain HTTP on my home network".
+  - **Home server:** use your HTTPS address, e.g. `https://garage.your-tailnet.ts.net`.
 
 When asked, allow **notifications** (for reminders) and the **camera** (the first time you scan).
 
@@ -160,7 +174,8 @@ Every dependency is pinned and scanned with pip-audit, npm audit, OSV-Scanner, T
 
 | Folder | What's inside |
 |---|---|
-| `server/` | The API server (Python, FastAPI, SQLite) and its 57 automated tests |
+| `server/` | The API server (Python, FastAPI, SQLite) and its automated tests |
+| `desktop/` | The desktop app: a launcher that runs the same server on your computer, plus the packaging script |
 | `web/` | The web app (plain HTML/CSS/JavaScript, no third-party libraries) |
 | `android/` | The Android app (Kotlin, Jetpack Compose) |
 | `catalog/` | The shared list of maintenance types, spec fields and manufacturer links |

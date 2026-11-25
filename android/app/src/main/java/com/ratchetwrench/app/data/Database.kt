@@ -17,6 +17,10 @@ import kotlinx.coroutines.flow.Flow
 
 @Dao
 interface VehicleDao {
+    /** Mark every record as "needs sending" (used when connecting for the first time). */
+    @Query("UPDATE vehicles SET dirty = 1")
+    suspend fun markAllDirty()
+
     @Query("SELECT * FROM vehicles WHERE deleted_at IS NULL ORDER BY created_at")
     fun observeAll(): Flow<List<Vehicle>>
 
@@ -40,6 +44,10 @@ interface VehicleDao {
 
 @Dao
 interface SpecDao {
+    /** Mark every record as "needs sending" (used when connecting for the first time). */
+    @Query("UPDATE specs SET dirty = 1")
+    suspend fun markAllDirty()
+
     @Query("SELECT * FROM specs WHERE vehicle_id = :vehicleId AND deleted_at IS NULL")
     fun observeFor(vehicleId: String): Flow<List<Spec>>
 
@@ -60,6 +68,10 @@ interface SpecDao {
 
 @Dao
 interface EntryDao {
+    /** Mark every record as "needs sending" (used when connecting for the first time). */
+    @Query("UPDATE entries SET dirty = 1")
+    suspend fun markAllDirty()
+
     @Query("SELECT * FROM entries WHERE vehicle_id = :vehicleId AND deleted_at IS NULL ORDER BY date DESC, mileage DESC")
     fun observeFor(vehicleId: String): Flow<List<Entry>>
 
@@ -83,6 +95,10 @@ interface EntryDao {
 
 @Dao
 interface AttachmentDao {
+    /** Mark every record as "needs sending" (used when connecting for the first time). */
+    @Query("UPDATE attachments SET dirty = 1")
+    suspend fun markAllDirty()
+
     @Query("SELECT * FROM attachments WHERE entry_id = :entryId AND deleted_at IS NULL")
     fun observeForEntry(entryId: String): Flow<List<Attachment>>
 
@@ -107,6 +123,10 @@ interface AttachmentDao {
 
 @Dao
 interface ReminderDao {
+    /** Mark every record as "needs sending" (used when connecting for the first time). */
+    @Query("UPDATE reminders SET dirty = 1")
+    suspend fun markAllDirty()
+
     @Query("SELECT * FROM reminders WHERE deleted_at IS NULL")
     fun observeAll(): Flow<List<Reminder>>
 
@@ -133,6 +153,10 @@ interface ReminderDao {
 
 @Dao
 interface OdometerDao {
+    /** Mark every record as "needs sending" (used when connecting for the first time). */
+    @Query("UPDATE odometer SET dirty = 1")
+    suspend fun markAllDirty()
+
     @Query("SELECT * FROM odometer WHERE vehicle_id = :vehicleId AND deleted_at IS NULL ORDER BY date DESC")
     fun observeFor(vehicleId: String): Flow<List<OdometerReading>>
 
@@ -150,6 +174,10 @@ interface OdometerDao {
 
 @Dao
 interface PartDao {
+    /** Mark every record as "needs sending" (used when connecting for the first time). */
+    @Query("UPDATE parts SET dirty = 1")
+    suspend fun markAllDirty()
+
     @Query("SELECT * FROM parts WHERE vehicle_id = :vehicleId AND deleted_at IS NULL")
     fun observeFor(vehicleId: String): Flow<List<Part>>
 
@@ -178,6 +206,13 @@ abstract class AppDatabase : RoomDatabase() {
     abstract fun reminders(): ReminderDao
     abstract fun odometer(): OdometerDao
     abstract fun parts(): PartDao
+
+    /** Before the first sync with a server, queue everything made on this
+     *  phone so it is uploaded (photos taken here are queued separately). */
+    suspend fun markEverythingForUpload() {
+        vehicles().markAllDirty(); specs().markAllDirty(); entries().markAllDirty(); reminders().markAllDirty()
+        odometer().markAllDirty(); parts().markAllDirty()
+    }
 
     /** Remove every record (used when you sign out). */
     suspend fun wipe() = clearAllTables()

@@ -64,7 +64,8 @@ class SyncEngine(private val context: Context) {
 
     /** Run a full sync.  Throws on network/auth errors (the worker retries). */
     fun run() {
-        if (store.token == null || store.serverUrl.isBlank()) return
+        // Phone-only mode: nothing to sync, nothing leaves the phone.
+        if (store.mode != "server" || store.token == null || store.serverUrl.isBlank()) return
         push()
         uploadPhotos()
         pull()

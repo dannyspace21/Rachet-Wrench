@@ -1,7 +1,7 @@
 # requirements.in — the server's DIRECT dependencies, pinned to exact versions.
 # The full locked list (with every sub-dependency and its SHA-256 hash) is in
 # requirements.txt, generated with:
-#   uv pip compile requirements.in --generate-hashes --python-version 3.15 -o requirements.txt
+#   uv pip compile requirements.in --universal --generate-hashes --python-version 3.15 -o requirements.txt
 fastapi==0.165.0          # web framework (API, validation, OpenAPI docs)
 uvicorn==0.54.0           # web server that runs the app
 sqlalchemy==2.1.9         # database toolkit / ORM (parameterized queries only)
