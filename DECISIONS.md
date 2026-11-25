@@ -251,7 +251,7 @@ Every significant choice made while building Ratchet Wrench, and why. Written fo
   - **Checks before publishing:** it verifies the signature, refuses to publish a debug-signed APK, and fails clearly if the secrets are missing.
   - **Versions every release:** version code = run number × 1000, so it always increases, and the name is `1.0.<run>`.
   - **Publishes** a GitHub Release with the APK, `SHA256SUMS.txt` and the certificate fingerprint in the notes.
-- **Why Obtainium and not an in-app update checker:**
+- *(Superseded by D48: the app now updates itself; Obtainium is no longer used.)* **Why Obtainium and not an in-app update checker:**
   - **Obtainium** is a widely used open-source app that installs and updates apps straight from GitHub Releases.
   - An **in-app checker** would add a new outbound connection from Ratchet Wrench itself, against the "documented outbound connections only" rule, and duplicate what Obtainium already does well.
 - **Local builds** without the key still fall back to the debug key, so they install for testing, but they can't update a release-signed install.
@@ -308,3 +308,16 @@ The desktop app *is* the existing server plus web app, packaged to run on a PC. 
 ### D47. Lock files now cover every platform
 - `server/requirements.txt` is now compiled with `--universal`, so the same hash-locked file works on Linux (Docker), Windows and macOS (desktop builds).
 - The only new entry, `httpx2-jsfetch`, is marked for browser-Python (emscripten) only and is never installed on these platforms.
+
+### D48. The Android app updates itself (Obtainium dropped)
+- **What you asked for:** install once, then the app just updates itself. A third-party updater (Obtainium) was an extra step you didn't want.
+- **How it works:** on opening (at most every 6 hours), the app reads GitHub's "latest release". The tag `v1.0.N` means version code N × 1000, which matches the release workflow.
+  - **On Wi-Fi:** it downloads straight away.
+  - **On mobile data:** it shows an "Update available" banner and waits for a tap, because each update is about 70 MB.
+- **Checks before installing:** the SHA-256 must match `SHA256SUMS.txt`, the package name must match, the version must be newer, and the signing certificate must be identical. The app then installs through Android's `PackageInstaller` session API (no FileProvider needed).
+- **Why Android still asks to confirm:** Android always asks the user to confirm installs from outside an app store. `setRequireUserAction(USER_ACTION_NOT_REQUIRED)` (Android 12+) lets later updates go through without the prompt once the app is its own installer.
+- **Security:**
+  - **Outbound connection #4 (GitHub):** documented, and can be switched off in Settings. Only HTTPS and GitHub hosts are allowed, checked on every redirect. Debug builds never self-update.
+  - **The install-result receiver** isn't exported, so the confirm screen it opens can only come from Android's installer.
+  - **Permission:** `REQUEST_INSTALL_PACKAGES` is required for this.
+- **Desktop app:** it doesn't update itself yet. You download new versions from Releases (see docs/DESKTOP.md).

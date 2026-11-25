@@ -7,7 +7,7 @@
 #   3. checks the signature,
 #   4. publishes a GitHub Release "v1.0.<number>" with the APK and its
 #      SHA-256 checksum.
-# Phones running Obtainium watch these releases and update automatically
+# The installed app checks these releases when opened and updates itself
 # (see docs/ANDROID-UPDATES.md).  Each release gets a higher version number,
 # which Android requires for an update.
 #
@@ -108,7 +108,7 @@ jobs:
 
           Built automatically from commit ${GITHUB_SHA::7}.
 
-          - **Install / auto-update:** see [docs/ANDROID-UPDATES.md](https://github.com/${GITHUB_REPOSITORY}/blob/main/docs/ANDROID-UPDATES.md) (Obtainium).
+          - **Install / auto-update:** see [docs/ANDROID-UPDATES.md](https://github.com/${GITHUB_REPOSITORY}/blob/main/docs/ANDROID-UPDATES.md). Already installed? The app updates itself.
           - **Signing certificate SHA-256:** \`$CERT\`
           - **Checksums:** see \`SHA256SUMS.txt\`.
           EOF

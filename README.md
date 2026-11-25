@@ -112,12 +112,9 @@ Your database and photos live in the Docker volume `ratchet-data`. Back it up re
 
 The app needs **Android 10 or newer**.
 
-**Recommended: install with automatic updates (Obtainium)**
-1. Install **[Obtainium](https://github.com/ImranR98/Obtainium)**, a free, open-source app updater.
-2. In Obtainium, tap **Add App**, paste `https://github.com/dannyspace21/Rachet-Wrench`, and tap **Add**, then **Install**.
-3. That's it: every new version published on GitHub installs automatically.
+**Install once:** on your phone, open <https://github.com/dannyspace21/Rachet-Wrench/releases/latest>, tap the **`.apk`** file under *Assets*, then open it and tap **Install**. Android asks once to allow installs from your browser.
 
-Full instructions, including the one-time signing-key setup the owner does first, are in **[docs/ANDROID-UPDATES.md](docs/ANDROID-UPDATES.md)**.
+**Updates are automatic:** whenever you open the app, it checks for a newer version and installs it. It downloads on Wi-Fi; on mobile data it asks first. Android shows an "Update this app?" prompt; tap **Update**. Details: **[docs/ANDROID-UPDATES.md](docs/ANDROID-UPDATES.md)**.
 
 **First start:** choose one of:
 - **"Use on this phone only"**: no computer or server needed, works fully offline. Everything stays on the phone, and the history report PDF is made on the phone. You can connect later from *Settings*.

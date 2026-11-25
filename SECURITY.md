@@ -14,6 +14,7 @@ Ratchet Wrench contains **no telemetry, analytics, crash reporting, ads or "phon
 |---|---|---|---|---|
 | 1 | `https://vpic.nhtsa.dot.gov` (US government VIN decoder) | You press **Decode VIN**. The server or desktop app makes this call; in phone-only mode the phone calls it directly. | The VIN only | `RW_NHTSA_ENABLED=false` (server); in phone-only mode, just don't press Decode VIN |
 | 2 | **Your own** ntfy server (`RW_NTFY_URL`) | A reminder becomes due (if you turned push alerts on) | Reminder title, vehicle name, miles/days left | Leave `RW_NTFY_URL` empty (default) |
+| 4 | GitHub (`api.github.com`, `github.com`, GitHub's download servers) — **Android app only** | When you open the app (at most every 6 hours) or tap *Check for updates* | Nothing about you or your data: only standard requests to read the latest release and download the app | *Settings → App updates* → off |
 | 3 | `https://api.anthropic.com` (Claude AI) | Only if the server owner enabled AI vision **and** you choose it for a sticker scan after a warning | The sticker photo | Off by default (`RW_AI_VISION_ENABLED=false`) |
 
 Everything else stays on your server and your phone:
@@ -155,13 +156,18 @@ Everything else stays on your server and your phone:
   - requests can only go to the configured server
   - redirects are not followed
 - **Permissions and components (M8):**
-  - **permissions:** only INTERNET, CAMERA (requested when you open a scanner) and POST_NOTIFICATIONS, plus WorkManager's network-state, wake-lock and boot permissions for background sync
+  - **permissions:** only INTERNET, CAMERA (requested when you open a scanner), POST_NOTIFICATIONS and REQUEST_INSTALL_PACKAGES (for the app's own updates), plus WorkManager's network-state, wake-lock and boot permissions for background sync
   - **no storage, location, contacts or microphone access**; the gallery uses Android's photo picker
   - **only two exported components:** the launcher screen and WorkManager's job service (callable only by Android itself). Unused library components were removed.
 - **Privacy (M6):**
   - text and barcode recognition run on the phone
   - **ML Kit's Google usage-logging upload backend is removed** from the app manifest (verified in the final APK)
   - AI vision is optional, off unless the server owner enables it, and shows a third-party warning before anything is sent
+- **Self-updates:**
+  - the app installs its own updates through Android's PackageInstaller, using the `REQUEST_INSTALL_PACKAGES` permission (you allow "Install unknown apps" once)
+  - **before installing, it requires** that the download matches the SHA-256 checksum published with the release, has the same package name and a newer version, and is **signed with exactly the same certificate as the installed app**; anything else is deleted
+  - **downloads** come only over HTTPS from GitHub hosts, which are allow-listed and re-checked on every redirect
+  - the install-result receiver isn't exported
 - **Release signing and updates:**
   - releases are signed with one permanent RSA-4096 key
   - the key exists only as encrypted GitHub secrets plus your offline backup, never in the repository

@@ -48,6 +48,8 @@ import com.ratchetwrench.app.ui.SectionCard
 import com.ratchetwrench.app.ui.StatusPill
 import com.ratchetwrench.app.ui.TypeBadge
 import com.ratchetwrench.app.ui.UiIcon
+import com.ratchetwrench.app.ui.UpdateBanner
+import com.ratchetwrench.app.update.Updater
 import com.ratchetwrench.app.ui.miles
 import com.ratchetwrench.app.ui.money
 import com.ratchetwrench.app.ui.prettyDate
@@ -85,7 +87,10 @@ fun GarageScreen(nav: NavHostController) {
         syncError = try { withContext(Dispatchers.IO) { SyncEngine(ctx).run() }; null } catch (e: Exception) { "Offline — showing saved data. (${e.message})" }
         refreshing = false
     }
-    LaunchedEffect(Unit) { refresh() }
+    LaunchedEffect(Unit) {
+        Updater.autoCheck(ctx) // app updates (at most every 6 hours)
+        refresh()
+    }
 
     val due = reminders.mapNotNull { r -> byId[r.vehicle_id]?.let { v -> Triple(r, v, Reminders.status(r, v.current_mileage)) } }
         .filter { it.third.status == "overdue" || it.third.status == "due_soon" }
@@ -105,6 +110,7 @@ fun GarageScreen(nav: NavHostController) {
         PullToRefreshBox(isRefreshing = refreshing, onRefresh = { scope.launch { refresh() } }, modifier = Modifier.padding(pad)) {
             LazyColumn(Modifier.fillMaxSize(), contentPadding = androidx.compose.foundation.layout.PaddingValues(16.dp, 8.dp, 16.dp, 96.dp),
                 verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                item { UpdateBanner() }
                 syncError?.let { item { Text(it, color = LocalExtra.current.muted, style = MaterialTheme.typography.bodySmall) } }
                 if (vehicles.isEmpty()) item {
                     SectionCard {

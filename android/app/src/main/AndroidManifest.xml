@@ -3,7 +3,8 @@
   AndroidManifest.xml — what the app is allowed to do.
 
   Permissions (only what is needed):
-    INTERNET            talk to YOUR Ratchet Wrench server
+    INTERNET            talk to YOUR Ratchet Wrench server (and GitHub for app updates)
+    REQUEST_INSTALL_PACKAGES  install the app's own updates (you confirm)
     CAMERA              scan the VIN barcode, door stickers and take photos
     POST_NOTIFICATIONS  show maintenance reminders (asked at runtime)
   No location, contacts, storage or microphone access.  Gallery photos use
@@ -22,6 +23,9 @@
     <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.CAMERA" />
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+    <!-- Lets the app install its OWN updates from your GitHub Releases
+         (Android still asks you to confirm; see update/Updater.kt). -->
+    <uses-permission android:name="android.permission.REQUEST_INSTALL_PACKAGES" />
     <uses-feature android:name="android.hardware.camera" android:required="false" />
     <!-- Added by WorkManager but not needed (we never run a foreground service). -->
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" tools:node="remove" />
@@ -64,6 +68,10 @@
         <service android:name="androidx.work.impl.foreground.SystemForegroundService" tools:node="remove" />
         <receiver android:name="androidx.work.impl.diagnostics.DiagnosticsReceiver" tools:node="remove" />
         <receiver android:name="androidx.profileinstaller.ProfileInstallReceiver" tools:node="remove" tools:ignore="MissingClass" />
+
+        <!-- Receives the result of installing an app update.  Not exported:
+             only Android's installer can reach it (via our PendingIntent). -->
+        <receiver android:name=".update.InstallResultReceiver" android:exported="false" />
 
         <!-- Reviewed: the launcher activity must be exported so Android can
              open the app from its icon.  It accepts no data from other apps. -->

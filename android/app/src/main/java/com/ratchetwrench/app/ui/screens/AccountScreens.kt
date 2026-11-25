@@ -49,6 +49,7 @@ import com.ratchetwrench.app.ui.SecondaryButton
 import com.ratchetwrench.app.ui.SectionCard
 import com.ratchetwrench.app.ui.Segmented
 import com.ratchetwrench.app.ui.TopBar
+import com.ratchetwrench.app.ui.UpdateSettingsCard
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -212,6 +213,7 @@ fun SettingsScreen(nav: NavHostController, onSignedOut: () -> Unit) {
                     PrimaryButton("Connect to my computer or server", "sync") { nav.navigate("login") }
                 }
             }
+            UpdateSettingsCard()
             message?.let { Text(it, color = LocalExtra.current.muted) }
             if (repo.store.mode == "server") SectionCard {
                 Text("Account", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
