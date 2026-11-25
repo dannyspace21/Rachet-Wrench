@@ -1,0 +1,37 @@
+<!doctype html>
+<!--
+  index.html — the single page of the Ratchet Wrench web app.
+  All screens are drawn by js/app.js inside <main>.  There are no inline
+  scripts or styles and no third-party files, so the strict
+  Content-Security-Policy set by the server can block injected code.
+-->
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="color-scheme" content="light dark">
+  <meta name="theme-color" content="#EA580C">
+  <title>Ratchet Wrench</title>
+  <link rel="icon" href="/brand/favicon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="/css/app.css">
+  <!-- Applies your saved Light/Dark/System choice before the page paints. -->
+  <script src="/theme.js"></script>
+  <script type="module" src="/js/app.js"></script>
+</head>
+<body>
+  <a class="skip-link" href="#main">Skip to content</a>
+  <header class="topbar" id="topbar" hidden>
+    <a class="brand" href="#/" aria-label="Ratchet Wrench home">
+      <img src="/brand/logo-mark.svg" alt="" width="36" height="36">
+      <span>Ratchet Wrench</span>
+    </a>
+    <nav class="nav" aria-label="Main">
+      <a href="#/" data-nav="home"><svg class="i" aria-hidden="true"><use href="/icons/sprite.svg#u-home"></use></svg><span>Garage</span></a>
+      <a href="#/icons" data-nav="icons"><svg class="i" aria-hidden="true"><use href="/icons/sprite.svg#u-grid"></use></svg><span>Icons</span></a>
+      <a href="#/settings" data-nav="settings"><svg class="i" aria-hidden="true"><use href="/icons/sprite.svg#u-settings"></use></svg><span>Settings</span></a>
+    </nav>
+  </header>
+  <main id="main" tabindex="-1"></main>
+  <div id="toasts" class="toasts" role="status" aria-live="polite"></div>
+</body>
+</html>
