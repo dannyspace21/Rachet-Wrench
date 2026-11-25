@@ -1,0 +1,14 @@
+# requirements.in — the server's DIRECT dependencies, pinned to exact versions.
+# The full locked list (with every sub-dependency and its SHA-256 hash) is in
+# requirements.txt, generated with:
+#   uv pip compile requirements.in --generate-hashes --python-version 3.15 -o requirements.txt
+fastapi==0.165.0          # web framework (API, validation, OpenAPI docs)
+uvicorn==0.54.0           # web server that runs the app
+sqlalchemy==2.1.9         # database toolkit / ORM (parameterized queries only)
+python-multipart==0.0.34  # file-upload (multipart form) parsing
+argon2-cffi==25.1.0       # Argon2id password hashing
+pillow==13.0.0            # image decoding/re-encoding (strips EXIF/GPS)
+pillow-heif==1.9.0        # HEIC photo support for Pillow
+pypdf==7.1.1              # reading PDFs (Carfax import, manual page count)
+fpdf2==2.9.0              # generating the history report PDF
+anthropic==2.14.0         # official SDK, used ONLY by the optional AI vision mode

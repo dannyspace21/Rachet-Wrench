@@ -1,0 +1,12 @@
+{
+  "name": "ratchet-wrench-vendor",
+  "private": true,
+  "description": "Pinned third-party browser assets that are copied into the server (Swagger UI for the API docs page). Run: npm ci && npm run copy",
+  "license": "UNLICENSED",
+  "scripts": {
+    "copy": "node copy-assets.mjs"
+  },
+  "dependencies": {
+    "swagger-ui-dist": "5.36.0"
+  }
+}

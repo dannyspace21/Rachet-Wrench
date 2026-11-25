@@ -1,0 +1,138 @@
+# Ratchet Wrench — Decisions
+
+Every significant choice made while building Ratchet Wrench, and why. Written for a non-programmer: each entry says what was picked, what the alternatives were, and the reason.
+
+---
+
+## Architecture
+
+### D1. Server language and framework: Python + FastAPI
+- **Chosen:** Python 3.15 with FastAPI.
+- **Why:** FastAPI is one of the most widely used, actively maintained Python web frameworks. It validates every request automatically and generates the browsable API documentation the brief asks for. Python lets the server reuse mature libraries for images (Pillow), PDFs (pypdf, fpdf2) and password hashing (argon2-cffi).
+- **Alternatives:** Node.js/Express (more dependencies for the same features), Go (fewer ready-made PDF/image libraries).
+
+### D2. Database: SQLite (one file)
+- **Chosen:** SQLite, stored in the Docker volume at `/data/ratchet-wrench.db`.
+- **Why:** For one household's vehicles, SQLite is fast and reliable, needs no separate database server, and backing up means copying one file. WAL mode, foreign keys and a busy timeout are turned on.
+- **Alternative:** PostgreSQL. It's more to run, update and secure, and has no benefit at this scale. The code uses SQLAlchemy, so switching later is a small change.
+- **Schema changes:** tables are created automatically on start. If a future version changes tables, add Alembic migrations then (not needed for v1).
+
+### D3. Web app: plain HTML/CSS/JavaScript with **zero** third-party JS libraries
+- **Why:** This removes the largest supply-chain risk in web development (hundreds of npm packages). There's no build step, and the strict Content-Security-Policy (`script-src 'self'`) can be kept. The UI is a small single-page app using hash routes (`#/vehicles/…`).
+- **Only exception:** Swagger UI (`swagger-ui-dist`, Apache-2.0), used for the login-protected API docs page. It is pinned, lock-filed, audited and copied into the server, so it never loads from a CDN.
+
+### D4. Login tokens: random opaque tokens stored as SHA-256 hashes (not JWT)
+- **Why:** Tokens can be revoked instantly (logout, password change), no signing secret has to be managed, and a stolen database can't be used to log in. Tokens expire after `RW_TOKEN_TTL_HOURS` (default 30 days).
+- **Web:** token in an `HttpOnly; Secure; SameSite=Strict` cookie, plus a double-submit CSRF token header on every change.
+- **Android:** the token comes back in the login response and is stored encrypted with an Android Keystore key.
+
+### D5. Password hashing: Argon2id (argon2-cffi defaults, RFC 9106 profile)
+- **Why:** Argon2id is the algorithm OWASP recommends first. Old hashes are re-hashed automatically if the parameters change.
+
+### D6. Login protection
+- Per-account lockout: 5 wrong passwords lock the account for 15 minutes.
+- Per-IP rate limit: 10 login attempts per minute.
+- The same error appears for "unknown user" and "wrong password", and the server spends the same time on both, so attackers can't discover usernames.
+- All limits can be changed in `.env`.
+
+### D7. Users and access control
+- Multiple accounts are supported. The first admin is created from `.env`, and admins can create more users.
+- Every record has an `owner_id`. Every query is filtered by it, and someone else's record answers "404 Not found", never "403 Forbidden", so IDs can't even be confirmed.
+
+### D8. Sync design (offline phone)
+- UUIDs for all IDs. `created_at`/`updated_at`/`deleted_at` on every record. Soft deletes.
+- `updated_at` = when the user edited it, used for "newest edit wins". `server_modified_at` = when the server stored it, used by `GET /api/sync?since=`. Keeping these separate means a phone with a wrong clock can't hide changes from other devices. Future timestamps are clamped to "now + 1 minute".
+- `next_since` overlaps by 5 seconds, so writes that commit during a sync are never missed. Records are idempotent, so repeats are harmless.
+- Photos upload separately in the background (`POST /api/attachments` with a phone-chosen UUID, which makes retries safe).
+
+### D9. Money stored as whole cents (integers)
+- **Why:** This avoids rounding errors (e.g. $0.10 + $0.20 ≠ $0.30 in floating point).
+
+### D10. Maintenance vs. repair
+- A single `entries` table with `kind = maintenance | repair`. They are shown with different colors and badges, can be filtered separately, and are totaled separately in the report.
+
+## Features
+
+### D11. VIN decoding through the server (not directly from the phone)
+- The NHTSA vPIC API is called by the server, so the documented list of outbound connections stays in one place.
+- A VIN is checked with the official check-digit formula first. European vehicles (including many motorcycles) don't always use the check digit, so a mismatch is a warning, not an error.
+- Only fields NHTSA actually returns are offered, labelled "From VIN". Nothing is guessed. For example, NHTSA does not provide oil type, so it stays blank.
+- **Paid spec API:** there's a plug-in interface (`SpecProvider` in `server/app/vin.py`) switched on by `RW_VIN_SPEC_PROVIDER`/`RW_VIN_SPEC_API_KEY`. None is bundled, because no specific provider was chosen.
+
+### D12. Door-sticker text recognition
+- **Android:** Google ML Kit on-device text recognition, *bundled* model (works offline, nothing leaves the phone).
+- **Web uploads:** Tesseract OCR from Debian's official package, running inside the server container. Tesseract only ever receives a grayscale PNG that Pillow freshly regenerated, never the uploaded file, and it runs with memory/CPU limits (see SECURITY.md for the unfixed Debian CVEs).
+- **Parsing:** one set of conservative rules, written in Python (`sticker_parser.py`) and mirrored in Kotlin (`StickerParser.kt`), tested against the same sample text. VINs must pass the check digit. Separate words are never glued together to "find" a VIN (a test caught this producing a fake VIN).
+- Every field goes to a review screen (confirm, edit or reject) before it is saved as "From door sticker".
+- Sticker photos are saved to the vehicle (category `sticker`).
+
+### D13. Optional AI vision for stickers: Anthropic Claude API, off by default
+- **Model:** `claude-opus-5-5` (the current default Claude model; changeable with `RW_AI_VISION_MODEL`).
+- **Library:** Anthropic's official Python SDK (`anthropic`). It is used instead of hand-written HTTP because the official SDK is the supported, maintained way to call the API. It is imported only when the mode is used.
+- **Requirements to turn it on:** `RW_AI_VISION_ENABLED=true` AND an API key. The app shows a clear warning that the photo is sent to a third party.
+- **How it's called:** structured JSON output (a schema with only the sticker field names), low effort (simple transcription), and server-side refusal fallback (`fallbacks: "default"`) so a rare false-positive refusal is retried on a fallback model automatically.
+- The answer is validated (known keys only, short strings) and still goes through the human review screen.
+
+### D14. Carfax import
+- The PDF text is extracted by pypdf in a separate, sandboxed process with memory, CPU and time limits and a page limit (60 pages for Carfax).
+- Records are split at dates and typed by keyword. "Title issued / offered for sale"-style rows are proposed as *not suggested*.
+- Costs are never invented (Carfax has none).
+- The user reviews every row before saving. The original PDF is kept on the vehicle.
+
+### D15. Manufacturer links (parts store and owner portal)
+- These are a fixed list of links per make in `catalog/build_catalog.py`. There is no scraping.
+- Where we couldn't confirm a parts store run by the manufacturer itself (Acura, Honda, Kia, Hyundai), the parts link falls back to the owner portal, never to a dealer site.
+- Every vehicle can override both links.
+- **Caveat:** the links could not be checked live from the build environment (no general web access). Verify them once and adjust the catalog if any have moved.
+
+### D16. Reminder logic
+- "Whichever comes first": due at `last mileage + N` miles OR `last date + M months`.
+- "Due soon" means within 500 miles or 30 days.
+- Logging a maintenance entry of the same type moves matching reminders forward automatically (only if that entry is newer).
+- Month arithmetic is calendar-correct (Jan 31 + 1 month = Feb 28/29).
+
+### D17. Alerts: no email
+- **Android:** local notifications computed on the phone (WorkManager), which work offline.
+- **Server:** optional ntfy push. A background task runs every `RW_REMINDER_CHECK_MINUTES`, and only if `RW_NTFY_URL` is set. Re-notifications are limited to once every 3 days per reminder and status.
+- An optional ntfy container is included in `docker-compose.yml` (profile `ntfy`).
+
+### D18. History report PDF: fpdf2
+- fpdf2 is maintained, pure Python, and can draw our SVG icons directly.
+- Built-in fonts are Latin-1 only, so other characters are replaced (e.g. "—" → "-"). This avoids bundling a font file.
+
+### D19. Uploads
+- **Allowed types:** JPEG, PNG, HEIC and PDF, detected by magic bytes. Pillow's decoder must agree with the detected type.
+- **Images** are re-encoded from pixels only. This removes EXIF/GPS/comments and anything appended after the image. HEIC is converted to JPEG for browser compatibility, and PNG stays PNG.
+- **Limit on image size:** 60 megapixels (decompression-bomb protection). Size limits come from `.env`.
+- **PDFs** are opened only in the sandboxed helper. They are served as downloads (`Content-Disposition: attachment`) so a browser PDF viewer never runs embedded content.
+- Files get random names (`<32 hex>.jpg`), are stored under `/data/uploads` (outside the web root) with 0600 permissions, and are never executed.
+- Deleting an attachment erases the file immediately.
+
+### D20. Seed data
+- Your five vehicles. The model years for the Lexus cars and the Ducati weren't given, so they're left blank. Only the 2014 Kia Forte has a year.
+- Specs were added only where certain for every model year (e.g. RC F = 5.0 L V8, Monster 696 = 696 cc twin), and even those are labelled "Unverified".
+- One sample part number, marked "Sample data — verify fitment".
+- The photos are simple drawn illustrations, not real photos.
+
+## Supply chain & tooling
+
+### D21. Exact pins and hash-locked installs
+- `server/requirements.in` lists the direct dependencies. `server/requirements.txt` is the full lock with SHA-256 hashes, generated by `uv pip compile --generate-hashes`.
+- Docker installs with `--require-hashes --only-binary=:all:`, so only those exact pre-built files are accepted and no build scripts run.
+- **Why requirements.txt rather than .lock:** it is the standard pip-tools name, which OSV-Scanner, pip-audit and Dependabot all recognize. An earlier `requirements.lock` name was silently skipped by OSV-Scanner.
+
+### D22. Docker base image: `python:3.15.2-slim-trixie`, pinned by digest
+- This is the official Python image, the latest stable Python, and the minimal "slim" variant. `apt-get upgrade` runs at build time to pull in Debian security fixes released after the image.
+- The container runs as uid 10001 with a read-only root filesystem, all Linux capabilities dropped, `no-new-privileges`, and memory and process limits (docker-compose.yml).
+
+### D23. npm install scripts disabled
+- `swagger-ui-dist` depends on `@scarf/scarf`, an install-time download-analytics package. `tools/vendor/.npmrc` sets `ignore-scripts=true`, so it never runs. The copied browser files contain no Scarf code (verified with grep).
+- Swagger UI's online validator badge is switched off (`validatorUrl: null`). The page's CSP would block it anyway.
+
+### D24. Security scanners and how they ran in the build sandbox
+- **Scanners:** pip-audit, npm audit, OSV-Scanner (offline database mode), Trivy (image and config), Semgrep (security rule folders from the official `semgrep/semgrep-rules` repository) and Gitleaks.
+- The build environment blocked semgrep.dev and api.osv.dev, so Semgrep used a local clone of the official rules and OSV-Scanner used its downloadable offline database. On your machine the script uses the online registries by default.
+- Semgrep runs with `--metrics=off` (no telemetry).
+
+### D25. GitHub Actions pinned to commit SHAs
+- CodeQL (`security-extended` queries; Python, JavaScript, GitHub Actions and Kotlin) and Dependabot (pip, npm, Gradle, Docker, docker-compose, GitHub Actions).

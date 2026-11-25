@@ -1,0 +1,28 @@
+# Secrets and local data — never commit these.
+.env
+*.db
+*.db-wal
+*.db-shm
+data/
+Caddyfile
+
+# Python / Node build leftovers
+__pycache__/
+*.pyc
+.pytest_cache/
+node_modules/
+.venv/
+
+# Android build output and local config
+android/.gradle/
+android/build/
+android/app/build/
+android/local.properties
+android/*.jks
+android/*.keystore
+android/app/release/
+*.apk
+!docs/**/*.apk
+.idea/
+*.iml
+scan-results/

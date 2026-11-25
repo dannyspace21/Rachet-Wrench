@@ -1,0 +1,26 @@
+# dependabot.yml — GitHub checks these dependency lists every week and opens
+# a pull request when a newer (or security-fixed) version is available.
+# Turn on "Dependabot alerts" and "Dependabot security updates" in the
+# repository's Settings -> Code security (see SECURITY.md).
+version: 2
+updates:
+  - package-ecosystem: "pip"          # server Python packages (requirements.in/.txt)
+    directory: "/server"
+    schedule: { interval: "weekly" }
+    open-pull-requests-limit: 10
+  - package-ecosystem: "npm"          # vendored Swagger UI (API docs page)
+    directory: "/tools/vendor"
+    schedule: { interval: "weekly" }
+  - package-ecosystem: "gradle"       # Android app libraries
+    directory: "/android"
+    schedule: { interval: "weekly" }
+    open-pull-requests-limit: 10
+  - package-ecosystem: "docker"       # server base image
+    directory: "/server"
+    schedule: { interval: "weekly" }
+  - package-ecosystem: "docker-compose"   # Caddy and ntfy images
+    directory: "/"
+    schedule: { interval: "weekly" }
+  - package-ecosystem: "github-actions"   # the actions used by our workflows
+    directory: "/"
+    schedule: { interval: "weekly" }

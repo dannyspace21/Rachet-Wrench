@@ -1,0 +1,13 @@
+# Only the server code and shared assets go into the image.
+.git
+android
+tools
+docs
+scripts
+**/node_modules
+**/__pycache__
+**/.pytest_cache
+server/tests
+*.md
+.env
+.env.*
