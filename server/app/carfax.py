@@ -80,7 +80,9 @@ def _guess_kind(text: str, type_key: str) -> str:
     if type_key in {"accident_damage", "general_repair", "recall", "tire_repair", "diagnostics"}:
         return "repair"
     # "replaced" on a normal wear item (filters, wipers...) is still maintenance.
-    wear = {"oil_change", "oil_filter", "air_filter", "cabin_filter", "wipers", "spark_plugs", "tire_rotation"}
+    wear = {"oil_change", "oil_filter", "air_filter", "cabin_filter", "wipers", "spark_plugs", "tire_rotation",
+            "tire_replacement", "wheel_alignment", "wheel_balance", "brake_fluid", "coolant", "transmission_fluid",
+            "fuel_filter", "serpentine_belt", "timing_belt", "lights_bulbs", "inspection", "emissions", "registration"}
     if type_key not in wear and any(h in low for h in REPAIR_HINTS):
         return "repair"
     return "maintenance"

@@ -7,10 +7,15 @@
 set -euo pipefail
 cd "$(dirname "$0")"
 PY="${PYTHON:-python3}"
+if curl -sf http://127.0.0.1:8099/api/health >/dev/null 2>&1; then
+  echo "Port 8099 is already in use (an old screenshot server?). Stop it first." >&2; exit 1
+fi
 DATA="$(mktemp -d)"
 "$PY" make_samples.py
-( cd ../../server && RW_DATA_DIR="$DATA" RW_ADMIN_PASSWORD=screenshot-password RW_COOKIE_SECURE=false \
-  RW_SEED_SAMPLE_DATA=true "$PY" -m uvicorn app.main:app --port 8099 >"$DATA/server.log" 2>&1 & echo $! > "$DATA/pid" )
+# "exec" makes the background process BE the server, so $! is its real PID.
+( cd ../../server && exec env RW_DATA_DIR="$DATA" RW_ADMIN_PASSWORD=screenshot-password RW_COOKIE_SECURE=false \
+  RW_SEED_SAMPLE_DATA=true "$PY" -m uvicorn app.main:app --port 8099 >"$DATA/server.log" 2>&1 ) &
+echo $! > "$DATA/pid"
 trap 'kill "$(cat "$DATA/pid")" 2>/dev/null || true; rm -rf "$DATA"' EXIT
 for _ in $(seq 1 30); do curl -sf http://127.0.0.1:8099/api/health >/dev/null && break; sleep 1; done
 node capture.cjs

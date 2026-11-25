@@ -9,7 +9,7 @@ A new session can read this file and continue where the last one stopped.
 | 1 | Server, database, API for all features | ✅ Done |
 | 2 | Logo, icon set, web app | ✅ Done |
 | 3 | Android app (offline sync, VIN barcode, sticker scan, local notifications) | ✅ Done (not run on a device: no emulator in build sandbox) |
-| 4 | Final security review, README, screenshots | ⏳ Next |
+| 4 | Final security review, README, screenshots | ✅ Done |
 
 ## Phase 1 — done
 - FastAPI server in `server/app` (see the top-of-file comments in each module).
@@ -32,6 +32,12 @@ A new session can read this file and continue where the last one stopped.
 - Build: `cd android && ANDROID_HOME=<sdk> ./gradlew assembleRelease lintRelease testDebugUnitTest` — all passing; 5 unit tests.
 - SDK in this sandbox: copied from the `cimg/android:2026.11.4` image to `/opt/android-sdk` (platforms 37.0/37.2, build-tools 37.0.0).
 
+## Phase 4 — done
+- Final security review: added tests for cross-site form posts and reviving deleted attachments (fixed); 57 server tests passing.
+- `SECURITY.md` (all measures, scanners, final results, unfixed Debian CVEs with risk/mitigation, how to rerun scans).
+- `README.md` for non-programmers with light/dark screenshots captured by `tools/screenshots/run.sh` (Playwright).
+- Final scans: all passing (pip-audit, npm audit, OSV-Scanner incl. Android lockfile, Trivy image + config, Semgrep, Gitleaks, Android lint).
+
 ## How to run things (for the next session)
 ```bash
 # tests
@@ -44,5 +50,8 @@ python3 catalog/build_catalog.py
 ```
 Build-sandbox notes: the sandbox blocks dl.google.com, api.osv.dev, semgrep.dev and vpic.nhtsa.dot.gov. Workarounds used: OSV offline DB (`OSV_OFFLINE=1`), local semgrep-rules clone (`SEMGREP_RULES_DIR`), Trivy with `TRIVY_DOCKER_OPTS` proxy settings, Android SDK copied from the `cimg/android` Docker image. Docker builds there need a temporary Dockerfile copy that routes apt through the proxy (not committed).
 
-## Next steps
-1. Phase 4: README with screenshots, SECURITY.md, final scans.
+## Ideas for later (not started)
+- Run the Android app on a real device/emulator and add phone screenshots to the README (no emulator was available in the build sandbox).
+- Database migrations with Alembic once the schema needs to change.
+- A specific paid VIN-spec provider class (plug-in point exists in `server/app/vin.py`).
+- Verify the manufacturer parts/owner-portal links in `catalog/build_catalog.py` (they couldn't be checked live from the sandbox).

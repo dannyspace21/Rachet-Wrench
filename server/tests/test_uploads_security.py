@@ -150,3 +150,12 @@ def test_deleting_attachment_erases_file(client, admin, app_env):
     att = _upload(client, admin, v["id"], _jpeg_with_gps()).json()
     assert client.delete(f"/api/attachments/{att['id']}", headers=admin).status_code == 200
     assert list((app_env / "data" / "uploads").rglob("*.jpg")) == []
+
+
+def test_deleted_attachment_cannot_be_revived(client, admin):
+    v = make_vehicle(client, admin)
+    att = _upload(client, admin, v["id"], _jpeg_with_gps()).json()
+    client.delete(f"/api/attachments/{att['id']}", headers=admin)
+    r = client.post("/api/attachments", headers=admin, data={"vehicle_id": v["id"], "id": att["id"]},
+                    files={"file": ("a.jpg", _jpeg_with_gps(), "image/jpeg")})
+    assert r.status_code == 404

@@ -152,3 +152,12 @@ def test_oversized_request_body_rejected(client, admin):
     big = b"x" * (200 * 1024 * 1024)
     r = client.post("/api/vehicles", content=big, headers={**admin, "Content-Type": "application/json"})
     assert r.status_code == 413
+
+
+def test_cross_site_simple_form_posts_are_rejected(client):
+    """A malicious website can send text/plain or form posts without a CORS
+    preflight; the API must only accept real JSON."""
+    body = '{"username":"admin","password":"correct-horse-battery"}'
+    for ctype in ("text/plain", "application/x-www-form-urlencoded"):
+        r = client.post("/api/auth/login", content=body, headers={"Content-Type": ctype})
+        assert r.status_code == 422, ctype

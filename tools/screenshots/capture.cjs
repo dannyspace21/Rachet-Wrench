@@ -47,7 +47,7 @@ for (const scheme of ["light", "dark"]) {
   // Door-jamb sticker: upload the sample and show the review screen.
   await page.goto(BASE + `/#/v/${rc.id}/sticker`);
   await page.setInputFiles("input[type=file]", join(here, "sample-sticker.png"));
-  await page.click("text=Read stickers");
+  await page.click("button:has-text(\"Read stickers\")");
   await page.waitForSelector(".review-row", { timeout: 60000 });
   await page.evaluate(() => document.querySelector(".review-row").scrollIntoView({ block: "center" }));
   await shot(page, "sticker-review", scheme);
@@ -57,7 +57,9 @@ for (const scheme of ["light", "dark"]) {
   await page.click(".type-opt >> text=Brake pads");
   await page.click(".seg >> text=Repair");
   await page.fill("input[placeholder='What was done?']", "Front pads and rotors replaced");
-  await page.setInputFiles("input[type=file]", [join(here, "sample-sticker.png")]);
+  await page.fill("input[inputmode=decimal]", "412.80");
+  await page.setInputFiles("input[type=file]", [join(here, "sample-brake-before.jpg"), join(here, "sample-brake-after.jpg")]);
+  await page.evaluate(() => document.querySelector(".previews").scrollIntoView({ block: "center" }));
   await shot(page, "add-entry", scheme);
 
   // Icon set.
@@ -66,7 +68,7 @@ for (const scheme of ["light", "dark"]) {
   // Carfax review.
   await page.goto(BASE + `/#/v/${rc.id}/carfax`);
   await page.setInputFiles("input[type=file]", join(here, "sample-carfax.pdf"));
-  await page.click("text=Read report");
+  await page.click("button:has-text(\"Read report\")");
   await page.waitForSelector(".review-row", { timeout: 60000 });
   await page.evaluate(() => document.querySelector(".review-row").scrollIntoView({ block: "start" }));
   await shot(page, "carfax-review", scheme);

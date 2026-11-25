@@ -7,6 +7,9 @@
 # Settings and secrets come from the .env file next to this one
 # (copy .env.example to .env first).  Never put passwords in this file.
 
+# Fixed project name, so the data volume is always "ratchet-wrench_ratchet-data".
+name: ratchet-wrench
+
 services:
   ratchet-wrench:
     build:

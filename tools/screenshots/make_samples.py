@@ -49,7 +49,21 @@ def carfax() -> None:
     pdf.output(str(HERE / "sample-carfax.pdf"))
 
 
+def brake_photos() -> None:
+    """Two simple illustrations standing in for before/after photos."""
+    for name, pad in (("sample-brake-before.jpg", (110, 110, 110)), ("sample-brake-after.jpg", (214, 84, 40))):
+        img = Image.new("RGB", (1200, 900), (228, 232, 238))
+        d = ImageDraw.Draw(img)
+        d.ellipse([300, 150, 900, 750], fill=(150, 155, 160), outline=(60, 60, 60), width=8)
+        for r in range(130, 290, 22):
+            d.arc([600 - r, 450 - r, 600 + r, 450 + r], 0, 360, fill=(125, 130, 135), width=3)
+        d.ellipse([510, 360, 690, 540], fill=(90, 95, 100))
+        d.rounded_rectangle([750, 230, 930, 670], 50, fill=pad, outline=(30, 30, 30), width=6)
+        img.save(HERE / name, quality=85)
+
+
 if __name__ == "__main__":
+    brake_photos()
     sticker()
     carfax()
     print("samples written")

@@ -66,7 +66,7 @@ async def upload(
     if id:
         existing = db.get(Attachment, id)
         if existing is not None:
-            if existing.owner_id != user.id:
+            if existing.owner_id != user.id or existing.deleted_at is not None:
                 raise HTTPException(status.HTTP_404_NOT_FOUND, "Not found.")
             if existing.has_file:
                 return serialize(existing)
