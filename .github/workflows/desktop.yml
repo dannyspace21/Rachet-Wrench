@@ -59,7 +59,9 @@ jobs:
             if curl -sf http://127.0.0.1:8099/api/health; then echo " -> OK"; kill $! 2>/dev/null || true; exit 0; fi
             sleep 2
           done
-          echo "::error::The desktop app did not start."; exit 1
+          echo "::error::The desktop app did not start."
+          cat "$RUNNER_TEMP"/rwdata/*/desktop.log 2>/dev/null || true
+          exit 1
       - name: Package
         run: |
           cd desktop/dist

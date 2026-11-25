@@ -54,6 +54,11 @@ def main() -> None:
         "--collect-submodules=app",
         "--hidden-import=app.pdf_worker",
         "--collect-submodules=uvicorn",
+        # Argon2 password hashing loads cffi's compiled backend from C code,
+        # which PyInstaller can't see; on Windows the app fails to start
+        # ("DLL load failed while importing _ffi") without these.
+        "--hidden-import=_cffi_backend",
+        "--collect-binaries=_argon2_cffi_bindings",
         "--collect-all=pillow_heif",
         "--collect-data=fpdf",
         "--hidden-import=anthropic",  # optional AI vision mode
