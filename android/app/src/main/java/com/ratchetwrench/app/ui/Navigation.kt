@@ -32,6 +32,13 @@ val LocalRepo = staticCompositionLocalOf<Repository> { error("no repository") }
 /** Lets Settings change the theme for the whole app immediately. */
 val LocalSetTheme = staticCompositionLocalOf<(String) -> Unit> { {} }
 
+/**
+ * Run screen changes (go back / open a screen) on the main thread.  After
+ * saving, a coroutine can resume on another thread, and the navigation
+ * library throws if it's used off the main thread.
+ */
+suspend fun onMain(block: () -> Unit) = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Main.immediate) { block() }
+
 /** Read a value a child screen handed back, once. */
 fun <T> NavHostController.takeResult(key: String): T? =
     currentBackStackEntry?.savedStateHandle?.remove<T>(key)
@@ -51,10 +58,14 @@ fun AppRoot() {
     // First screen: phone-only users and connected users go straight to the
     // garage; a brand-new install shows the welcome choice.  (Installs from
     // before phone-only mode existed are "server" if they have a login.)
-    val start = when {
-        repo.store.mode == "local" -> "garage"
-        repo.store.token != null -> { if (repo.store.mode.isEmpty()) repo.store.mode = "server"; "garage" }
-        else -> "welcome"
+    // Decided ONCE per launch (remember): the navigation graph's start screen
+    // must not change while the app is running.
+    val start = remember {
+        when {
+            repo.store.mode == "local" -> "garage"
+            repo.store.token != null -> { if (repo.store.mode.isEmpty()) repo.store.mode = "server"; "garage" }
+            else -> "welcome"
+        }
     }
 
     CompositionLocalProvider(LocalRepo provides repo, LocalSetTheme provides { t: String -> repo.store.theme = t; theme = t }) {

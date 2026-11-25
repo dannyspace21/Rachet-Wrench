@@ -68,6 +68,11 @@ android {
     packaging {
         resources.excludes += setOf("/META-INF/{AL2.0,LGPL2.1}", "/META-INF/*.kotlin_module")
     }
+    testOptions {
+        // Screen tests (Robolectric) need the app's real resources.
+        unitTests.isIncludeAndroidResources = true
+        unitTests.all { it.maxHeapSize = "3g" }
+    }
     lint {
         abortOnError = true
         checkReleaseBuilds = true
@@ -145,4 +150,13 @@ dependencies {
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.11.0")
 
     testImplementation("junit:junit:4.13.2")
+    // Screen tests: run the real app's screens on the build machine
+    // (Robolectric) and tap through them like a user.  Test-only — never
+    // included in the app.
+    testImplementation(composeBom)
+    testImplementation("androidx.compose.ui:ui-test-junit4")
+    debugImplementation("androidx.compose.ui:ui-test-manifest")
+    testImplementation("org.robolectric:robolectric:4.18.1")
+    testImplementation("androidx.work:work-testing:2.12.0")
+    testImplementation("androidx.test:core-ktx:1.7.0")
 }

@@ -141,7 +141,7 @@ fun LoginScreen(onSignedIn: () -> Unit, onBack: (() -> Unit)? = null) {
                                 SyncEngine(appContext).run() // first full upload + download
                             }
                             pass = ""
-                            onSignedIn()
+                            com.ratchetwrench.app.ui.onMain { onSignedIn() }
                         } catch (e: Exception) {
                             error = e.message ?: "Sign-in failed."
                         } finally { busy = false }
@@ -215,6 +215,7 @@ fun SettingsScreen(nav: NavHostController, onSignedOut: () -> Unit) {
             }
             UpdateSettingsCard()
             message?.let { Text(it, color = LocalExtra.current.muted) }
+            AboutCard()
             if (repo.store.mode == "server") SectionCard {
                 Text("Account", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
                 Text("Signed in as ${repo.store.username}", color = MaterialTheme.colorScheme.onSurfaceVariant)
@@ -235,10 +236,42 @@ fun SettingsScreen(nav: NavHostController, onSignedOut: () -> Unit) {
                             repo.db.wipe()
                             repo.store.signOut()
                         }
-                        onSignedOut()
+                        com.ratchetwrench.app.ui.onMain { onSignedOut() }
                     }
                 }
             }
         }
+    }
+}
+
+/**
+ * About — what this app is, which version is installed, and exactly what it
+ * connects to.  Links open in the phone's browser (nothing is fetched here).
+ */
+@Composable
+fun AboutCard() {
+    val ctx = LocalContext.current
+    fun open(url: String) = runCatching {
+        ctx.startActivity(android.content.Intent(android.content.Intent.ACTION_VIEW, android.net.Uri.parse(url))
+            .addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK))
+    }
+    SectionCard {
+        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+            com.ratchetwrench.app.ui.AppLogo(48.dp)
+            Column {
+                Text("About Ratchet Wrench", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                Text("Version ${com.ratchetwrench.app.BuildConfig.VERSION_NAME} (${com.ratchetwrench.app.BuildConfig.VERSION_CODE})",
+                    color = MaterialTheme.colorScheme.onSurfaceVariant)
+            }
+        }
+        Text("A self-hosted maintenance and repair log for your cars and motorcycles. Free and open source.",
+            color = MaterialTheme.colorScheme.onSurfaceVariant)
+        Text("Privacy: no ads, no tracking, no analytics. The app only connects to: your own computer or server (if you " +
+            "connect one), the U.S. government NHTSA service (to decode a VIN, when you ask), and GitHub (to check for " +
+            "app updates). Crash details are kept on this phone only.",
+            color = MaterialTheme.colorScheme.onSurfaceVariant, style = MaterialTheme.typography.bodySmall)
+        SecondaryButton("Project page and help", "external") { open("https://github.com/dannyspace21/Rachet-Wrench") }
+        SecondaryButton("Report a problem", "warning") { open("https://github.com/dannyspace21/Rachet-Wrench/issues") }
+        SecondaryButton("Security and privacy details", "book") { open("https://github.com/dannyspace21/Rachet-Wrench/blob/main/SECURITY.md") }
     }
 }

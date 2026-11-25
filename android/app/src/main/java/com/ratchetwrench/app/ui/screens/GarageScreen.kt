@@ -35,6 +35,8 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavHostController
 import com.ratchetwrench.app.CrashLog
@@ -64,7 +66,7 @@ import kotlinx.coroutines.withContext
 fun TopBarImpl(title: String, onBack: (() -> Unit)?, actions: @Composable () -> Unit) {
     TopAppBar(
         title = { Text(title, fontWeight = FontWeight.Bold, maxLines = 1) },
-        navigationIcon = { if (onBack != null) IconButton(onBack) { UiIcon("chevron_left") } },
+        navigationIcon = { if (onBack != null) IconButton(onBack) { UiIcon("chevron_left", description = "Back") } },
         actions = { actions() },
         colors = TopAppBarDefaults.topAppBarColors(containerColor = MaterialTheme.colorScheme.background),
     )
@@ -118,11 +120,18 @@ fun GarageScreen(nav: NavHostController) {
     Scaffold(
         topBar = {
             TopBarImpl("Garage", null) {
-                IconButton({ nav.navigate("settings") }) { UiIcon("settings") }
+                // Labelled (not just a gear) so Settings & About are easy to find.
+                androidx.compose.material3.TextButton({ nav.navigate("settings") }) {
+                    UiIcon("settings", Modifier.size(20.dp), MaterialTheme.colorScheme.primary)
+                    Spacer(Modifier.size(6.dp))
+                    Text("Settings")
+                }
             }
         },
         floatingActionButton = {
-            ExtendedFloatingActionButton(onClick = { nav.navigate("vehicle-edit/new") }, icon = { UiIcon("plus", tint = MaterialTheme.colorScheme.onPrimaryContainer) },
+            ExtendedFloatingActionButton(onClick = { nav.navigate("vehicle-edit/new") },
+                // Material 3 doesn't pass the button's text on to screen readers; say it explicitly.
+                modifier = Modifier.semantics { contentDescription = "Add vehicle" }, icon = { UiIcon("plus", tint = MaterialTheme.colorScheme.onPrimaryContainer) },
                 text = { Text("Add vehicle") })
         },
     ) { pad ->

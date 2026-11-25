@@ -129,7 +129,7 @@ fun VehicleScreen(nav: NavHostController, id: String) {
     val ownersUrl = v.owners_url.ifBlank { links.owners ?: "" }
 
     Scaffold(
-        topBar = { TopBar(v.displayName(), onBack = { nav.popBackStack() }) { IconButton({ nav.navigate("vehicle-edit/$id") }) { UiIcon("edit") } } },
+        topBar = { TopBar(v.displayName(), onBack = { nav.popBackStack() }) { IconButton({ nav.navigate("vehicle-edit/$id") }) { UiIcon("edit", description = "Edit vehicle") } } },
         snackbarHost = { SnackbarHost(snack) },
     ) { pad ->
         Column(Modifier.fillMaxSize().padding(pad)) {
@@ -413,7 +413,7 @@ private fun OdometerTab(v: Vehicle) {
                     Text(miles(r.mileage, v.mileage_unit), fontWeight = FontWeight.Bold)
                     Text(prettyDate(r.date), color = LocalExtra.current.muted)
                 }
-                IconButton({ scope.launch { repo.deleteOdometer(r.id) } }) { UiIcon("trash") }
+                IconButton({ scope.launch { repo.deleteOdometer(r.id) } }) { UiIcon("trash", description = "Delete reading") }
             }
         }
     }
@@ -503,8 +503,10 @@ fun VehicleEditScreen(nav: NavHostController, id: String?) {
                         trim = trim.trim(), nickname = nick.trim(), current_mileage = mileage.toIntOrNull(), mileage_unit = unit)
                     repo.saveVehicle(v)
                     for ((k, value) in decodedSpecs) repo.saveSpec(v.id, k, value, "vin")
-                    nav.popBackStack()
-                    if (id == null) nav.navigate("vehicle/${v.id}")
+                    com.ratchetwrench.app.ui.onMain {
+                        nav.popBackStack()
+                        if (id == null) nav.navigate("vehicle/${v.id}")
+                    }
                 }
             }
             if (id != null) SecondaryButton("Delete vehicle", "trash", Modifier.fillMaxWidth()) { confirmDelete = true }
@@ -512,6 +514,6 @@ fun VehicleEditScreen(nav: NavHostController, id: String?) {
     }
     if (confirmDelete) AlertDialog(onDismissRequest = { confirmDelete = false }, title = { Text("Delete vehicle?") },
         text = { Text("This deletes the vehicle and all of its records and photos.") },
-        confirmButton = { TextButton({ scope.launch { repo.deleteVehicle(id!!); nav.popBackStack("garage", false) } }) { Text("Delete", color = MaterialTheme.colorScheme.error) } },
+        confirmButton = { TextButton({ scope.launch { repo.deleteVehicle(id!!); com.ratchetwrench.app.ui.onMain { nav.popBackStack("garage", false) } } }) { Text("Delete", color = MaterialTheme.colorScheme.error) } },
         dismissButton = { TextButton({ confirmDelete = false }) { Text("Cancel") } })
 }

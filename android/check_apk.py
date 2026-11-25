@@ -9,6 +9,11 @@ crashed as soon as the VIN barcode scanner opened.  This script reads the
 APK's manifest and code and fails if any component that Android or ML Kit
 creates BY NAME is missing its no-argument constructor.
 
+It also checks that every icon drawable made by icons/build_icons.py is
+still inside the APK.  Version 1.0.10 shipped with the resource shrinker
+having deleted them (they were looked up by name), so the home screen and
+the Add-entry screen crashed on open.
+
 Usage: python3 android/check_apk.py <app-release.apk> <android-build-tools-dir>
 """
 
@@ -29,6 +34,7 @@ def main() -> int:
     registrars = set(re.findall(r'"com\.google\.firebase\.components:([A-Za-z0-9_.$]+)"', manifest))
     # The CameraX config provider is also created by name.
     registrars |= set(re.findall(r'value\(0x01010024\)="(androidx\.camera\.[A-Za-z0-9_.$]+Provider)"', manifest))
+    failures = check_icons(apk, tools)
     if not registrars:
         print("No by-name components found (unexpected).")
         return 1
@@ -42,7 +48,6 @@ def main() -> int:
                 dump.append(subprocess.run([str(tools / "dexdump"), path], capture_output=True, text=True).stdout)  # nosemgrep
     text = "\n".join(dump)
 
-    failures = []
     for cls in sorted(registrars):
         descriptor = "L" + cls.replace(".", "/") + ";"
         start = text.find(f"Class descriptor  : '{descriptor}'")
@@ -58,6 +63,21 @@ def main() -> int:
     for f in failures:
         print(f"FAIL {f}")
     return 1 if failures else 0
+
+
+def check_icons(apk: Path, tools: Path) -> list:
+    """Every icons/types/*.svg and icons/ui/*.svg must exist as a drawable."""
+    root = Path(__file__).resolve().parent.parent / "icons"
+    wanted = {f"ic_type_{p.stem}" for p in (root / "types").glob("*.svg")}
+    wanted |= {f"ic_ui_{p.stem}" for p in (root / "ui").glob("*.svg")}
+    wanted |= {"ic_launcher_foreground"}
+    # Reviewed: fixed SDK program + file path as a list, no shell.
+    res = subprocess.run([str(tools / "aapt2"), "dump", "resources", str(apk)],  # nosemgrep
+                         capture_output=True, text=True, check=True).stdout
+    present = set(re.findall(r"drawable/([a-z0-9_]+)", res))
+    missing = sorted(wanted - present)
+    print(f"icons: {len(wanted) - len(missing)} of {len(wanted)} present")
+    return [f"drawable {m} missing (resource shrinker removed it?)" for m in missing]
 
 
 if __name__ == "__main__":

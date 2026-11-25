@@ -166,7 +166,7 @@ fun EntryEditScreen(nav: NavHostController, vehicleId: String, entryId: String?)
                 photos.forEach { p ->
                     Box {
                         PhotoThumb(Attachment(id = p, localPath = p, content_type = mimeFor(p)), 88.dp)
-                        IconButton({ photos.remove(p); File(p).delete() }, Modifier.align(Alignment.TopEnd)) { UiIcon("x") }
+                        IconButton({ photos.remove(p); File(p).delete() }, Modifier.align(Alignment.TopEnd)) { UiIcon("x", description = "Remove photo") }
                     }
                 }
             }
@@ -180,7 +180,7 @@ fun EntryEditScreen(nav: NavHostController, vehicleId: String, entryId: String?)
                         performed_by = by, shop_name = if (by == "shop") shop.trim() else "", notes = notes)
                     repo.saveEntry(e, isNew = existing == null)
                     for (p in photos) repo.addPhoto(v.id, e.id, if (mimeFor(p) == "application/pdf") "receipt" else "photo", p, mimeFor(p), File(p).nameWithoutExtension.take(40))
-                    nav.popBackStack()
+                    com.ratchetwrench.app.ui.onMain { nav.popBackStack() }
                 }
             }
         }
@@ -201,8 +201,8 @@ fun EntryDetailScreen(nav: NavHostController, id: String) {
 
     Scaffold(topBar = {
         TopBar(e.custom_type.ifBlank { Catalog.typeLabel(ctx, e.type_key) }, onBack = { nav.popBackStack() }) {
-            IconButton({ nav.navigate("entry-edit/${e.vehicle_id}/${e.id}") }) { UiIcon("edit") }
-            IconButton({ confirm = true }) { UiIcon("trash") }
+            IconButton({ nav.navigate("entry-edit/${e.vehicle_id}/${e.id}") }) { UiIcon("edit", description = "Edit entry") }
+            IconButton({ confirm = true }) { UiIcon("trash", description = "Delete entry") }
         }
     }) { pad ->
         Column(Modifier.fillMaxSize().padding(pad).verticalScroll(rememberScrollState()).padding(16.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
@@ -231,6 +231,11 @@ fun EntryDetailScreen(nav: NavHostController, id: String) {
         }
     }
     if (confirm) AlertDialog(onDismissRequest = { confirm = false }, title = { Text("Delete entry?") }, text = { Text("The entry and its photos will be deleted.") },
-        confirmButton = { TextButton({ scope.launch { repo.deleteEntry(e.id) }; confirm = false; nav.popBackStack() }) { Text("Delete", color = MaterialTheme.colorScheme.error) } },
+        confirmButton = { TextButton({
+            // Delete FIRST, then leave: leaving the screen cancels its scope,
+            // which could otherwise cancel the delete before it runs.
+            confirm = false
+            scope.launch { repo.deleteEntry(e.id); com.ratchetwrench.app.ui.onMain { nav.popBackStack() } }
+        }) { Text("Delete", color = MaterialTheme.colorScheme.error) } },
         dismissButton = { TextButton({ confirm = false }) { Text("Cancel") } })
 }

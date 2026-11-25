@@ -16,7 +16,7 @@ import com.ratchetwrench.app.sync.ReminderWorker
 import com.ratchetwrench.app.sync.SyncWorker
 import com.ratchetwrench.app.ui.AppRoot
 
-class RatchetApp : Application() {
+open class RatchetApp : Application() {
     override fun onCreate() {
         super.onCreate()
         CrashLog.install(this)

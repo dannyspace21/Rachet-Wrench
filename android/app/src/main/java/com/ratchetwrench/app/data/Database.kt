@@ -224,5 +224,9 @@ abstract class AppDatabase : RoomDatabase() {
             instance ?: Room.databaseBuilder(context.applicationContext, AppDatabase::class.java, "ratchet-wrench.db")
                 .build().also { instance = it }
         }
+
+        /** Tests only: close the database so the next test starts fresh. */
+        @androidx.annotation.VisibleForTesting
+        fun resetForTests() = synchronized(this) { instance?.close(); instance = null }
     }
 }

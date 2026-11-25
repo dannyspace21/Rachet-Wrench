@@ -76,10 +76,12 @@ fun TypeBadge(typeKey: String, kind: String = "maintenance", size: Dp = 48.dp) {
 }
 
 @Composable
-fun UiIcon(name: String, modifier: Modifier = Modifier.size(22.dp), tint: Color = MaterialTheme.colorScheme.onSurface) {
-    val ctx = LocalContext.current
-    val id = ctx.resources.getIdentifier("ic_ui_$name", "drawable", ctx.packageName)
-    if (id != 0) Icon(painterResource(id), contentDescription = null, modifier = modifier, tint = tint)
+fun UiIcon(name: String, modifier: Modifier = Modifier.size(22.dp), tint: Color = MaterialTheme.colorScheme.onSurface,
+           description: String? = null) {
+    // Direct-reference table (see IconResources.kt); description = what a
+    // screen reader says for icon-only buttons.
+    val id = UI_ICON_RES[name] ?: return
+    Icon(painterResource(id), contentDescription = description, modifier = modifier, tint = tint)
 }
 
 @Composable

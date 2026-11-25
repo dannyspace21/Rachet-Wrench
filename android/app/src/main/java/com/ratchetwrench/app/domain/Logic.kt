@@ -105,9 +105,11 @@ object Catalog {
         return MakeLinks(parts = m.parts ?: m.owners, owners = m.owners)
     }
 
-    /** Drawable resource for a type icon (generated from the same SVGs). */
-    fun iconRes(context: Context, key: String): Int {
-        val id = context.resources.getIdentifier("ic_type_$key", "drawable", context.packageName)
-        return if (id != 0) id else context.resources.getIdentifier("ic_type_custom", "drawable", context.packageName)
-    }
+    /** Drawable for a type icon (generated from the same SVGs).  Uses the
+     *  generated direct-reference table — never a by-name lookup, which the
+     *  release build's resource shrinker can't see. Unknown keys get the
+     *  "Custom / other" icon. */
+    @Suppress("UNUSED_PARAMETER")
+    fun iconRes(context: Context, key: String): Int =
+        com.ratchetwrench.app.ui.TYPE_ICON_RES[key] ?: com.ratchetwrench.app.ui.TYPE_ICON_RES.getValue("custom")
 }

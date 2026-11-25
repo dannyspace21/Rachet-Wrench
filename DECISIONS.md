@@ -328,3 +328,28 @@ The desktop app *is* the existing server plus web app, packaged to run on a PC. 
 - **Fix:** keep rules in `app/proguard-rules.pro` that keep ML Kit, including the classes its native code calls by name. This adds about 1 MB.
 - **Regression guard:** `android/check_apk.py` runs in the release workflow and fails if any component that Android or ML Kit creates by name lacks its constructor. It was verified to flag the published v1.0.9 APK and to pass the fixed build.
 - **Local crash details:** the app saves the stack trace of any crash *on the phone only* (`last_crash.txt` in its private storage). On the next launch it offers **Copy details**. Nothing is sent anywhere, so problems can be reported precisely without adding telemetry.
+
+### D50. Crash fix: the release build had deleted every icon; screen tests added
+- **The crash (v1.0.10):** opening the app with a vehicle saved, and opening **Add entry**, crashed. The release build's resource shrinker had removed 123 of the 125 icon drawables. The app looked icons up *by name* at run time (`getIdentifier`), which the shrinker can't see, so it treated them as unused. Drawing a missing icon (`painterResource(0)`) crashes. It also explains why the Settings gear was invisible.
+- **Fix:**
+  - `icons/build_icons.py` now also generates `IconResources.kt`, which maps each type and UI icon key to a direct `R.drawable` reference. The compiler checks every icon exists, and the shrinker can see they are used. No by-name lookups remain in the app.
+  - A `res/raw/keep_icons.xml` (`tools:keep`) is a second safety net.
+  - An unknown type falls back to the "Custom" icon, and an unknown UI icon draws nothing — neither can crash.
+- **Regression guards:**
+  - `check_apk.py` now also fails the release if any icon from `icons/types` or `icons/ui` is missing from the APK. It flags v1.0.10 (2 of 125 present).
+  - New Robolectric screen tests (`ScreensTest.kt`) run the real app on the build machine and tap through it like a user:
+    - add, view, edit and delete an entry;
+    - every vehicle tab drawn with real data (odometer, specs, reminders, parts) and the history filters;
+    - the door-sticker screen and edit vehicle;
+    - Settings, theme switching and About;
+    - reopening the app with saved data;
+    - every catalog type has an icon.
+  - Camera screens need real hardware, so they rely on the APK check.
+  - The four small dialogs with a text box (Mileage, spec value, reminder, part) can't be opened under Robolectric: a bare Material dialog with one text field and none of our code never "settles" there. Their save code was reviewed by hand, and the data they save is inserted directly so the tabs are tested with it.
+  - Robolectric needs `nativeruntime-dist-compat`, a large file that Maven Central rate-limited from the build container. CI downloads it normally; locally it was taken from Google's official Maven Central mirror and its SHA-1 checked against Central's.
+- **Other fixes found in the review:**
+  - **Delete entry** left the screen before the delete ran, which could cancel it. The screen now deletes first, then leaves.
+  - The app's first screen is now decided once per launch instead of on every redraw.
+  - Going back or opening a screen after a save or delete now always runs on the main thread (`onMain`). The navigation library throws when used off it, and the tests caught a save resuming on another thread.
+  - The **Add vehicle** button now has an explicit screen-reader label: Material 3 1.5 doesn't pass its text on.
+- **Settings & About:** the Garage top bar now shows a labelled **Settings** button (not just a gear). Settings ends with an **About** card: version, what the app is, exactly what it connects to, and links to the project page, issue tracker and security notes. The links open in the browser; the app fetches nothing itself.

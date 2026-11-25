@@ -179,7 +179,7 @@ fun StickerScreen(nav: NavHostController, vehicleId: String) {
                         }
                         // Keep the sticker photos with the vehicle (unless AI mode already uploaded them).
                         if (!aiUsed) photos.forEach { repo.addPhoto(v.id, null, "sticker", it, "image/jpeg", "Door sticker") }
-                        nav.popBackStack()
+                        com.ratchetwrench.app.ui.onMain { nav.popBackStack() }
                     }
                 }
                 SecondaryButton("Reject all", modifier = Modifier.fillMaxWidth()) { proposals.clear() }
