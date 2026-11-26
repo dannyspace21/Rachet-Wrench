@@ -927,6 +927,19 @@
     "carfax": "From Carfax",
     "manual": "From owner's manual"
   },
+  "manual_specs": [
+    "oil_type",
+    "oil_capacity",
+    "coolant_type",
+    "coolant_capacity",
+    "transmission_fluid_type",
+    "transmission_fluid_capacity",
+    "brake_fluid_type",
+    "differential_fluid_type",
+    "fuel_capacity",
+    "spark_plug_part",
+    "lug_nut_torque"
+  ],
   "makes": {
     "Acura": {
       "parts": null,

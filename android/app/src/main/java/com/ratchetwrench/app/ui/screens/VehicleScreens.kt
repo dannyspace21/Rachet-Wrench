@@ -276,6 +276,7 @@ private fun SpecsTab(nav: NavHostController, v: Vehicle) {
     var editing by remember { mutableStateOf<Pair<String, Spec?>?>(null) }
     val carOnly = setOf("power_steering_fluid_type", "differential_fluid_type", "seating_capacity", "wiper_size_driver", "wiper_size_passenger", "tire_size_spare", "tire_pressure_spare")
     val bikeOnly = setOf("fork_oil_type", "chain_size", "sprocket_front", "sprocket_rear", "chain_slack")
+    val fromManual = Catalog.get(ctx).manual_specs.toSet()
     val defs = Catalog.get(ctx).specs.filter { byKey.containsKey(it.key) || (if (v.kind == "motorcycle") it.key !in carOnly else it.key !in bikeOnly) }
     LazyColumn(contentPadding = androidx.compose.foundation.layout.PaddingValues(16.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
         item {
@@ -305,7 +306,12 @@ private fun SpecsTab(nav: NavHostController, v: Vehicle) {
                 ListRow(onClick = { editing = d.key to s }) {
                     Column(Modifier.weight(1f)) {
                         Text(d.label, style = MaterialTheme.typography.bodySmall, color = LocalExtra.current.muted)
-                        if (s?.value.isNullOrBlank()) Text("Unknown", fontStyle = FontStyle.Italic, color = LocalExtra.current.muted)
+                        if (s?.value.isNullOrBlank()) {
+                            if (d.key in fromManual) Text("Not set · can be filled from owner's manual", fontStyle = FontStyle.Italic,
+                                color = LocalExtra.current.muted, textDecoration = androidx.compose.ui.text.style.TextDecoration.Underline,
+                                modifier = Modifier.clickable { nav.navigate("manual/${v.id}") })
+                            else Text("Unknown", fontStyle = FontStyle.Italic, color = LocalExtra.current.muted)
+                        }
                         else Text(s.value, fontWeight = FontWeight.SemiBold)
                     }
                     if (s != null && s.value.isNotBlank()) SourcePill(s.source)

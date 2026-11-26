@@ -138,3 +138,12 @@ def test_value_from_the_next_section_is_not_offered():
     assert got["oil_capacity"] == ["5.7 L (6.0 qt)"]
     assert got["coolant_capacity"] == ["9.1 L (9.6 qt)"]
     assert got["transmission_fluid_capacity"] == ["8.4 L (8.9 qt)"]
+
+
+def test_catalog_lists_the_same_specs_as_the_manual_reader():
+    import json
+    from pathlib import Path
+    from app.manual_specs import RULES
+    cat = json.loads((Path(__file__).resolve().parents[2] / "catalog" / "catalog.json").read_text())
+    assert cat["manual_specs"] == list(RULES)
+    assert set(cat["manual_specs"]) <= {s["key"] for s in cat["specs"]}

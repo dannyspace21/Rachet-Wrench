@@ -137,6 +137,7 @@ async function specsTab(body, v, { catalog }) {
   const groups = {};
   for (const r of rows) (groups[r.group] ||= []).push(r);
   const sources = catalog.spec_sources;
+  const fromManual = new Set(catalog.manual_specs || []);
   const intro = h("div", { class: "notice info" }, icon("u-info"),
     h("p", {}, "Specs are never guessed. Each value shows where it came from — ", h("strong", {}, "From VIN"), ", ",
       h("strong", {}, "From door sticker"), ", ", h("strong", {}, "From owner's manual"), ", ", h("strong", {}, "Entered by me"), " or ", h("strong", {}, "Unverified"),
@@ -162,7 +163,9 @@ async function specsTab(body, v, { catalog }) {
     h("div", { class: "card" }, Object.entries(groups).map(([g, list]) => h("div", { class: "spec-group" }, h("h3", {}, g),
       list.map((r) => h("div", { class: "spec-row" },
         h("span", {}, r.label),
-        h("span", { class: "v" + (r.value ? "" : " unknown") }, r.value || "Unknown"),
+        r.value ? h("span", { class: "v" }, r.value)
+          : fromManual.has(r.key) ? h("a", { class: "v unknown from-manual", href: `#/v/${v.id}/manual`, title: "Find it in your owner's manual" }, "Not set · can be filled from owner's manual")
+            : h("span", { class: "v unknown" }, "Unknown"),
         r.source ? h("span", { class: "pill " + (SOURCE_CLASS[r.source] || "") }, sources[r.source] || r.source) : h("span", {}),
         h("button", { class: "btn small ghost", type: "button", "aria-label": `Edit ${r.label}`, onclick: () => editSpec(v, r, sources) }, icon("u-edit")))))))));
 }

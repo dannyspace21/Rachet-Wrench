@@ -94,6 +94,8 @@ object Reminders {
     val metric_groups: List<MetricGroup> = emptyList(),
     /** Paint code -> colour name, per make (curated; see catalog/build_catalog.py). */
     val paint_codes: Map<String, Map<String, String>> = emptyMap(),
+    /** Specs the owner's-manual reader can find (empty ones say so on the Specs tab). */
+    val manual_specs: List<String> = emptyList(),
 )
 
 @Serializable data class MetricGroup(val key: String, val label: String, val categories: List<String> = emptyList(), val types: List<String> = emptyList())

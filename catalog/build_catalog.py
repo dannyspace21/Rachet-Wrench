@@ -446,6 +446,10 @@ METRIC_GROUPS = [
 #   automotivetouchup.com (Lexus RC / IS), paintref.com (Toyota 2021, Kia),
 #   chipfixx.ca/pages/kia-paint-codes.
 # ---------------------------------------------------------------------------
+MANUAL_SPECS = ["oil_type", "oil_capacity", "coolant_type", "coolant_capacity", "transmission_fluid_type",
+                "transmission_fluid_capacity", "brake_fluid_type", "differential_fluid_type", "fuel_capacity",
+                "spark_plug_part", "lug_nut_torque"]
+
 PAINT_CODES = {
     "lexus": {
         "083": "Ultra White", "085": "Eminent White Pearl", "077": "Starfire Pearl", "212": "Obsidian", "223": "Caviar",
@@ -498,6 +502,10 @@ def main() -> None:
             for (k, label, group, hint) in SPECS
         ],
         "spec_sources": SPEC_SOURCES,
+        # Specs the owner's-manual reader can find (server/app/manual_specs.py
+        # RULES; a server test keeps the two lists the same).  Empty ones show
+        # "can be filled from owner's manual" on the Specs tab.
+        "manual_specs": MANUAL_SPECS,
         "makes": MAKES,
         "make_names": MAKE_NAMES,
         "retailers": [{**r, "affiliate": affiliates.get(r["key"], NO_AFFILIATE)} for r in RETAILERS],
