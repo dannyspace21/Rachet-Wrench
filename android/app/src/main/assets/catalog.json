@@ -1056,8 +1056,15 @@
       "search_url": "https://www.amazon.com/s?k={q}",
       "enabled": true,
       "affiliate": {
-        "param": "tag",
-        "value": ""
+        "program": "Amazon Associates",
+        "enabled": false,
+        "platforms": [],
+        "method": "param",
+        "params": {
+          "tag": ""
+        },
+        "wrap": "",
+        "disclosure": "As an Amazon Associate, the developer of Ratchet Wrench earns from qualifying purchases."
       }
     },
     {
@@ -1068,8 +1075,13 @@
       "search_url": "https://www.walmart.com/search?q={q}",
       "enabled": true,
       "affiliate": {
-        "param": "",
-        "value": ""
+        "program": "Walmart Affiliates (Impact)",
+        "enabled": false,
+        "platforms": [],
+        "method": "wrap",
+        "params": {},
+        "wrap": "",
+        "disclosure": "Ratchet Wrench may earn a commission from Walmart purchases made through this link."
       }
     },
     {
@@ -1080,8 +1092,13 @@
       "search_url": "https://shop.advanceautoparts.com/web/SearchResults?searchTerm={q}",
       "enabled": true,
       "affiliate": {
-        "param": "",
-        "value": ""
+        "program": "Advance Auto Parts affiliate program",
+        "enabled": false,
+        "platforms": [],
+        "method": "wrap",
+        "params": {},
+        "wrap": "",
+        "disclosure": "Ratchet Wrench may earn a commission from Advance Auto Parts purchases made through this link."
       }
     }
   ],

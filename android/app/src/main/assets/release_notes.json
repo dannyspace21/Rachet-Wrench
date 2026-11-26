@@ -2,6 +2,15 @@
   "_comment": "Release notes shown in the app ('What's new' pop-up after an update, and Settings > Release notes) and on the GitHub release page. Newest first. EVERY Android release needs an entry here whose version matches the release (1.0.<workflow run number>); the release workflow refuses to publish otherwise. Keep it high level and in plain English.",
   "releases": [
     {
+      "version": "1.0.32",
+      "date": "2026-11-26",
+      "new": [],
+      "improved": [
+        "Smart Shopping is ready for optional affiliate links in the future — none are switched on. If they ever are, they'll be clearly marked and explained, they never change what's searched for or suggested, and you can turn them off in Settings → Smart Shopping."
+      ],
+      "fixed": []
+    },
+    {
       "version": "1.0.31",
       "date": "2026-11-26",
       "new": [

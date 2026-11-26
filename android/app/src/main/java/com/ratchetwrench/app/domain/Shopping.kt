@@ -139,13 +139,26 @@ object Shopping {
         }
     }
 
-    /** The retailer's search address (affiliate tag only when configured). */
-    fun retailerUrl(r: Retailer, query: String): String {
-        var url = r.search_url.replace("{q}", encode(query))
-        if (r.affiliate.param.isNotBlank() && r.affiliate.value.isNotBlank()) {
-            url += (if ('?' in url) "&" else "?") + encode(r.affiliate.param) + "=" + encode(r.affiliate.value)
-        }
-        return url
+    // Affiliate links: applied ONLY here, after the search text is final, so a
+    // commission can never change what is searched for or suggested.  Same
+    // rules as web/js/shopping.js (shared cases in catalog/shopping_tests.json).
+    /** Is an affiliate link used for this retailer on this platform (web | desktop | android)? */
+    fun affiliateOn(r: Retailer, platform: String?, allowed: Boolean = true): Boolean {
+        val a = r.affiliate
+        if (!allowed || platform == null || !a.enabled || platform !in a.platforms) return false
+        return if (a.method == "wrap") a.wrap.startsWith("https://") && "{url}" in a.wrap
+        else a.params.isNotEmpty() && a.params.values.all { it.isNotBlank() }
+    }
+
+    /** The ordinary search address — exactly what was asked for, no tracking. */
+    fun searchUrl(r: Retailer, query: String): String = r.search_url.replace("{q}", encode(query))
+
+    /** The address a retailer button opens (ordinary unless an approved affiliate set-up applies here). */
+    fun retailerUrl(r: Retailer, query: String, platform: String? = null, allowed: Boolean = true): String {
+        val plain = searchUrl(r, query)
+        if (!affiliateOn(r, platform, allowed)) return plain
+        if (r.affiliate.method == "wrap") return r.affiliate.wrap.replace("{url}", encode(plain))
+        return plain + (if ('?' in plain) "&" else "?") + r.affiliate.params.entries.joinToString("&") { (k, v) -> encode(k) + "=" + encode(v.trim()) }
     }
 
     /** Retailers to offer: enabled in the catalog and not turned off on this phone, preferred first. */

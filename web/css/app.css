@@ -459,3 +459,4 @@ a.item:hover { border-color: color-mix(in srgb, var(--brand) 40%, var(--border))
 .recall-text { margin: 0; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
 .recall-text.open { display: block; }
 .recall-warning { margin: 0; padding: 8px 10px; border-radius: 8px; background: color-mix(in srgb, #dc2626 12%, transparent); font-weight: 600; }
+.affiliate-note { border-left: 3px solid var(--brand); padding: 6px 10px; background: var(--surface-2); border-radius: 6px; margin: 0; }

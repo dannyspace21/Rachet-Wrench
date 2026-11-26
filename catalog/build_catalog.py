@@ -16,6 +16,7 @@ Run:  python3 catalog/build_catalog.py
 """
 
 import json
+import re
 from pathlib import Path
 
 HERE = Path(__file__).resolve().parent
@@ -158,15 +159,52 @@ MAKE_NAMES = {
 # ---------------------------------------------------------------------------
 RETAILERS = [
     {"key": "amazon", "name": "Amazon", "icon": "cart", "color": "#ff9900",
-     "search_url": "https://www.amazon.com/s?k={q}", "enabled": True,
-     "affiliate": {"param": "tag", "value": ""}},
+     "search_url": "https://www.amazon.com/s?k={q}", "enabled": True},
     {"key": "walmart", "name": "Walmart", "icon": "cart", "color": "#0071ce",
-     "search_url": "https://www.walmart.com/search?q={q}", "enabled": True,
-     "affiliate": {"param": "", "value": ""}},
+     "search_url": "https://www.walmart.com/search?q={q}", "enabled": True},
     {"key": "advance_auto", "name": "Advance Auto Parts", "icon": "cart", "color": "#e31837",
-     "search_url": "https://shop.advanceautoparts.com/web/SearchResults?searchTerm={q}", "enabled": True,
-     "affiliate": {"param": "", "value": ""}},
+     "search_url": "https://shop.advanceautoparts.com/web/SearchResults?searchTerm={q}", "enabled": True},
 ]
+
+# ---------------------------------------------------------------------------
+# Affiliate links: configured ONLY in catalog/affiliates.json (all OFF).
+# The settings are checked here so an invalid or placeholder setting can never
+# reach the apps.  See docs/AFFILIATES.md.
+# ---------------------------------------------------------------------------
+PLATFORMS = {"web", "desktop", "android"}
+PLACEHOLDER = re.compile(r"(your|xxx|example|placeholder|changeme|todo|<|>|\s)", re.IGNORECASE)
+NO_AFFILIATE = {"program": "", "enabled": False, "platforms": [], "method": "param", "params": {}, "wrap": "", "disclosure": ""}
+
+
+def load_affiliates() -> dict:
+    """Read catalog/affiliates.json and refuse anything that isn't a real, complete setting."""
+    path = HERE / "affiliates.json"
+    data = json.loads(path.read_text(encoding="utf-8")) if path.is_file() else {}
+    keys = {r["key"] for r in RETAILERS}
+    out = {}
+    for key, a in data.items():
+        if key.startswith("_"):
+            continue
+        assert key in keys, f"affiliates.json: unknown retailer {key!r}"
+        a = {**NO_AFFILIATE, **a}
+        assert a["method"] in ("param", "wrap"), f"{key}: method must be 'param' or 'wrap'"
+        assert set(a["platforms"]) <= PLATFORMS, f"{key}: platforms must be from {sorted(PLATFORMS)}"
+        if a["enabled"]:
+            assert a["platforms"], f"{key}: enabled, but no platforms listed (where are you approved to use links?)"
+            assert a["disclosure"].strip(), f"{key}: enabled affiliate links need a disclosure"
+            if a["method"] == "param":
+                assert a["params"] and all(str(v).strip() for v in a["params"].values()), f"{key}: fill in every parameter value"
+                for name, value in a["params"].items():
+                    assert re.fullmatch(r"[A-Za-z0-9_.-]{1,64}", name) and re.fullmatch(r"[A-Za-z0-9_.~-]{1,128}", str(value)) \
+                        and not PLACEHOLDER.search(str(value)), f"{key}: {name}={value!r} doesn't look like a real identifier"
+            else:
+                w = a["wrap"].strip()
+                assert w.startswith("https://") and w.count("{url}") == 1, f"{key}: wrap must be an https link containing {{url}} once"
+                assert not PLACEHOLDER.search(w.replace("{url}", "")), f"{key}: wrap still contains a placeholder"
+        out[key] = {k: a[k] for k in NO_AFFILIATE}
+    return out
+
+
 
 # ---------------------------------------------------------------------------
 # Smart Shopping — what to buy for a maintenance type.
@@ -399,6 +437,7 @@ def main() -> None:
     for sp in SPEC_PARTS:
         assert sp["spec"] in spec_keys and sp["type_key"] in keys and "{v}" in sp["format"], sp
 
+    affiliates = load_affiliates()
     catalog = {
         "version": 1,
         "types": [
@@ -412,7 +451,7 @@ def main() -> None:
         "spec_sources": SPEC_SOURCES,
         "makes": MAKES,
         "make_names": MAKE_NAMES,
-        "retailers": RETAILERS,
+        "retailers": [{**r, "affiliate": affiliates.get(r["key"], NO_AFFILIATE)} for r in RETAILERS],
         "shopping": SHOPPING,
         "spec_parts": SPEC_PARTS,
         "metric_groups": METRIC_GROUPS,

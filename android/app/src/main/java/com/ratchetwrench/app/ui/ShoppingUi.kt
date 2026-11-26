@@ -63,6 +63,8 @@ fun ShoppingDialog(title: String, items: List<ShopItem>, onClose: () -> Unit) {
     val repo = LocalRepo.current
     val catalog = Catalog.get(ctx)
     val retailers = Shopping.activeRetailers(catalog, repo.store.shoppingDisabled, repo.store.shoppingPreferred)
+    val allowed = repo.store.shoppingAffiliate
+    val paid = retailers.filter { Shopping.affiliateOn(it, "android", allowed) }
     AlertDialog(onDismissRequest = onClose,
         title = { Text(title) },
         text = {
@@ -79,14 +81,18 @@ fun ShoppingDialog(title: String, items: List<ShopItem>, onClose: () -> Unit) {
                             retailers.forEach { r ->
                                 AssistChip(onClick = {
                                     repo.store.shoppingPreferred = r.key // listed first next time
-                                    runCatching { com.ratchetwrench.app.ui.screens.openLink(ctx, Shopping.retailerUrl(r, item.query)) }
-                                }, label = { Text(r.name) }, leadingIcon = { UiIcon(r.icon.ifBlank { "cart" }, Modifier.size(18.dp)) })
+                                    runCatching { com.ratchetwrench.app.ui.screens.openLink(ctx, Shopping.retailerUrl(r, item.query, "android", allowed)) }
+                                }, label = { Text(if (r in paid) "${r.name} · affiliate" else r.name) }, leadingIcon = { UiIcon(r.icon.ifBlank { "cart" }, Modifier.size(18.dp)) })
                             }
                         }
                     }
                 }
                 Text("Opens the retailer's app or website. Check that the product fits your vehicle before buying. Nothing in your records changes.",
                     color = LocalExtra.current.muted, style = MaterialTheme.typography.bodySmall)
+                // Required disclosure whenever an affiliate link is shown.
+                if (paid.isNotEmpty()) Text(paid.joinToString(" ") { it.affiliate.disclosure } +
+                    " Searches are the same with or without it — commissions never decide what's suggested. Turn affiliate links off in Settings → Smart Shopping.",
+                    style = MaterialTheme.typography.bodySmall)
             }
         },
         confirmButton = { TextButton(onClose) { Text("Close") } })

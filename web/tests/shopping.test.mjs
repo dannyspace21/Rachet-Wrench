@@ -4,7 +4,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
-import { itemsFor, partQuery, retailerUrl, activeRetailers, listItemsFor, listItemQuery } from "../js/shopping.js";
+import { itemsFor, partQuery, retailerUrl, searchUrl, activeRetailers, listItemsFor, listItemQuery } from "../js/shopping.js";
 
 const root = new URL("../../", import.meta.url);
 const catalog = JSON.parse(readFileSync(new URL("catalog/catalog.json", root), "utf8"));
@@ -26,9 +26,26 @@ test("part searches prefer the exact part number", () => {
 test("retailer links come from the catalog", () => {
   const byKey = Object.fromEntries(catalog.retailers.map((r) => [r.key, r]));
   for (const c of cases.urls) assert.equal(retailerUrl(byKey[c.retailer], c.query), c.url);
-  assert.equal(retailerUrl(cases.affiliate.retailer, cases.affiliate.query), cases.affiliate.url);
-  // No affiliate tracking is configured today.
-  for (const r of catalog.retailers) assert.equal(retailerUrl(r, "x").includes("tag="), false);
+});
+
+test("affiliate links: only when configured, approved for this platform and allowed by the user", () => {
+  for (const c of cases.affiliates) assert.equal(retailerUrl(c.retailer, c.query, c.platform, c.allowed), c.url, c.name);
+});
+
+test("the shipped catalog has NO affiliate tracking switched on", () => {
+  for (const r of catalog.retailers) {
+    assert.equal(r.affiliate.enabled, false, r.key);
+    for (const p of ["web", "desktop", "android"]) assert.equal(retailerUrl(r, "oil filter", p), searchUrl(r, "oil filter"), `${r.key} ${p}`);
+  }
+});
+
+test("a commission can never change what is searched for", () => {
+  for (const c of cases.affiliates) {
+    const plain = searchUrl(c.retailer, c.query);
+    const url = retailerUrl(c.retailer, c.query, c.platform, c.allowed);
+    // The ordinary search address is always inside the link, unchanged (param: as the start; wrap: encoded inside).
+    assert.ok(url.startsWith(plain) || url.includes(encodeURIComponent(plain)), c.name);
+  }
 });
 
 test("retailer preferences: turned-off retailers hidden, preferred first", () => {

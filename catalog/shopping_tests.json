@@ -269,20 +269,6 @@
       "url": "https://www.amazon.com/s?k=26%22%20%26%2018%22%20blades"
     }
   ],
-  "affiliate": {
-    "retailer": {
-      "key": "x",
-      "name": "X",
-      "search_url": "https://shop.example/s?k={q}",
-      "enabled": true,
-      "affiliate": {
-        "param": "tag",
-        "value": "rw-20"
-      }
-    },
-    "query": "oil",
-    "url": "https://shop.example/s?k=oil&tag=rw-20"
-  },
   "list_items": [
     {
       "vehicle": "lexus",
@@ -389,6 +375,183 @@
       },
       "query": "Shop towels",
       "exact": false
+    }
+  ],
+  "affiliates": [
+    {
+      "name": "no affiliate set up -> ordinary link",
+      "retailer": {
+        "key": "x",
+        "name": "X",
+        "search_url": "https://shop.example/s?k={q}",
+        "enabled": true,
+        "affiliate": {
+          "enabled": false,
+          "platforms": [],
+          "method": "param",
+          "params": {},
+          "wrap": ""
+        }
+      },
+      "query": "oil filter",
+      "platform": "web",
+      "allowed": true,
+      "url": "https://shop.example/s?k=oil%20filter"
+    },
+    {
+      "name": "param on an approved platform",
+      "retailer": {
+        "key": "x",
+        "name": "X",
+        "search_url": "https://shop.example/s?k={q}",
+        "enabled": true,
+        "affiliate": {
+          "program": "P",
+          "enabled": true,
+          "platforms": [
+            "web"
+          ],
+          "method": "param",
+          "params": {
+            "tag": "rw-20"
+          },
+          "wrap": "",
+          "disclosure": "d"
+        }
+      },
+      "query": "oil filter",
+      "platform": "web",
+      "allowed": true,
+      "url": "https://shop.example/s?k=oil%20filter&tag=rw-20"
+    },
+    {
+      "name": "param, but this platform isn't approved -> ordinary link",
+      "retailer": {
+        "key": "x",
+        "name": "X",
+        "search_url": "https://shop.example/s?k={q}",
+        "enabled": true,
+        "affiliate": {
+          "program": "P",
+          "enabled": true,
+          "platforms": [
+            "web"
+          ],
+          "method": "param",
+          "params": {
+            "tag": "rw-20"
+          },
+          "wrap": "",
+          "disclosure": "d"
+        }
+      },
+      "query": "oil filter",
+      "platform": "android",
+      "allowed": true,
+      "url": "https://shop.example/s?k=oil%20filter"
+    },
+    {
+      "name": "user turned affiliate links off -> ordinary link",
+      "retailer": {
+        "key": "x",
+        "name": "X",
+        "search_url": "https://shop.example/s?k={q}",
+        "enabled": true,
+        "affiliate": {
+          "program": "P",
+          "enabled": true,
+          "platforms": [
+            "web"
+          ],
+          "method": "param",
+          "params": {
+            "tag": "rw-20"
+          },
+          "wrap": "",
+          "disclosure": "d"
+        }
+      },
+      "query": "oil filter",
+      "platform": "web",
+      "allowed": false,
+      "url": "https://shop.example/s?k=oil%20filter"
+    },
+    {
+      "name": "enabled but identifier missing -> ordinary link",
+      "retailer": {
+        "key": "x",
+        "name": "X",
+        "search_url": "https://shop.example/s?k={q}",
+        "enabled": true,
+        "affiliate": {
+          "program": "P",
+          "enabled": true,
+          "platforms": [
+            "web"
+          ],
+          "method": "param",
+          "params": {
+            "tag": " "
+          },
+          "wrap": "",
+          "disclosure": "d"
+        }
+      },
+      "query": "oil filter",
+      "platform": "web",
+      "allowed": true,
+      "url": "https://shop.example/s?k=oil%20filter"
+    },
+    {
+      "name": "wrap (network deep link)",
+      "retailer": {
+        "key": "x",
+        "name": "X",
+        "search_url": "https://shop.example/s?k={q}",
+        "enabled": true,
+        "affiliate": {
+          "program": "P",
+          "enabled": true,
+          "platforms": [
+            "web",
+            "android"
+          ],
+          "method": "wrap",
+          "params": {},
+          "wrap": "https://net.example/c/1/2/3?u={url}",
+          "disclosure": "d"
+        }
+      },
+      "query": "255/35R19 tires",
+      "platform": "android",
+      "allowed": true,
+      "url": "https://net.example/c/1/2/3?u=https%3A%2F%2Fshop.example%2Fs%3Fk%3D255%252F35R19%2520tires"
+    },
+    {
+      "name": "no platform given -> ordinary link",
+      "retailer": {
+        "key": "x",
+        "name": "X",
+        "search_url": "https://shop.example/s?k={q}",
+        "enabled": true,
+        "affiliate": {
+          "program": "P",
+          "enabled": true,
+          "platforms": [
+            "web"
+          ],
+          "method": "param",
+          "params": {
+            "tag": "rw-20"
+          },
+          "wrap": "",
+          "disclosure": "d"
+        }
+      },
+      "query": "oil",
+      "platform": null,
+      "allowed": true,
+      "url": "https://shop.example/s?k=oil"
     }
   ]
 }

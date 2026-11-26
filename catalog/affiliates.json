@@ -1,0 +1,30 @@
+{
+  "_readme": "Affiliate links for Smart Shopping — the ONLY place they are configured. Everything is OFF. Before turning a retailer on, read docs/AFFILIATES.md: be approved by the program, confirm its CURRENT terms allow links on each platform you list (web = your website/server pages, desktop = the downloadable desktop app, android = the Android app), and paste the exact identifiers or link template the program gave you. Never invent identifiers. Then run: python3 catalog/build_catalog.py (it refuses invalid settings).",
+  "amazon": {
+    "program": "Amazon Associates",
+    "enabled": false,
+    "platforms": [],
+    "method": "param",
+    "params": {"tag": ""},
+    "wrap": "",
+    "disclosure": "As an Amazon Associate, the developer of Ratchet Wrench earns from qualifying purchases."
+  },
+  "walmart": {
+    "program": "Walmart Affiliates (Impact)",
+    "enabled": false,
+    "platforms": [],
+    "method": "wrap",
+    "params": {},
+    "wrap": "",
+    "disclosure": "Ratchet Wrench may earn a commission from Walmart purchases made through this link."
+  },
+  "advance_auto": {
+    "program": "Advance Auto Parts affiliate program",
+    "enabled": false,
+    "platforms": [],
+    "method": "wrap",
+    "params": {},
+    "wrap": "",
+    "disclosure": "Ratchet Wrench may earn a commission from Advance Auto Parts purchases made through this link."
+  }
+}

@@ -7,7 +7,7 @@
 
 import { api } from "../api.js";
 import { h, icon, modal } from "../ui.js";
-import { activeRetailers, itemsFor, partQuery, prefs, retailerUrl, savePrefs } from "../shopping.js";
+import { activeRetailers, affiliateOn, itemsFor, partQuery, prefs, retailerUrl, savePrefs, webPlatform } from "../shopping.js";
 
 /** Specs and parts of a vehicle, in the shape shopping.js expects. */
 export async function shoppingContext(v) {
@@ -23,11 +23,16 @@ export function shoppingOn(catalog) {
 /** The dialog.  items = [{label, query, exact, hint}] */
 export function openShopping(title, items, catalog) {
   const specLabel = Object.fromEntries(catalog.specs.map((s) => [s.key, s.label]));
+  const platform = webPlatform();
+  const allowed = prefs().affiliate;
+  const url = (r, q) => retailerUrl(r, q, platform, allowed);
+  const paid = activeRetailers(catalog).filter((r) => affiliateOn(r, platform, allowed));
   const rows = items.map((it) => {
     const box = h("input", { class: "input", value: it.query, maxlength: 200, "aria-label": `Search for ${it.label}` });
     const buttons = activeRetailers(catalog).map((r) => {
-      const a = h("a", { class: "btn small shop-retailer", target: "_blank", rel: "noopener noreferrer",
-        href: retailerUrl(r, it.query) }, icon("u-" + (r.icon || "cart")), r.name);
+      const isPaid = paid.includes(r);
+      const a = h("a", { class: "btn small shop-retailer", target: "_blank", rel: isPaid ? "noopener noreferrer sponsored" : "noopener noreferrer",
+        href: url(r, it.query) }, icon("u-" + (r.icon || "cart")), r.name, isPaid ? h("span", { class: "muted small" }, " · affiliate") : null);
       // Accent colour via the style API (the page's CSP forbids inline style attributes).
       if (/^#[0-9a-f]{3,8}$/i.test(r.color || "")) a.style.setProperty("--retailer", r.color);
       // Remember the last retailer used as the preferred one (listed first next time).
@@ -38,7 +43,7 @@ export function openShopping(title, items, catalog) {
     // The search text can be adjusted before opening a retailer.
     box.addEventListener("input", () => {
       const q = box.value.trim() || it.query;
-      for (const a of buttons) a.href = retailerUrl(activeRetailers(catalog).find((r) => r.key === a.dataset.key), q);
+      for (const a of buttons) a.href = url(activeRetailers(catalog).find((r) => r.key === a.dataset.key), q);
     });
     return h("div", { class: "shop-item" },
       h("strong", {}, it.label),
@@ -47,7 +52,10 @@ export function openShopping(title, items, catalog) {
       h("div", { class: "btn-row" }, buttons));
   });
   return modal({ title, body: h("div", { class: "stack" }, rows,
-    h("p", { class: "muted small" }, "Opens the retailer's website in a new tab. Check that the product fits your vehicle before buying. Nothing in your records changes.")),
+    h("p", { class: "muted small" }, "Opens the retailer's website in a new tab. Check that the product fits your vehicle before buying. Nothing in your records changes."),
+    // Required disclosure, shown whenever an affiliate link is on screen.
+    paid.length ? h("p", { class: "small affiliate-note" }, ...paid.map((r) => r.affiliate.disclosure + " "),
+      "Searches are the same with or without it — commissions never decide what's suggested. You can turn affiliate links off in Settings → Smart Shopping.") : null),
   actions: [{ label: "Close", value: null }] });
 }
 

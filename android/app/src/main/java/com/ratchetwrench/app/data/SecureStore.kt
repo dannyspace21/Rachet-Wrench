@@ -133,6 +133,11 @@ class SecureStore(context: Context) {
     var shoppingDisabled: Set<String>
         get() = prefs.getStringSet("shop_disabled", emptySet()) ?: emptySet()
         set(v) = prefs.edit().putStringSet("shop_disabled", v.toSet()).apply()
+    /** Affiliate links allowed on this phone (only matters if an approved program is set up). */
+    var shoppingAffiliate: Boolean
+        get() = prefs.getBoolean("shop_affiliate", true)
+        set(v) = prefs.edit().putBoolean("shop_affiliate", v).apply()
+
     var shoppingPreferred: String?
         get() = prefs.getString("shop_preferred", null)
         set(v) = prefs.edit().putString("shop_preferred", v).apply()

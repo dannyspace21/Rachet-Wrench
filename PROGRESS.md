@@ -91,6 +91,8 @@ Build-sandbox notes: the sandbox blocks dl.google.com, api.osv.dev, semgrep.dev 
 
 - v1.0.31: Recalls in the History tab (NHTSA by year/make/model, owner status, synced); Coming up card removed (D65).
 
+- v1.0.32: affiliate-ready Smart Shopping (all off; per retailer/platform config, disclosure, opt-out, admin guide) (D66).
+
 ## Ideas for later (not started)
 - Code-sign the desktop app (paid Apple/Microsoft certificates) to remove first-launch warnings; add an Intel-Mac build if needed.
 - Run the Android app on a real device/emulator and add phone screenshots to the README (no emulator was available in the build sandbox).

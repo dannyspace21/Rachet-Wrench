@@ -98,7 +98,10 @@ object Reminders {
 
 @Serializable data class SpecPart(val spec: String, val type_key: String, val name: String, val format: String = "{v}")
 
-@Serializable data class Affiliate(val param: String = "", val value: String = "")
+/** Affiliate set-up for one retailer (catalog/affiliates.json; OFF unless an approved program was configured). */
+@Serializable data class Affiliate(val program: String = "", val enabled: Boolean = false, val platforms: List<String> = emptyList(),
+                                   val method: String = "param", val params: Map<String, String> = emptyMap(), val wrap: String = "",
+                                   val disclosure: String = "")
 @Serializable data class Retailer(val key: String, val name: String, val icon: String = "cart", val color: String = "",
                                   val search_url: String, val enabled: Boolean = true, val affiliate: Affiliate = Affiliate())
 @Serializable data class ShopRecipe(val label: String, val queries: List<String>, val needs: String? = null)

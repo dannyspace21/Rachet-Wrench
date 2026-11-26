@@ -133,12 +133,44 @@ export function partQuery(part, vehicle, typeLabel) {
   return { query: ymm ? `${ymm} ${what}` : what, exact: false };
 }
 
-/** The retailer's search address for some text (affiliate tag only if configured). */
-export function retailerUrl(retailer, query) {
-  let url = retailer.search_url.replace("{q}", encodeURIComponent(query));
+// ---------------------------------------------------------------------------
+// Affiliate links (catalog/affiliates.json; all OFF unless the administrator
+// configured an approved program for this platform).  They are applied ONLY
+// here, after the search text is final, so a commission can never change
+// what is searched for or which products are suggested.
+// ---------------------------------------------------------------------------
+/** Is an affiliate link used for this retailer here?  platform: web | desktop | android. */
+export function affiliateOn(retailer, platform, allowed = true) {
   const a = retailer.affiliate || {};
-  if (a.param && a.value) url += (url.includes("?") ? "&" : "?") + `${encodeURIComponent(a.param)}=${encodeURIComponent(a.value)}`;
-  return url;
+  if (!allowed || !platform || !a.enabled || !(a.platforms || []).includes(platform)) return false;
+  if (a.method === "wrap") return typeof a.wrap === "string" && a.wrap.startsWith("https://") && a.wrap.includes("{url}");
+  const params = Object.values(a.params || {});
+  return params.length > 0 && params.every((v) => String(v).trim() !== "");
+}
+
+/** The ordinary search address — exactly what was asked for, no tracking. */
+export function searchUrl(retailer, query) {
+  return retailer.search_url.replace("{q}", encodeURIComponent(query));
+}
+
+/**
+ * The address a retailer button opens.  Without an active affiliate set-up
+ * this is the ordinary search address.  With one: "param" adds the
+ * program's parameters (e.g. Amazon's tag=); "wrap" puts the ordinary
+ * address inside the program's link (e.g. Impact's ...?u={url}).
+ */
+export function retailerUrl(retailer, query, platform = null, allowed = true) {
+  const plain = searchUrl(retailer, query);
+  if (!affiliateOn(retailer, platform, allowed)) return plain;
+  const a = retailer.affiliate;
+  if (a.method === "wrap") return a.wrap.replace("{url}", encodeURIComponent(plain));
+  const extra = Object.entries(a.params).map(([k, v]) => `${encodeURIComponent(k)}=${encodeURIComponent(String(v).trim())}`).join("&");
+  return plain + (plain.includes("?") ? "&" : "?") + extra;
+}
+
+/** Where this web page is running: the desktop app (on this computer) or a server. */
+export function webPlatform(hostname = globalThis.location?.hostname || "") {
+  return hostname === "127.0.0.1" || hostname === "localhost" ? "desktop" : "web";
 }
 
 // ---------------------------------------------------------------------------
@@ -149,8 +181,9 @@ const KEY = "rw-smart-shopping";
 export function prefs() {
   try {
     const p = JSON.parse(localStorage.getItem(KEY) || "{}");
-    return { enabled: p.enabled !== false, disabled: Array.isArray(p.disabled) ? p.disabled : [], preferred: p.preferred || null };
-  } catch { return { enabled: true, disabled: [], preferred: null }; }
+    return { enabled: p.enabled !== false, disabled: Array.isArray(p.disabled) ? p.disabled : [], preferred: p.preferred || null,
+      affiliate: p.affiliate !== false };
+  } catch { return { enabled: true, disabled: [], preferred: null, affiliate: true }; }
 }
 
 export function savePrefs(p) {

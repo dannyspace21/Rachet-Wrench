@@ -2,7 +2,7 @@
 // docs, sign out) and the icon set overview.
 
 import { api, getCatalog, getMe, refreshMe, forgetMe } from "../api.js";
-import { prefs as shopPrefs, savePrefs as saveShopPrefs } from "../shopping.js";
+import { affiliateOn, prefs as shopPrefs, savePrefs as saveShopPrefs, webPlatform } from "../shopping.js";
 import { h, mount, icon, field, segmented, toast, showError, setPrefs, modal, applyTheme } from "../ui.js";
 
 export async function settingsView(main) {
@@ -213,8 +213,21 @@ async function shoppingCard() {
   const preferred = field("Preferred retailer (listed first)", { tag: "select", value: p.preferred || "",
     options: [{ value: "", label: "No preference" }, ...(catalog.retailers || []).filter((r) => r.enabled).map((r) => ({ value: r.key, label: r.name }))] });
   preferred.input.addEventListener("change", () => { p.preferred = preferred.input.value || null; save(); });
+  // Affiliate links: only offered when the administrator set up an approved
+  // program for this platform (catalog/affiliates.json); this browser can opt out.
+  const platform = webPlatform();
+  const programs = (catalog.retailers || []).filter((r) => r.enabled && affiliateOn(r, platform, true));
+  let affiliate = null;
+  if (programs.length) {
+    const box = h("input", { type: "checkbox", checked: p.affiliate !== false });
+    box.addEventListener("change", () => { p.affiliate = box.checked; save(); });
+    affiliate = h("div", { class: "stack" }, h("strong", {}, "Affiliate links"),
+      h("label", { class: "row option-row" }, box, h("span", {}, `Use affiliate links for ${programs.map((r) => r.name).join(", ")}`)),
+      h("p", { class: "muted small" }, ...programs.map((r) => r.affiliate.disclosure + " "),
+        "Prices and search results are the same either way, and commissions never affect what's suggested. Turn this off for ordinary links."));
+  }
   return h("section", { class: "card stack" }, h("h2", {}, "Smart Shopping"),
     h("p", { class: "muted" }, "Optional “Find supplies” and “Shop” buttons on reminders and parts. They open a search on the retailer's own website using your vehicle's specs and part numbers. You never have to buy anything, and nothing is sent from Ratchet Wrench."),
     h("label", { class: "row option-row" }, on, h("span", {}, "Show shopping buttons")),
-    h("div", { class: "stack" }, h("strong", {}, "Retailers"), boxes), preferred);
+    h("div", { class: "stack" }, h("strong", {}, "Retailers"), boxes), preferred, affiliate);
 }

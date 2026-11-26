@@ -497,7 +497,7 @@ def test_catalog_serves_smart_shopping_config(client, admin):
     for r in retailers.values():
         assert r["name"] and r["enabled"] is True
         assert r["search_url"].startswith("https://") and "{q}" in r["search_url"]
-        assert r["affiliate"]["value"] == ""  # no affiliate tracking configured
+        assert r["affiliate"]["enabled"] is False and not r["affiliate"]["wrap"]  # no affiliate tracking configured
     types = {t["key"] for t in cat["types"]}
     specs = {s["key"] for s in cat["specs"]}
     assert "oil_change" in cat["shopping"] and "inspection" not in cat["shopping"]

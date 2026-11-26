@@ -505,6 +505,18 @@ fun ShoppingSettingsCard() {
                         label = { Text(name) })
                 }
             }
+            // Affiliate links: only offered when an approved program is set up for Android.
+            val programs = retailers.filter { com.ratchetwrench.app.domain.Shopping.affiliateOn(it, "android", true) }
+            if (programs.isNotEmpty()) {
+                var aff by remember { mutableStateOf(repo.store.shoppingAffiliate) }
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text("Use affiliate links (${programs.joinToString { it.name }})", Modifier.weight(1f))
+                    androidx.compose.material3.Switch(aff, { aff = it; repo.store.shoppingAffiliate = it })
+                }
+                Text(programs.joinToString(" ") { it.affiliate.disclosure } +
+                    " Prices and search results are the same either way, and commissions never affect what's suggested.",
+                    style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            }
         }
     }
 }

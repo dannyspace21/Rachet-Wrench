@@ -3,7 +3,6 @@
 // (catalog/shopping_tests.json), so Android and web can never drift apart.
 package com.ratchetwrench.app
 
-import com.ratchetwrench.app.domain.Affiliate
 import com.ratchetwrench.app.domain.CatalogData
 import com.ratchetwrench.app.domain.ListLine
 import com.ratchetwrench.app.domain.Retailer
@@ -94,14 +93,23 @@ class ShoppingTest {
             val o = case.jsonObject
             assertEquals(str(o["url"]), Shopping.retailerUrl(byKey.getValue(str(o["retailer"])!!), str(o["query"])!!))
         }
-        val a = cases["affiliate"]!!.jsonObject
-        val r = a["retailer"]!!.jsonObject
-        val aff = r["affiliate"]!!.jsonObject
-        val retailer = Retailer(str(r["key"])!!, str(r["name"])!!, search_url = str(r["search_url"])!!,
-            affiliate = Affiliate(str(aff["param"])!!, str(aff["value"])!!))
-        assertEquals(str(a["url"]), Shopping.retailerUrl(retailer, str(a["query"])!!))
-        // No affiliate tracking is configured today.
-        catalog.retailers.forEach { assertFalse(Shopping.retailerUrl(it, "x").contains("tag=")) }
+    }
+
+    @Test fun affiliateLinksOnlyWhenConfiguredApprovedAndAllowed() {
+        for (case in cases["affiliates"]!!.jsonArray) {
+            val o = case.jsonObject
+            val retailer = json.decodeFromJsonElement(Retailer.serializer(), o["retailer"]!!)
+            val url = Shopping.retailerUrl(retailer, str(o["query"])!!, str(o["platform"]), o["allowed"]!!.jsonPrimitive.booleanOrNull!!)
+            assertEquals(str(o["name"]), str(o["url"]), url)
+            // A commission can never change what is searched for.
+            val plain = Shopping.searchUrl(retailer, str(o["query"])!!)
+            org.junit.Assert.assertTrue(url.startsWith(plain) || url.contains(Shopping.encode(plain)))
+        }
+        // The shipped catalog has no affiliate tracking switched on, on any platform.
+        for (r in catalog.retailers) for (p in listOf("web", "desktop", "android")) {
+            assertFalse(r.key, r.affiliate.enabled)
+            assertEquals(Shopping.searchUrl(r, "oil filter"), Shopping.retailerUrl(r, "oil filter", p))
+        }
     }
 
     @Test fun preferredRetailerFirstAndTurnedOffHidden() {
