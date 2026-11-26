@@ -23,9 +23,11 @@ android {
         versionCode = (System.getenv("RW_VERSION_CODE") ?: "1").toInt()
         versionName = System.getenv("RW_VERSION_NAME") ?: "1.0.0-local"
         // In-app bug reports: GitHub key that can only create issues on this
-        // repository, passed in by the release build (never in the source).
-        // TEMPORARY until reports move to a relay service (docs/BUG-REPORTS.md).
-        buildConfigField("String", "ISSUE_TOKEN", "\"" + (System.getenv("RW_ISSUE_TOKEN") ?: "").replace("\"", "") + "\"")
+        // repository.  Only RELEASE builds get it (below), from the release
+        // workflow's RW_ISSUE_TOKEN secret — never in the source, never in
+        // debug/test builds.  TEMPORARY until reports move to a relay
+        // service (docs/BUG-REPORTS.md).
+        buildConfigField("String", "ISSUE_TOKEN", "\"\"")
         buildConfigField("String", "ISSUE_REPO", "\"dannyspace21/Rachet-Wrench\"")
     }
 
@@ -50,6 +52,7 @@ android {
 
     buildTypes {
         release {
+            buildConfigField("String", "ISSUE_TOKEN", "\"" + (System.getenv("RW_ISSUE_TOKEN") ?: "").filter { it.isLetterOrDigit() || it == '_' } + "\"")
             // Shrink and obfuscate release builds (makes reverse-engineering
             // harder and removes unused code).
             isMinifyEnabled = true
