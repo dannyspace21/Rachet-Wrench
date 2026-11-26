@@ -191,6 +191,7 @@ class ScreensTest {
         click("System")
         click("Kilometers")
         click("Miles")
+        waitForText("Release notes")
         waitForText("About Ratchet Wrench")
         waitForText("Version", substring = true)
         tapIcon("Back")

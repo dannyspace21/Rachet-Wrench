@@ -52,6 +52,11 @@ jobs:
           distribution: temurin
           java-version: "21"
 
+      - name: Check this release has release notes
+        # Every release needs an entry in android/app/src/main/assets/release_notes.json
+        # (shown in the app after updating, and on the release page).
+        run: python3 android/release_notes.py check "$RW_VERSION_NAME"
+
       - name: Check the signing key is configured
         env:
           KEYSTORE_B64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
@@ -108,7 +113,13 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           CERT=$(grep -m1 "certificate SHA-256 digest" signing.txt | awk '{print $NF}')
-          cat > notes.md <<EOF
+          {
+            echo "## What's new in $RW_VERSION_NAME"
+            echo
+            python3 android/release_notes.py markdown "$RW_VERSION_NAME"
+          } > notes.md
+          cat >> notes.md <<EOF
+          ---
           Ratchet Wrench for Android, version $RW_VERSION_NAME.
 
           Built automatically from commit ${GITHUB_SHA::7}.

@@ -215,6 +215,7 @@ fun SettingsScreen(nav: NavHostController, onSignedOut: () -> Unit) {
             }
             UpdateSettingsCard()
             message?.let { Text(it, color = LocalExtra.current.muted) }
+            com.ratchetwrench.app.ui.ReleaseNotesCard()
             AboutCard()
             if (repo.store.mode == "server") SectionCard {
                 Text("Account", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)

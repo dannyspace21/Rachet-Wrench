@@ -108,6 +108,9 @@ fun GarageScreen(nav: NavHostController) {
         )
     }
 
+    // After an update: "What's new" (once per version; not while the crash notice shows).
+    if (crash == null) com.ratchetwrench.app.ui.WhatsNewDialog()
+
     LaunchedEffect(Unit) {
         Updater.autoCheck(ctx) // app updates (at most every 6 hours)
         refresh()

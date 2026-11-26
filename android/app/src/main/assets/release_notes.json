@@ -1,0 +1,75 @@
+{
+  "_comment": "Release notes shown in the app ('What's new' pop-up after an update, and Settings > Release notes) and on the GitHub release page. Newest first. EVERY Android release needs an entry here whose version matches the release (1.0.<workflow run number>); the release workflow refuses to publish otherwise. Keep it high level and in plain English.",
+  "releases": [
+    {
+      "version": "1.0.14",
+      "date": "2026-11-26",
+      "new": [
+        "Release notes: after each update, a “What's new” message shows what changed the first time you open the app.",
+        "Settings now has a Release notes section listing what changed in every version."
+      ],
+      "improved": [],
+      "fixed": []
+    },
+    {
+      "version": "1.0.13",
+      "date": "2026-11-26",
+      "new": [
+        "The VIN scanner also reads the printed VIN, not just the barcode. You confirm a VIN read from text before it's used.",
+        "Flashlight button, zoom slider and tap-to-focus on the VIN scanner."
+      ],
+      "improved": [
+        "Much better barcode reading: the scanner now looks at a far sharper picture (1080p instead of 640×480)."
+      ],
+      "fixed": []
+    },
+    {
+      "version": "1.0.12",
+      "date": "2026-11-26",
+      "new": [
+        "The camera shows small previews of the photos you've taken."
+      ],
+      "improved": [
+        "Photos are saved without hidden location details on the phone's copy."
+      ],
+      "fixed": [
+        "Photos no longer disappear when you turn the phone while using the camera or adding an entry.",
+        "Photos are no longer sideways or flipped — they're saved and shown the way you took them, even with auto-rotate off."
+      ]
+    },
+    {
+      "version": "1.0.11",
+      "date": "2026-11-25",
+      "new": [
+        "Settings button on the Garage screen, and an About section in Settings."
+      ],
+      "improved": [
+        "Every release is now tested by automatically tapping through the app before it's published."
+      ],
+      "fixed": [
+        "The app no longer crashes when opened with a vehicle saved, or when adding an entry (icons were missing).",
+        "Deleting an entry now always works."
+      ]
+    },
+    {
+      "version": "1.0.10",
+      "date": "2026-11-25",
+      "new": [],
+      "improved": [
+        "If the app ever closes unexpectedly, it offers to copy the error details next time (kept on your phone only)."
+      ],
+      "fixed": [
+        "Scan barcode no longer crashes the app."
+      ]
+    },
+    {
+      "version": "1.0.9",
+      "date": "2026-11-25",
+      "new": [
+        "The app updates itself: new versions download on Wi-Fi (or ask first on mobile data) and install after a quick confirmation."
+      ],
+      "improved": [],
+      "fixed": []
+    }
+  ]
+}

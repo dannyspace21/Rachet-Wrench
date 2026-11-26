@@ -377,3 +377,18 @@ The desktop app *is* the existing server plus web app, packaged to run on a PC. 
   - **Safeguards:** a check digit can't catch everything (two misreads can still pass about 1 time in 11). So a VIN read from text must be read identically in two frames *and* confirmed by the user ("Is this the VIN?") before it's used. Barcode reads with a valid check digit are still used immediately.
 - **Controls:** flashlight toggle (if the phone has one), zoom slider, and tap-to-focus.
 - **Tests:** `VinFinderTest` covers the barcode variants, labelled, spaced and multi-line text, O/0 and lowercase, look-alike repair, and that ordinary sticker text is not mistaken for a VIN.
+
+### D53. Release notes in the app and on every release
+- **What you asked for:** every Android update comes with high-level release notes, shown as the first pop-up after updating and also in Settings.
+- **One source:** `android/app/src/main/assets/release_notes.json` (newest first, with `new` / `improved` / `fixed` lists).
+  - It's bundled in the app, so it works offline and nothing extra is downloaded.
+  - The release workflow puts the same notes at the top of the GitHub release page.
+- **Can't be forgotten:** the first step of the release workflow (`android/release_notes.py check`) fails unless the top entry is exactly the version being built and isn't empty. The version is `1.0.<workflow run number>`, so the entry is written for the next run number.
+- **In the app:**
+  - **"What's new" pop-up:** appears once per version on the Garage screen.
+    - A brand-new install doesn't see it, because there's nothing "new" yet.
+    - Signing out doesn't make it reappear.
+    - It never covers the crash-details notice.
+  - **Settings → Release notes:** shows the installed version's notes, with earlier versions behind **Show earlier versions**.
+- **Backfilled:** notes for 1.0.9–1.0.13 were written from the release history.
+- **Tests:** `ReleaseNotesTest` checks the file loads, versions are unique and newest first, and every entry has content. It also checks the pop-up shows after an update and is remembered once dismissed. The Settings screen test checks the section is there.

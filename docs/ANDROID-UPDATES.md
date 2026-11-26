@@ -39,3 +39,18 @@ To create a new key, run `scripts/create-android-signing-key.sh` on a computer y
 **Keep a backup of the key file and password.** If they're lost, future versions can't update the installed app, and everyone would have to uninstall and reinstall.
 
 The signing certificate's SHA-256 fingerprint is shown in every release's notes. It must never change.
+
+## Release notes (required for every release)
+
+Every Android release has release notes. You see them in the app:
+
+- **"What's new" pop-up:** shown the first time you open the app after it updates (once per version; never on a brand-new install).
+- **Settings → Release notes:** shows this version's notes, with every earlier version under **Show earlier versions**.
+
+The same notes appear at the top of the GitHub release page.
+
+**For whoever publishes a release:** add an entry at the **top** of `android/app/src/main/assets/release_notes.json` before pushing Android changes to `main`.
+
+- **Version:** the release workflow numbers releases `1.0.<run number>`, so the entry's `version` is the previous release's number + 1.
+- **Contents:** keep it high level and in plain English, under `new`, `improved` and `fixed`.
+- **Enforced:** the workflow checks this first (`android/release_notes.py check`) and **refuses to publish** if the entry is missing or empty.

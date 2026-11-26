@@ -64,7 +64,11 @@ fun AppRoot() {
         when {
             repo.store.mode == "local" -> "garage"
             repo.store.token != null -> { if (repo.store.mode.isEmpty()) repo.store.mode = "server"; "garage" }
-            else -> "welcome"
+            else -> {
+                // Brand-new install: nothing is "new" yet, so skip the What's new pop-up.
+                repo.store.notesSeenCode = com.ratchetwrench.app.BuildConfig.VERSION_CODE
+                "welcome"
+            }
         }
     }
 

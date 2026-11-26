@@ -61,6 +61,8 @@ Build-sandbox notes: the sandbox blocks dl.google.com, api.osv.dev, semgrep.dev 
 
 - v1.0.13: VIN scanner at 1080p, also reads printed VINs (with confirmation), flashlight, zoom, tap-to-focus (D52).
 
+- v1.0.14: release notes — "What's new" pop-up after updates, Settings → Release notes, required by the release workflow (D53).
+
 ## Ideas for later (not started)
 - Code-sign the desktop app (paid Apple/Microsoft certificates) to remove first-launch warnings; add an Intel-Mac build if needed.
 - Run the Android app on a real device/emulator and add phone screenshots to the README (no emulator was available in the build sandbox).

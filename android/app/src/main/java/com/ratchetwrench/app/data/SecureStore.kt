@@ -119,6 +119,11 @@ class SecureStore(context: Context) {
         get() = prefs.getString("last_since", null)
         set(v) = prefs.edit().putString("last_since", v).apply()
 
+    /** The app version whose "What's new" notes were last shown (versionCode). */
+    var notesSeenCode: Int
+        get() = prefs.getInt("notes_seen", 0)
+        set(v) = prefs.edit().putInt("notes_seen", v).apply()
+
     var lastSyncOk: String?
         get() = prefs.getString("last_sync_ok", null)
         set(v) = prefs.edit().putString("last_sync_ok", v).apply()
@@ -130,9 +135,11 @@ class SecureStore(context: Context) {
     /** Forget everything except the server address and theme (data is wiped separately). */
     fun signOut() {
         val keep = serverUrl to theme
+        val seen = notesSeenCode
         prefs.edit().clear().apply()
         serverUrl = keep.first
         theme = keep.second
+        notesSeenCode = seen // don't show "What's new" again after signing out
     }
 
     /** Stop syncing but keep using the app on this phone with the same data. */
