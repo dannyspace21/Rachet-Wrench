@@ -526,3 +526,14 @@ def test_web_shopping_logic_with_shared_cases():
     # Reviewed: fixed program + our own test files, no shell.
     r = subprocess.run([node, "--test", *tests], cwd=root, capture_output=True, text=True, timeout=120, check=False)  # noqa: S603  # nosemgrep
     assert r.returncode == 0, r.stdout[-3000:] + r.stderr[-2000:]
+
+
+def test_carfax_recognises_oil_change_wordings():
+    """Different ways shops write an oil change are all oil changes (never air filter)."""
+    from app.carfax import classify
+
+    for line in ("Oil and filter changed", "Oil & filter changed", "Changed oil & filter", "Oil/filter service",
+                 "Lube, oil and filter", "Oil changed"):
+        assert classify(line)[0] == "oil_change", line
+    assert classify("Engine air filter replaced")[0] == "air_filter"
+    assert classify("Oil filter replaced")[0] == "oil_filter"

@@ -34,6 +34,8 @@ object Metrics {
     val RANGE_YEARS = mapOf("all" to null, "5y" to 5, "2y" to 2, "1y" to 1)
 
     fun groupOf(typeKey: String, c: CatalogData): String {
+        // A group that names the service outright wins (e.g. oil changes).
+        c.metric_groups.firstOrNull { typeKey in it.types }?.let { return it.key }
         val t = c.types.firstOrNull { it.key == typeKey }
         return c.metric_groups.firstOrNull { t != null && t.category in it.categories }?.key ?: c.metric_groups.last().key
     }

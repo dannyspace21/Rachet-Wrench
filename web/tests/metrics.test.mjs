@@ -3,7 +3,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
-import { byGroup, byType, byYear, cutoff, filterEntries, intervals, totals } from "../js/metrics.js";
+import { byGroup, byType, byYear, cutoff, filterEntries, groupOf, intervals, totals } from "../js/metrics.js";
 
 const root = new URL("../../", import.meta.url);
 const catalog = JSON.parse(readFileSync(new URL("catalog/catalog.json", root), "utf8"));
@@ -51,4 +51,11 @@ test("a mileage typo (negative gap) is shown but not averaged", () => {
   const r = intervals(n.entries);
   assert.deepEqual(r.rows.map((x) => x.sinceMiles), n.sinceMiles);
   assert.equal(r.avgMiles, n.avgMiles);
+});
+
+test("bug #2: oil changes are their own category, never mixed with air filters", () => {
+  for (const [type, group] of c.separate_groups) assert.equal(groupOf(type, catalog), group, type);
+  // Every service type lands in exactly one of at most 8 groups.
+  assert.ok(catalog.metric_groups.length <= 8);
+  for (const t of catalog.types) assert.ok(catalog.metric_groups.some((g) => g.key === groupOf(t.key, catalog)), t.key);
 });

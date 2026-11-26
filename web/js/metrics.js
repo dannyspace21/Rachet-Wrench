@@ -15,6 +15,9 @@ export const RANGE_YEARS = { all: null, "5y": 5, "2y": 2, "1y": 1 };
 
 /** The metric group a service type belongs to (catalog category -> group). */
 export function groupOf(typeKey, catalog) {
+  // A group that names the service outright wins (e.g. oil changes).
+  const pinned = catalog.metric_groups.find((x) => (x.types || []).includes(typeKey));
+  if (pinned) return pinned.key;
   const t = catalog.types.find((x) => x.key === typeKey);
   const g = t && catalog.metric_groups.find((x) => x.categories.includes(t.category));
   return g ? g.key : catalog.metric_groups[catalog.metric_groups.length - 1].key;

@@ -371,14 +371,16 @@ SPEC_PARTS = [
 # chart can't show more than 8 colours clearly).  Order = colour order.
 # ---------------------------------------------------------------------------
 METRIC_GROUPS = [
-    {"key": "engine", "label": "Engine & oil", "categories": ["Engine", "Fuel system", "Ignition", "Cooling"]},
+    # "types" (a list of service keys) wins over "categories": oil changes are
+    # their own group so they're never mixed with air filters, belts, etc.
+    {"key": "oil", "label": "Oil changes", "types": ["oil_change", "oil_filter"], "categories": []},
+    {"key": "engine", "label": "Engine & filters", "categories": ["Engine", "Fuel system", "Ignition", "Interior"]},
     {"key": "tires", "label": "Tires & wheels", "categories": ["Tires & wheels"]},
     {"key": "brakes", "label": "Brakes", "categories": ["Brakes"]},
-    {"key": "fluids", "label": "Fluids", "categories": ["Fluids"]},
+    {"key": "fluids", "label": "Fluids & cooling", "categories": ["Fluids", "Cooling"]},
     {"key": "chassis", "label": "Suspension & drivetrain", "categories": ["Suspension & steering", "Drivetrain", "Exhaust", "Motorcycle"]},
     {"key": "electrical", "label": "Electrical & climate", "categories": ["Electrical", "Climate"]},
-    {"key": "body", "label": "Body & interior", "categories": ["Body & glass", "Interior"]},
-    {"key": "other", "label": "Inspections & other", "categories": ["Paperwork", "Repairs", "Other"]},
+    {"key": "other", "label": "Body, inspections & other", "categories": ["Body & glass", "Paperwork", "Repairs", "Other"]},
 ]
 
 
@@ -391,6 +393,9 @@ def main() -> None:
     assert len(spec_keys) == len(set(spec_keys)), "duplicate spec key"
     cats = [c for g in METRIC_GROUPS for c in g["categories"]]
     assert sorted(cats) == sorted({t[2] for t in TYPES}), "every category in exactly one metric group"
+    pinned = [k for g in METRIC_GROUPS for k in g.get("types", [])]
+    assert len(pinned) == len(set(pinned)) and set(pinned) <= set(keys), "metric group types"
+    assert len(METRIC_GROUPS) <= 8, "a chart can't show more than 8 colours clearly"
     for sp in SPEC_PARTS:
         assert sp["spec"] in spec_keys and sp["type_key"] in keys and "{v}" in sp["format"], sp
 

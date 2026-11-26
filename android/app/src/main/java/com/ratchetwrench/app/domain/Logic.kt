@@ -94,7 +94,7 @@ object Reminders {
     val metric_groups: List<MetricGroup> = emptyList(),
 )
 
-@Serializable data class MetricGroup(val key: String, val label: String, val categories: List<String>)
+@Serializable data class MetricGroup(val key: String, val label: String, val categories: List<String> = emptyList(), val types: List<String> = emptyList())
 
 @Serializable data class SpecPart(val spec: String, val type_key: String, val name: String, val format: String = "{v}")
 

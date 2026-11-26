@@ -1,5 +1,5 @@
 {
-  "_comment": "Hand-worked cases for the Metrics tab. The web app (web/tests/metrics.test.mjs) and Android (MetricsTest.kt) must both give exactly these numbers. today = 2026-11-26; e10 is deleted and must never count; e9 sits one day outside the 12-month range.",
+  "_comment": "Hand-worked cases for the Metrics tab. The web app (web/tests/metrics.test.mjs) and Android (MetricsTest.kt) must both give exactly these numbers. today = 2026-11-26; e10 is deleted and must never count; e9 sits one day outside the 12-month range. Bug #2: oil changes / oil filters must never share a group with air filters.",
   "today": "2026-11-26",
   "entries": [
     {
@@ -228,34 +228,28 @@
   ],
   "groups_all": [
     {
-      "key": "engine",
+      "key": "oil",
       "slot": 0,
       "count": 4,
       "cents": 19000
     },
     {
       "key": "tires",
-      "slot": 1,
+      "slot": 2,
       "count": 2,
       "cents": 102500
     },
     {
       "key": "brakes",
-      "slot": 2,
+      "slot": 3,
       "count": 1,
       "cents": 30000
     },
     {
-      "key": "body",
-      "slot": 6,
-      "count": 1,
-      "cents": 4000
-    },
-    {
       "key": "other",
       "slot": 7,
-      "count": 1,
-      "cents": 3500
+      "count": 2,
+      "cents": 7500
     }
   ],
   "groups_except": {
@@ -269,7 +263,7 @@
     "groups": [
       {
         "key": "tires",
-        "slot": 1,
+        "slot": 2,
         "count": 1,
         "cents": 100000
       },
@@ -431,5 +425,39 @@
       -2000
     ],
     "avgMiles": 4000
-  }
+  },
+  "separate_groups": [
+    [
+      "oil_change",
+      "oil"
+    ],
+    [
+      "oil_filter",
+      "oil"
+    ],
+    [
+      "air_filter",
+      "engine"
+    ],
+    [
+      "cabin_filter",
+      "engine"
+    ],
+    [
+      "fuel_filter",
+      "engine"
+    ],
+    [
+      "spark_plugs",
+      "engine"
+    ],
+    [
+      "coolant",
+      "fluids"
+    ],
+    [
+      "wipers",
+      "other"
+    ]
+  ]
 }

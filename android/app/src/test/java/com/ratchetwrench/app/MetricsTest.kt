@@ -83,4 +83,13 @@ class MetricsTest {
         assertEquals(n["sinceMiles"]!!.jsonArray.map { int(it) }, neg.rows.map { it.sinceMiles })
         assertEquals(int(n["avgMiles"]), neg.avgMiles)
     }
+
+    /** Bug #2: oil changes are their own category, never mixed with air filters. */
+    @Test fun oilChangesHaveTheirOwnCategory() {
+        for (pair in c["separate_groups"]!!.jsonArray) {
+            val (type, group) = pair.jsonArray.map { it.jsonPrimitive.content }
+            assertEquals(type, group, Metrics.groupOf(type, catalog))
+        }
+        org.junit.Assert.assertTrue(catalog.metric_groups.size <= 8)
+    }
 }

@@ -14,7 +14,7 @@
 
 import { api } from "../api.js";
 import { h, mount, money, dateText, emptyState } from "../ui.js";
-import { byGroup, byType, byYear, cutoff, filterEntries, intervals, newestFirst, totals } from "../metrics.js";
+import { byGroup, byType, byYear, cutoff, filterEntries, groupOf, intervals, newestFirst, totals } from "../metrics.js";
 
 const SVG = "http://www.w3.org/2000/svg";
 const PAGE = 50;
@@ -337,9 +337,7 @@ export async function metricsTab(body, v, { catalog, label }) {
   }
 
   function groupSlotOf(typeKey) {
-    const tt = catalog.types.find((x) => x.key === typeKey);
-    const i = catalog.metric_groups.findIndex((g) => tt && g.categories.includes(tt.category));
-    return i < 0 ? catalog.metric_groups.length - 1 : i;
+    return catalog.metric_groups.findIndex((g) => g.key === groupOf(typeKey, catalog));
   }
 
   draw();

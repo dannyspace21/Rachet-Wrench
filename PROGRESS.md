@@ -87,6 +87,8 @@ Build-sandbox notes: the sandbox blocks dl.google.com, api.osv.dev, semgrep.dev 
 
 - v1.0.27: in-app bug reports to GitHub Issues (temporary build-time key; relay planned) (D64).
 
+- v1.0.30: bug #2 — Metrics: oil changes their own category; Carfax recognises more oil-change wordings.
+
 ## Ideas for later (not started)
 - Code-sign the desktop app (paid Apple/Microsoft certificates) to remove first-launch warnings; add an Intel-Mac build if needed.
 - Run the Android app on a real device/emulator and add phone screenshots to the README (no emulator was available in the build sandbox).

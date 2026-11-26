@@ -80,7 +80,9 @@ SERVICE_RULES: list[tuple[str, str, str]] = [
     ("checked", "inspection", "check"),
     # engine & filters
     ("cabin air filter", "cabin_filter", "work"), ("cabin filter", "cabin_filter", "work"),
-    ("oil and filter", "oil_change", "work"), ("oil change", "oil_change", "work"), ("oil changed", "oil_change", "work"),
+    ("oil and filter", "oil_change", "work"), ("oil & filter", "oil_change", "work"), ("oil/filter", "oil_change", "work"),
+    ("oil change", "oil_change", "work"), ("oil changed", "oil_change", "work"), ("changed oil", "oil_change", "work"),
+    ("lube, oil", "oil_change", "work"),
     ("oil filter", "oil_filter", "work"),
     ("air filter", "air_filter", "work"), ("fuel filter", "fuel_filter", "work"),
     ("spark plug", "spark_plugs", "work"), ("ignition coil", "ignition_coils", "work"),
