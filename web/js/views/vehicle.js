@@ -9,6 +9,8 @@ import { reminderItem } from "./dashboard.js";
 import { partShopButton, reminderShopButton, shoppingContext } from "./shopping-ui.js";
 import { addPartToList, addReminderToList } from "./shopping-list.js";
 import { metricsTab } from "./metrics-tab.js";
+import { recallsPanel } from "./recalls-panel.js";
+import { sortRecalls } from "../recalls.js";
 
 // In the order you use them: what's due, what fits, what was done, the specs.
 // (Mileage is updated with the "Update mileage" button; no separate tab.)
@@ -77,22 +79,30 @@ async function logMileage(v) {
 // ---------------------------------------------------------------------------
 // History tab: maintenance & repair entries, filterable
 // ---------------------------------------------------------------------------
+const historyFilter = new Map();
+
 async function historyTab(body, v, { label }) {
-  const [entries, atts] = await Promise.all([api(`/api/entries?vehicle_id=${v.id}`), api(`/api/attachments?vehicle_id=${v.id}`)]);
+  const [entries, atts, recalls] = await Promise.all([api(`/api/entries?vehicle_id=${v.id}`), api(`/api/attachments?vehicle_id=${v.id}`),
+    api(`/api/recalls?vehicle_id=${v.id}`)]);
   const photos = {};
   for (const a of atts) if (a.entry_id && a.content_type.startsWith("image/")) (photos[a.entry_id] ||= []).push(a);
-  let filter = "all";
+  // Remember the chosen filter while the page re-draws (e.g. after marking a recall done).
+  let filter = historyFilter.get(v.id) || "all";
   const list = h("div", { class: "list" });
   const totals = h("p", { class: "muted small" });
   const draw = () => {
+    totals.hidden = filter === "recalls";
+    if (filter === "recalls") { recallsPanel(list, v, entries, recalls); return; }
     const shown = entries.filter((e) => filter === "all" || e.kind === filter);
     const sum = (k) => entries.filter((e) => e.kind === k).reduce((s, e) => s + (e.cost_cents || 0), 0);
     totals.textContent = `Maintenance ${money(sum("maintenance"))} · Repairs ${money(sum("repair"))} · Total ${money(sum("maintenance") + sum("repair"))}`;
     mount(list, shown.length ? shown.map((e) => entryItem(e, label, photos[e.id] || [], v)) :
       emptyState("u-list", "No records yet", "Log your first maintenance or repair.", h("a", { class: "btn primary", href: `#/v/${v.id}/entry/new` }, "Add entry")));
   };
-  const seg = segmented([{ value: "all", label: "All" }, { value: "maintenance", label: "Maintenance", icon: "u-maintenance" }, { value: "repair", label: "Repairs", icon: "u-repair" }],
-    filter, (val) => { filter = val; draw(); }, "Filter records");
+  const openCount = sortRecalls(recalls, entries, today()).filter((x) => x.s.status === "open").length;
+  const seg = segmented([{ value: "all", label: "All" }, { value: "maintenance", label: "Maintenance", icon: "u-maintenance" }, { value: "repair", label: "Repairs", icon: "u-repair" },
+    { value: "recalls", label: openCount ? `Recalls (${openCount} open)` : "Recalls", icon: "t-recall" }],
+    filter, (val) => { filter = val; historyFilter.set(v.id, val); draw(); }, "Filter records");
   draw();
   mount(body, h("div", { class: "row between", style: null }, seg, totals), h("div", { style: null }), list);
   body.children[1].style.height = "16px";

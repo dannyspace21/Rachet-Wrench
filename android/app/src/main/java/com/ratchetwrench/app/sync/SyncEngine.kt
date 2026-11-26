@@ -23,6 +23,7 @@ import com.ratchetwrench.app.data.Part
 import com.ratchetwrench.app.data.Reminder
 import com.ratchetwrench.app.data.SecureStore
 import com.ratchetwrench.app.data.ShoppingItem
+import com.ratchetwrench.app.data.VehicleRecall
 import com.ratchetwrench.app.data.Spec
 import com.ratchetwrench.app.data.SyncPull
 import com.ratchetwrench.app.data.Synced
@@ -58,6 +59,8 @@ class SyncEngine(private val context: Context) {
         "attachments" to setOf("id", "updated_at", "deleted_at", "vehicle_id", "entry_id", "category", "caption"),
         "shopping" to setOf("id", "updated_at", "deleted_at", "vehicle_id", "reminder_id", "part_id", "type_key", "description",
             "part_number", "spec", "quantity", "purchased", "notes"),
+        "recalls" to setOf("id", "updated_at", "deleted_at", "vehicle_id", "campaign", "component", "summary", "consequence",
+            "remedy", "report_date", "park_it", "status", "done_date", "entry_id", "notes"),
     )
 
     private fun <T> toPush(kind: String, ser: KSerializer<T>, item: T): JsonObject {
@@ -66,6 +69,7 @@ class SyncEngine(private val context: Context) {
         // A shopping line can be unlinked from its vehicle/reminder/part: send
         // those as explicit nulls (missing would mean "unchanged").
         if (kind == "shopping") for (k in listOf("vehicle_id", "reminder_id", "part_id")) out.putIfAbsent(k, kotlinx.serialization.json.JsonNull)
+        if (kind == "recalls") for (k in listOf("done_date", "entry_id")) out.putIfAbsent(k, kotlinx.serialization.json.JsonNull)
         return JsonObject(out)
     }
 
@@ -81,6 +85,7 @@ class SyncEngine(private val context: Context) {
         try {
             push()
             pushShopping()
+            kotlinx.coroutines.runBlocking { pushRecalls() }
             uploadPhotos()
             pull()
         } catch (e: Exception) {
@@ -136,6 +141,17 @@ class SyncEngine(private val context: Context) {
             catch (e: com.ratchetwrench.app.data.ApiException) { if (e.status == 422) return@runBlocking else throw e }
         val results = json.parseToJsonElement(res).jsonObject["results"]!!.jsonObject
         applyResults(results["shopping"], ShoppingItem.serializer(), { db.shopping().upsert(it) }, { db.shopping().remove(it) }, { db.shopping().get(it) }) { it.copy(dirty = false) }
+    }
+
+    /** Recalls, also in their own request (an older computer refuses them: they wait on the phone). */
+    private suspend fun pushRecalls() {
+        val items = db.recalls().dirty()
+        if (items.isEmpty()) return
+        val body = JsonObject(mapOf("recalls" to JsonArray(items.map { toPush("recalls", VehicleRecall.serializer(), it) })))
+        val res = try { api.send("POST", "/api/sync", body) }
+            catch (e: com.ratchetwrench.app.data.ApiException) { if (e.status == 422) return else throw e }
+        val results = json.parseToJsonElement(res).jsonObject["results"]!!.jsonObject
+        applyResults(results["recalls"], VehicleRecall.serializer(), { db.recalls().upsert(it) }, { db.recalls().remove(it) }, { db.recalls().get(it) }) { it.copy(dirty = false) }
     }
 
     /**
@@ -218,6 +234,7 @@ class SyncEngine(private val context: Context) {
             db.attachments().upsert(server.copy(localPath = local?.localPath))
         }
         merge(data.shopping, { db.shopping().get(it) }) { db.shopping().upsert(it) }
+        merge(data.recalls, { db.recalls().get(it) }) { db.recalls().upsert(it) }
         data.settings?.let { s ->
             store.theme = s.theme
             store.distanceUnit = s.distance_unit

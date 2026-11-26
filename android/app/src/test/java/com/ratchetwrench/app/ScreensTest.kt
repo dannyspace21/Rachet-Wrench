@@ -189,11 +189,11 @@ class ScreensTest {
         waitForText("Scan door sticker")
         tapIcon("Back")
 
-        // The vehicle screen shows what's coming up for this vehicle (the
-        // reminder above was last done at 37,000 mi; due at 42,000, the car is at 43,500 -> overdue).
-        click("History")
-        waitForText("Coming up")
+        // No separate "Coming up" card any more: the Reminders tab (first) shows it
+        // (last done at 37,000 mi, due at 42,000, the car is at 43,500 -> overdue).
+        click("Reminders")
         waitForText("Overdue")
+        org.junit.Assert.assertTrue("no Coming up card", rule.onAllNodesWithText("Coming up").fetchSemanticsNodes().isEmpty())
 
         // Edit vehicle screen.
         tapIcon("Edit vehicle")
@@ -409,6 +409,41 @@ class ScreensTest {
         scrollTo("Brake pads · repair")
         click("Brake pads · repair")
         waitForText("Brake pads")
+    }
+
+    /** History → Recalls: open first, Mark as done adds it to the history, Doesn't apply. */
+    @Test
+    fun recallsInHistory() {
+        startPhoneOnlyWithVehicle()
+        val ctx = ApplicationProvider.getApplicationContext<Context>()
+        val repo = com.ratchetwrench.app.data.Repository(ctx)
+        kotlinx.coroutines.runBlocking {
+            val v = repo.db.vehicles().observeAll().first().first()
+            fun rc(c: String, comp: String, d: String, remedy: String = "") = com.ratchetwrench.app.data.VehicleRecall(id = repo.recallId(v.id, c),
+                vehicle_id = v.id, campaign = c, component = comp, summary = "Summary of $c", consequence = "Risk of $c", remedy = remedy, report_date = d)
+            repo.db.recalls().upsert(rc("20V012000", "FUEL SYSTEM, GASOLINE:DELIVERY:FUEL PUMP", "2020-01-13"))
+            repo.db.recalls().upsert(rc("17V773000", "SERVICE BRAKES", "2017-12-01", "Kia's number for this recall is SC158."))
+            // A recall already in the history (e.g. from Carfax) under the carmaker's number.
+            repo.saveEntry(com.ratchetwrench.app.data.Entry(vehicle_id = v.id, type_key = "recall", date = "2019-03-01", description = "Recall SC158 performed"), isNew = true)
+        }
+        click("History")
+        click("Recalls (1)")
+        waitForText("Fuel System, Gasoline:Delivery:Fuel Pump", substring = true)
+        waitForText("Done Mar 1, 2019 — see the history record")   // matched by the carmaker's number SC158
+        click("Mark as done")
+        waitForText("Mark recall as done")
+        type("Dealer / shop (optional)", "Lexus of Town")
+        click("Mark as done")
+        waitGone("Mark recall as done")
+        kotlinx.coroutines.runBlocking {
+            val v = repo.db.vehicles().observeAll().first().first()
+            val r = repo.db.recalls().get(repo.recallId(v.id, "20V012000"))!!
+            org.junit.Assert.assertEquals("done", r.status)
+            val e = repo.db.entries().get(r.entry_id!!)!!
+            org.junit.Assert.assertEquals("recall", e.type_key)
+            org.junit.Assert.assertEquals("Lexus of Town", e.shop_name)
+            org.junit.Assert.assertTrue(e.description.startsWith("Recall 20V012000"))
+        }
     }
 
     @Test

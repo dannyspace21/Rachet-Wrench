@@ -55,6 +55,8 @@ class DatabaseUpgradeTest {
             assertEquals("Lexus", db.vehicles().get("v1")?.make)
             db.shopping().upsert(ShoppingItem(id = "s1", vehicle_id = "v1", description = "Oil filter", quantity = 2))
             assertEquals(2, db.shopping().get("s1")?.quantity)
+            db.recalls().upsert(com.ratchetwrench.app.data.VehicleRecall(id = "r1", vehicle_id = "v1", campaign = "20V012000"))
+            assertEquals("open", db.recalls().get("r1")?.status)
         }
         AppDatabase.resetForTests()
     }

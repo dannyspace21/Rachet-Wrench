@@ -13,6 +13,8 @@ them so every kind gets the same security checks (see records.py).
 # (No "from __future__ import annotations" here: FastAPI must see the real
 # schema classes in the generated functions below.)
 
+from datetime import date
+
 from fastapi import APIRouter, Depends, Query
 from sqlalchemy.orm import Session
 
@@ -40,6 +42,8 @@ def _sort(kind: str, rows: list) -> list:
         return sorted(rows, key=lambda r: (r.date, r.mileage or 0), reverse=True)
     if kind == "vehicles":
         return sorted(rows, key=lambda r: r.created_at)
+    if kind == "recalls":  # newest recall first
+        return sorted(rows, key=lambda r: (r.report_date is not None, r.report_date or date.min), reverse=True)
     if kind == "shopping":  # still to buy first, then oldest first
         return sorted(rows, key=lambda r: (r.purchased, r.created_at))
     return rows

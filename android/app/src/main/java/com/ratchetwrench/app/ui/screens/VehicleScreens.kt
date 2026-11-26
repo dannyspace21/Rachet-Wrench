@@ -128,13 +128,8 @@ fun VehicleScreen(nav: NavHostController, id: String) {
     var tab by rememberSaveable { mutableStateOf(0) }
     var showMileage by remember { mutableStateOf(false) }
     val photos by repo.db.attachments().observeVehiclePhotos().collectAsState(initial = emptyList())
-    val rems by repo.db.reminders().observeFor(id).collectAsState(initial = emptyList())
     val v = vehicle ?: return
     val links = Catalog.links(ctx, v.make, v.kind)
-    // Smart Shopping: what's known about this vehicle (specs, saved parts).
-    val shopCtx = com.ratchetwrench.app.ui.rememberShopContext(v)
-    val shopOn = com.ratchetwrench.app.ui.shoppingOn()
-    var shopping by remember { mutableStateOf<Pair<String, List<com.ratchetwrench.app.domain.ShopItem>>?>(null) }
     val ownersUrl = v.owners_url.ifBlank { links.owners ?: "" }
 
     Scaffold(
@@ -178,39 +173,7 @@ fun VehicleScreen(nav: NavHostController, id: String) {
                     // (The manufacturer's parts site is on the Parts tab.)
                     if (ownersUrl.isNotBlank()) ActionChip("Owner portal", "book") { openLink(ctx, ownersUrl) }
                 }
-                // Coming up: overdue / due-soon maintenance for this vehicle.
-                val due = rems.map { it to Reminders.status(it, v.current_mileage) }
-                    .filter { it.second.status == "overdue" || it.second.status == "due_soon" }
-                    .sortedBy { if (it.second.status == "overdue") 0 else 1 }
-                if (due.isNotEmpty()) {
-                    androidx.compose.material3.Card(shape = androidx.compose.foundation.shape.RoundedCornerShape(14.dp),
-                        colors = androidx.compose.material3.CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-                        border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outline)) {
-                        Column(Modifier.padding(horizontal = 12.dp, vertical = 8.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                            Row(verticalAlignment = Alignment.CenterVertically) {
-                                Text("Coming up", fontWeight = FontWeight.Bold, modifier = Modifier.weight(1f))
-                                if (due.size > 3) TextButton({ tab = 2 }) { Text("See all ${due.size}") }
-                            }
-                            due.take(3).forEach { (r, st) ->
-                                Row(Modifier.fillMaxWidth().clickable { nav.navigate("reminder/${r.id}") }, verticalAlignment = Alignment.CenterVertically,
-                                    horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                                    TypeBadge(r.type_key, "neutral", 32.dp)
-                                    Column(Modifier.weight(1f)) {
-                                        Text(r.title.ifBlank { Catalog.typeLabel(ctx, r.type_key) }, fontWeight = FontWeight.SemiBold,
-                                            style = MaterialTheme.typography.bodyMedium)
-                                        Text(st.describe(v.mileage_unit), color = LocalExtra.current.muted, style = MaterialTheme.typography.bodySmall)
-                                    }
-                                    val shopItems = if (shopOn) com.ratchetwrench.app.domain.Shopping.itemsFor(r.type_key, shopCtx, Catalog.get(ctx)) else emptyList()
-                                    val name = r.title.ifBlank { Catalog.typeLabel(ctx, r.type_key) }
-                                    if (shopItems.isNotEmpty()) com.ratchetwrench.app.ui.ShopIconButton("Find supplies for $name") {
-                                        shopping = "Find supplies — $name" to shopItems
-                                    }
-                                    StatusPill(st.status)
-                                }
-                            }
-                        }
-                    }
-                }
+                // (No "Coming up" card: Reminders is the first tab and lists the same things.)
             }
             PrimaryScrollableTabRow(selectedTabIndex = tab, edgePadding = 16.dp, containerColor = MaterialTheme.colorScheme.background) {
                 TABS.forEachIndexed { i, t -> Tab(selected = tab == i, onClick = { tab = i }, text = { Text(t, fontWeight = FontWeight.SemiBold) }) }
@@ -224,7 +187,6 @@ fun VehicleScreen(nav: NavHostController, id: String) {
             }
         }
     }
-    shopping?.let { (title, items) -> com.ratchetwrench.app.ui.ShoppingDialog(title, items) { shopping = null } }
     if (showMileage) {
         var text by remember { mutableStateOf(v.current_mileage?.toString() ?: "") }
         AlertDialog(onDismissRequest = { showMileage = false }, title = { Text("Update mileage") },
@@ -242,10 +204,32 @@ private fun HistoryTab(nav: NavHostController, v: Vehicle) {
     val repo = LocalRepo.current
     val ctx = LocalContext.current
     val entries by repo.db.entries().observeFor(v.id).collectAsState(initial = emptyList())
+    val recalls by repo.db.recalls().observeFor(v.id).collectAsState(initial = emptyList())
     var filter by rememberSaveable { mutableStateOf("all") }
+    val scope = rememberCoroutineScope()
     val shown = entries.filter { filter == "all" || it.kind == filter }
+    val recallRows = com.ratchetwrench.app.domain.Recalls.sorted(recalls, entries, LocalDate.now())
+    val openRecalls = recallRows.count { it.second.status == "open" }
+    var recallStatus by remember { mutableStateOf<String?>(null) }
+    fun refreshRecalls() {
+        recallStatus = "Checking NHTSA for recalls…"
+        scope.launch {
+            val msg = runCatching { repo.refreshRecalls(v) }.fold(
+                { n -> if (n > 0) "$n new recall${if (n == 1) "" else "s"} found." else "Checked NHTSA just now." },
+                { it.message ?: "Couldn't reach NHTSA." })
+            com.ratchetwrench.app.ui.onMain { recallStatus = msg }
+        }
+    }
+    // Look up recalls once when the vehicle is opened (only year/make/model are sent).
+    androidx.compose.runtime.LaunchedEffect(v.id, v.year, v.make, v.model) { if (v.year != null && v.make.isNotBlank() && v.model.isNotBlank()) refreshRecalls() }
     LazyColumn(contentPadding = androidx.compose.foundation.layout.PaddingValues(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-        item { Segmented(listOf("all" to "All", "maintenance" to "Maintenance", "repair" to "Repairs"), filter) { filter = it } }
+        item {
+            Row(Modifier.horizontalScroll(androidx.compose.foundation.rememberScrollState())) {
+                Segmented(listOf("all" to "All", "maintenance" to "Maintenance", "repair" to "Repairs",
+                    "recalls" to if (openRecalls > 0) "Recalls ($openRecalls)" else "Recalls"), filter) { filter = it }
+            }
+        }
+        if (filter == "recalls") { recallItems(nav, v, recallRows, repo, recallStatus) { refreshRecalls() }; return@LazyColumn }
         item {
             val sum = { k: String -> entries.filter { it.kind == k }.sumOf { it.cost_cents ?: 0 } }
             Text("Maintenance ${money(sum("maintenance"), repo.store.currency)} · Repairs ${money(sum("repair"), repo.store.currency)}",

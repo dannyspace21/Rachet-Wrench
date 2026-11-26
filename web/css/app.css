@@ -452,3 +452,10 @@ a.item:hover { border-color: color-mix(in srgb, var(--brand) 40%, var(--border))
 }
 .bug-details { white-space: pre-wrap; word-break: break-word; background: var(--surface-2); padding: 8px 10px; border-radius: 8px; margin: 0; max-height: 120px; overflow: auto; }
 .bug-reminder { border-left: 3px solid var(--brand); padding: 6px 10px; background: var(--brand-soft); color: var(--text); border-radius: 6px; }
+
+/* Recalls (History tab) */
+.recall { display: grid; gap: 8px; }
+.recall-open { border-color: color-mix(in srgb, var(--danger, #dc2626) 45%, var(--border)); }
+.recall-text { margin: 0; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
+.recall-text.open { display: block; }
+.recall-warning { margin: 0; padding: 8px 10px; border-radius: 8px; background: color-mix(in srgb, #dc2626 12%, transparent); font-weight: 600; }

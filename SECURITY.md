@@ -12,6 +12,7 @@ Ratchet Wrench contains **no telemetry, analytics, crash reporting, ads or "phon
 
 | # | Where to | When | What is sent | How to turn off |
 |---|---|---|---|---|
+| 1b | `https://api.nhtsa.gov` (US government recall database) | When a vehicle's history is opened, and on *Check for new* (Recalls) — server/desktop for the web app, the phone directly in phone-only mode | The vehicle's **year, make and model** only (never the VIN) | Turn off NHTSA lookups (`RW_NHTSA_ENABLED=false`); on the phone, leave year/make/model empty |
 | 1 | `https://vpic.nhtsa.dot.gov` (US government vehicle database) | You press **Decode VIN** (the server or desktop app calls it; in phone-only mode the phone does). Also when you choose a make in **Add vehicle**, to suggest that make's models (the phone calls it directly; the web app asks its server). | The VIN, or the make name and model year | `RW_NHTSA_ENABLED=false` (server); on the phone, type the model instead |
 | 2 | **Your own** ntfy server (`RW_NTFY_URL`) | A reminder becomes due (if you turned push alerts on) | Reminder title, vehicle name, miles/days left | Leave `RW_NTFY_URL` empty (default) |
 | 4 | GitHub (`api.github.com`, `github.com`, GitHub's download servers) — **Android app only** | When you open the app (at most every 6 hours) or tap *Check for updates* | Nothing about you or your data: only standard requests to read the latest release and download the app | *Settings → App updates* → off |

@@ -12,6 +12,7 @@ package com.ratchetwrench.app.data
 import android.content.Context
 import com.ratchetwrench.app.sync.SyncWorker
 import java.time.LocalDate
+import kotlinx.coroutines.flow.first
 
 class Repository(private val context: Context) {
     val db = AppDatabase.get(context)
@@ -29,6 +30,7 @@ class Repository(private val context: Context) {
         val now = nowIso()
         // The server cascades the delete to everything that belongs to it.
         db.vehicles().upsert(v.copy(deleted_at = now, updated_at = now, dirty = true))
+        for (r in db.recalls().observeFor(id).first()) db.recalls().upsert(r.copy(deleted_at = now, updated_at = now, dirty = true))
         // Its shopping-list lines go too (the server does the same).
         for (i in db.shopping().all().filter { it.vehicle_id == id }) {
             db.shopping().upsert(i.copy(deleted_at = now, updated_at = now, dirty = true))
@@ -158,6 +160,47 @@ class Repository(private val context: Context) {
     suspend fun deletePart(id: String) {
         val p = db.parts().get(id) ?: return
         db.parts().upsert(p.copy(deleted_at = nowIso(), updated_at = nowIso(), dirty = true)); requestSync()
+    }
+
+    // ------------------------------------------------------------ recalls
+    /** Fixed id of a vehicle's recall row — the same one the server uses. */
+    fun recallId(vehicleId: String, campaign: String): String =
+        java.util.UUID.nameUUIDFromBytes("ratchet-wrench:recall:$vehicleId:$campaign".toByteArray(Charsets.UTF_8)).toString()
+
+    /** Look up NHTSA recalls for the vehicle and add any not listed yet.
+     *  Never changes existing rows (or what the owner marked).  Returns how many were added. */
+    suspend fun refreshRecalls(v: Vehicle): Int {
+        val year = v.year ?: throw java.io.IOException("Add the vehicle's year, make and model to look up recalls.")
+        val found = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) { Nhtsa.recalls(v.make, v.model, year) }
+        var added = 0
+        for (r in found) {
+            val id = recallId(v.id, r.campaign)
+            if (db.recalls().get(id) != null) continue
+            db.recalls().upsert(VehicleRecall(id = id, vehicle_id = v.id, campaign = r.campaign, component = r.component, summary = r.summary,
+                consequence = r.consequence, remedy = r.remedy, report_date = r.reportDate, park_it = r.parkIt,
+                updated_at = LOOKUP_TIME, dirty = true))
+            added++
+        }
+        if (added > 0) requestSync()
+        return added
+    }
+
+    suspend fun setRecallStatus(id: String, status: String) {
+        val r = db.recalls().get(id) ?: return
+        db.recalls().upsert(r.copy(status = status, done_date = if (status == "open") null else r.done_date,
+            entry_id = if (status == "open") null else r.entry_id, updated_at = nowIso(), dirty = true))
+        requestSync()
+    }
+
+    /** Add the recall repair to the history and mark the recall done. */
+    suspend fun markRecallDone(r: VehicleRecall, date: String, mileage: Int?, shop: String) {
+        val e = Entry(vehicle_id = r.vehicle_id, type_key = "recall", kind = "repair", date = date, mileage = mileage,
+            description = "Recall ${r.campaign}: ${r.component}".take(500), performed_by = "shop", shop_name = shop.trim().take(128),
+            notes = if (r.remedy.isNotBlank()) "Fix: ${r.remedy}".take(5000) else "")
+        saveEntry(e, isNew = true)
+        val fresh = db.recalls().get(r.id) ?: r
+        db.recalls().upsert(fresh.copy(status = "done", done_date = date, entry_id = e.id, updated_at = nowIso(), dirty = true))
+        requestSync()
     }
 
     // ------------------------------------------------------------ shopping list

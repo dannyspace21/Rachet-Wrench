@@ -233,14 +233,39 @@ interface ShoppingDao {
     suspend fun remove(id: String)
 }
 
+@Dao
+interface RecallDao {
+    @Query("UPDATE vehicle_recalls SET dirty = 1")
+    suspend fun markAllDirty()
+
+    @Query("SELECT * FROM vehicle_recalls WHERE vehicle_id = :vehicleId AND deleted_at IS NULL")
+    fun observeFor(vehicleId: String): Flow<List<VehicleRecall>>
+
+    @Query("SELECT * FROM vehicle_recalls WHERE id = :id")
+    fun observe(id: String): Flow<VehicleRecall?>
+
+    @Query("SELECT * FROM vehicle_recalls WHERE id = :id")
+    suspend fun get(id: String): VehicleRecall?
+
+    @Query("SELECT * FROM vehicle_recalls WHERE dirty = 1")
+    suspend fun dirty(): List<VehicleRecall>
+
+    @Upsert suspend fun upsert(item: VehicleRecall)
+
+    @Query("DELETE FROM vehicle_recalls WHERE id = :id")
+    suspend fun remove(id: String)
+}
+
 // Version 2 added the shopping list table (an automatic migration: new
 // table only, nothing existing changes, so no data is touched).
 @Database(
     entities = [Vehicle::class, Spec::class, Entry::class, Attachment::class, Reminder::class, OdometerReading::class, Part::class,
-        ShoppingItem::class],
-    version = 2,
+        ShoppingItem::class, VehicleRecall::class],
+    version = 3,
     exportSchema = true,
-    autoMigrations = [androidx.room.AutoMigration(from = 1, to = 2)],
+    // Each version only ADDED a table (2: shopping list, 3: recalls), so the
+    // automatic migrations never touch existing data.
+    autoMigrations = [androidx.room.AutoMigration(from = 1, to = 2), androidx.room.AutoMigration(from = 2, to = 3)],
 )
 abstract class AppDatabase : RoomDatabase() {
     abstract fun vehicles(): VehicleDao
@@ -251,12 +276,13 @@ abstract class AppDatabase : RoomDatabase() {
     abstract fun odometer(): OdometerDao
     abstract fun parts(): PartDao
     abstract fun shopping(): ShoppingDao
+    abstract fun recalls(): RecallDao
 
     /** Before the first sync with a server, queue everything made on this
      *  phone so it is uploaded (photos taken here are queued separately). */
     suspend fun markEverythingForUpload() {
         vehicles().markAllDirty(); specs().markAllDirty(); entries().markAllDirty(); reminders().markAllDirty()
-        odometer().markAllDirty(); parts().markAllDirty(); shopping().markAllDirty()
+        odometer().markAllDirty(); parts().markAllDirty(); shopping().markAllDirty(); recalls().markAllDirty()
     }
 
     /** Remove every record (used when you sign out). */

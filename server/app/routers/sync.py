@@ -32,7 +32,7 @@ from .auth import get_or_create_settings
 router = APIRouter(prefix="/api/sync", tags=["sync"])
 
 # Push order matters: parents (vehicles) before children (entries...).
-PUSH_ORDER = ["vehicles", "entries", "specs", "reminders", "odometer", "parts", "attachments", "shopping"]
+PUSH_ORDER = ["vehicles", "entries", "specs", "reminders", "odometer", "parts", "attachments", "shopping", "recalls"]
 OVERLAP = timedelta(seconds=5)
 
 

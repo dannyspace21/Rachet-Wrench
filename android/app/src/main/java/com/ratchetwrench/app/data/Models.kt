@@ -196,6 +196,37 @@ data class ShoppingItem(
     @Transient override val dirty: Boolean = false,
 ) : Synced
 
+/**
+ * A safety recall NHTSA lists for this vehicle's year/make/model, and what
+ * the owner knows about it.  The id is fixed per vehicle + campaign (same as
+ * the server), and rows added by a lookup carry updated_at = 1970 so any edit
+ * by the owner always wins when syncing.
+ */
+@Serializable
+@Entity(tableName = "vehicle_recalls", indices = [Index("vehicle_id")])
+data class VehicleRecall(
+    @PrimaryKey override val id: String,
+    val vehicle_id: String,
+    val campaign: String,
+    val component: String = "",
+    val summary: String = "",
+    val consequence: String = "",
+    val remedy: String = "",
+    val report_date: String? = null,
+    val park_it: Boolean = false,
+    val status: String = "open",          // open | done | not_applicable
+    val done_date: String? = null,
+    val entry_id: String? = null,
+    val notes: String = "",
+    val created_at: String = nowIso(),
+    override val updated_at: String = LOOKUP_TIME,
+    override val deleted_at: String? = null,
+    @Transient override val dirty: Boolean = false,
+) : Synced
+
+/** Edit time of rows added by a lookup (older than any real edit). */
+const val LOOKUP_TIME = "1970-01-01T00:00:00Z"
+
 /** Per-user settings from the server (theme, units, currency). */
 @Serializable
 data class UserSettings(
@@ -219,5 +250,6 @@ data class SyncPull(
     val parts: List<Part> = emptyList(),
     val attachments: List<Attachment> = emptyList(),
     val shopping: List<ShoppingItem> = emptyList(),
+    val recalls: List<VehicleRecall> = emptyList(),
     val settings: UserSettings? = null,
 )

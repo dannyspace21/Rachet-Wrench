@@ -29,12 +29,22 @@ from .catalog import load_catalog
 from .models import Part, VehicleSpec, utcnow
 
 
-def spec_part_id(vehicle_id: str, key: str) -> str:
-    """Same result as Java UUID.nameUUIDFromBytes("ratchet-wrench:spec-part:<vehicle>:<key>")."""
-    b = bytearray(hashlib.md5(f"ratchet-wrench:spec-part:{vehicle_id}:{key}".encode(), usedforsecurity=False).digest())
+def name_uuid(name: str) -> str:
+    """A fixed id for a name: same result as Java UUID.nameUUIDFromBytes(name)."""
+    b = bytearray(hashlib.md5(name.encode(), usedforsecurity=False).digest())
     b[6] = (b[6] & 0x0F) | 0x30  # version 3 (name-based, MD5)
     b[8] = (b[8] & 0x3F) | 0x80  # IETF variant
     return str(uuid.UUID(bytes=bytes(b)))
+
+
+def spec_part_id(vehicle_id: str, key: str) -> str:
+    """Same result as Java UUID.nameUUIDFromBytes("ratchet-wrench:spec-part:<vehicle>:<key>")."""
+    return name_uuid(f"ratchet-wrench:spec-part:{vehicle_id}:{key}")
+
+
+def recall_id(vehicle_id: str, campaign: str) -> str:
+    """Fixed id of a vehicle's recall row (phone and server agree on it)."""
+    return name_uuid(f"ratchet-wrench:recall:{vehicle_id}:{campaign}")
 
 
 def _mapping() -> dict[str, dict]:

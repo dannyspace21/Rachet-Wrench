@@ -228,6 +228,23 @@ class ShoppingItemIn(SyncFields):
         return _known_type(v)
 
 
+class RecallIn(SyncFields):
+    """A vehicle's recall: lookup fields + what the owner knows about it."""
+
+    vehicle_id: UUIDStr | None = None
+    campaign: Annotated[str, Field(pattern=r"^[0-9A-Z]{4,16}$")] | None = None
+    component: Annotated[str, Field(max_length=255)] | None = None
+    summary: Text | None = None
+    consequence: Text | None = None
+    remedy: Text | None = None
+    report_date: dt.date | None = None
+    park_it: bool | None = None
+    status: Literal["open", "done", "not_applicable"] | None = None
+    done_date: dt.date | None = None
+    entry_id: UUIDStr | None = None
+    notes: Text | None = None
+
+
 class AttachmentIn(SyncFields):
     """Metadata changes only (caption, links); the file itself is uploaded
     through POST /api/attachments."""
@@ -249,6 +266,7 @@ class SyncPushIn(Strict):
     parts: Annotated[list[PartIn], Field(max_length=500)] = []
     attachments: Annotated[list[AttachmentIn], Field(max_length=500)] = []
     shopping: Annotated[list[ShoppingItemIn], Field(max_length=500)] = []
+    recalls: Annotated[list[RecallIn], Field(max_length=500)] = []
 
 
 class StickerFieldIn(Strict):

@@ -1,0 +1,125 @@
+{
+  "_comment": "Shared cases for recall status (web/tests/recalls.test.mjs and Android RecallsTest.kt). today = 2026-11-26.",
+  "today": "2026-11-26",
+  "entries": [
+    {
+      "id": "h1",
+      "type_key": "recall",
+      "description": "Recall 20V-012 performed",
+      "notes": "",
+      "custom_type": ""
+    },
+    {
+      "id": "h2",
+      "type_key": "oil_change",
+      "description": "Oil change; mentions 17V773000 by accident",
+      "notes": "",
+      "custom_type": ""
+    },
+    {
+      "id": "h3",
+      "type_key": "recall",
+      "description": "Dealer visit",
+      "notes": "Campaign 15V015000 done",
+      "custom_type": "",
+      "deleted_at": "2026-01-01T00:00:00Z"
+    },
+    {
+      "id": "h4",
+      "type_key": "recall",
+      "description": "Recall work",
+      "notes": "",
+      "custom_type": ""
+    },
+    {
+      "id": "h5",
+      "type_key": "recall",
+      "description": "Recall SC-158 performed by dealer",
+      "notes": "",
+      "custom_type": ""
+    }
+  ],
+  "cases": [
+    {
+      "recall": {
+        "campaign": "20V012000",
+        "status": "open",
+        "report_date": "2020-01-13"
+      },
+      "status": "done",
+      "entry": "h1",
+      "isNew": false
+    },
+    {
+      "recall": {
+        "campaign": "17V773000",
+        "status": "open",
+        "report_date": "2017-12-01"
+      },
+      "status": "open",
+      "entry": null,
+      "isNew": false
+    },
+    {
+      "recall": {
+        "campaign": "15V015000",
+        "status": "open",
+        "report_date": "2015-01-16"
+      },
+      "status": "open",
+      "entry": null,
+      "isNew": false
+    },
+    {
+      "recall": {
+        "campaign": "26V500000",
+        "status": "open",
+        "report_date": "2026-09-01"
+      },
+      "status": "open",
+      "entry": null,
+      "isNew": true
+    },
+    {
+      "recall": {
+        "campaign": "26V501000",
+        "status": "done",
+        "report_date": "2026-09-01",
+        "entry_id": "h4"
+      },
+      "status": "done",
+      "entry": "h4",
+      "isNew": false
+    },
+    {
+      "recall": {
+        "campaign": "26V502000",
+        "status": "not_applicable",
+        "report_date": "2026-09-01"
+      },
+      "status": "not_applicable",
+      "entry": null,
+      "isNew": false
+    },
+    {
+      "recall": {
+        "campaign": "17V999000",
+        "status": "open",
+        "report_date": "2017-12-01",
+        "remedy": "Dealers will replace the pad. Kia's number for this recall is SC158."
+      },
+      "status": "done",
+      "entry": "h5",
+      "isNew": false
+    }
+  ],
+  "order": [
+    "26V500000",
+    "17V773000",
+    "15V015000",
+    "26V501000",
+    "20V012000",
+    "17V999000",
+    "26V502000"
+  ]
+}

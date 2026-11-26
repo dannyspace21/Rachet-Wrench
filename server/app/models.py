@@ -292,3 +292,27 @@ class ShoppingItem(SyncMixin, Base):
     quantity: Mapped[int] = mapped_column(Integer, default=1)
     purchased: Mapped[bool] = mapped_column(Boolean, default=False)
     notes: Mapped[str] = mapped_column(Text, default="")
+
+
+class VehicleRecall(SyncMixin, Base):
+    """A safety recall NHTSA lists for this vehicle's year/make/model, and
+    what the owner knows about it (open / done / doesn't apply to this car).
+
+    The id is fixed per vehicle + campaign (see spec_parts.name_uuid) so the
+    phone and the server never create two copies.  Rows added by a lookup
+    carry updated_at = 1970 so any edit by the owner always wins."""
+
+    __tablename__ = "vehicle_recalls"
+
+    vehicle_id: Mapped[str] = mapped_column(ForeignKey("vehicles.id", ondelete="CASCADE"), index=True)
+    campaign: Mapped[str] = mapped_column(String(16))          # NHTSA campaign number, e.g. 20V012000
+    component: Mapped[str] = mapped_column(String(255), default="")
+    summary: Mapped[str] = mapped_column(Text, default="")
+    consequence: Mapped[str] = mapped_column(Text, default="")
+    remedy: Mapped[str] = mapped_column(Text, default="")
+    report_date: Mapped[date | None] = mapped_column(Date, nullable=True)
+    park_it: Mapped[bool] = mapped_column(Boolean, default=False)  # "don't drive / park outside" warning
+    status: Mapped[str] = mapped_column(String(16), default="open")  # open | done | not_applicable
+    done_date: Mapped[date | None] = mapped_column(Date, nullable=True)
+    entry_id: Mapped[str | None] = mapped_column(String(36), nullable=True)  # the history record of the repair
+    notes: Mapped[str] = mapped_column(Text, default="")

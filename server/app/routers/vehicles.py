@@ -15,6 +15,7 @@ routers/vehicles.py — features that act on one whole vehicle:
 from __future__ import annotations
 
 import asyncio
+from datetime import UTC, date, datetime
 import re
 
 from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile, status
@@ -27,13 +28,14 @@ from ..carfax import DEFAULT_REMINDERS, parse_carfax
 from ..catalog import make_links, type_label
 from ..config import get_settings
 from ..database import get_db
-from ..models import Attachment, Entry, OdometerReading, Reminder, User, Vehicle, VehicleSpec, utcnow
+from ..models import Attachment, Entry, OdometerReading, Reminder, User, Vehicle, VehicleRecall, VehicleSpec, utcnow
 from ..ocr import extract_from_image, tesseract_available
 from ..records import get_owned, serialize, soft_delete, upsert
 from ..report import build_report
 from ..security import current_user
 from ..uploads import accept_upload, file_path, read_limited, run_pdf_worker, sniff_type
-from ..vin import decode_with_nhtsa, extra_specs, is_valid_vin, nhtsa_models, normalize_vin
+from ..spec_parts import recall_id
+from ..vin import decode_with_nhtsa, extra_specs, is_valid_vin, nhtsa_models, nhtsa_recalls, normalize_vin
 from .auth import get_or_create_settings
 
 router = APIRouter(prefix="/api", tags=["vehicle tools"])
@@ -74,6 +76,38 @@ async def vehicle_models(make: str, kind: str = "car", year: int | None = None, 
     except RuntimeError as exc:
         raise HTTPException(status.HTTP_502_BAD_GATEWAY, str(exc)) from None
     return {"make": make, "year": year, "kind": kind, "models": models}
+
+
+# Lookup rows carry this edit time so ANY change the owner makes wins.
+LOOKUP_TIME = datetime(1970, 1, 1, tzinfo=UTC)
+
+
+@router.post("/vehicles/{vehicle_id}/recalls/refresh")
+async def refresh_recalls(vehicle_id: str, user: User = Depends(current_user), db: Session = Depends(get_db)) -> dict:
+    """Look up NHTSA recalls for this vehicle's year/make/model and add any
+    that aren't listed yet (status "open").  Existing rows — and what the
+    owner marked on them — are never changed.  Only year, make and model
+    are sent to NHTSA (not the VIN)."""
+    v = get_owned(db, Vehicle, vehicle_id, user)
+    if not (v.year and v.make and v.model):
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, "Add the vehicle's year, make and model to look up recalls.")
+    try:
+        found = await asyncio.to_thread(nhtsa_recalls, v.make, v.model, v.year)
+    except RuntimeError as exc:
+        raise HTTPException(status.HTTP_502_BAD_GATEWAY, str(exc)) from None
+    now = utcnow()
+    added = 0
+    for r in found:
+        rid = recall_id(v.id, r["campaign"])
+        if db.get(VehicleRecall, rid) is not None:
+            continue
+        db.add(VehicleRecall(id=rid, owner_id=user.id, vehicle_id=v.id, campaign=r["campaign"], component=r["component"],
+                             summary=r["summary"], consequence=r["consequence"], remedy=r["remedy"],
+                             report_date=date.fromisoformat(r["report_date"]) if r["report_date"] else None,
+                             park_it=r["park_it"], status="open", created_at=now, updated_at=LOOKUP_TIME, server_modified_at=now))
+        added += 1
+    db.commit()
+    return {"added": added, "total": len(found)}
 
 
 @router.post("/vehicles/{vehicle_id}/apply-specs")

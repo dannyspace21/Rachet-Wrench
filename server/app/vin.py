@@ -229,3 +229,57 @@ def extra_specs(vin: str) -> dict[str, str]:
         return dict(cls().fetch_specs(vin))
     except Exception:
         return {}
+
+
+_RECALL_CACHE: dict[tuple, tuple[float, list[dict]]] = {}
+
+
+def _ddmmyyyy(text: str) -> str | None:
+    m = re.match(r"^(\d{2})/(\d{2})/(\d{4})$", (text or "").strip())
+    return f"{m.group(3)}-{m.group(2)}-{m.group(1)}" if m else None
+
+
+def nhtsa_recalls(make: str, model: str, year: int, timeout: float = 15.0) -> list[dict]:
+    """Every safety recall NHTSA lists for a year/make/model (not per VIN —
+    NHTSA's public data can't say which recalls apply to, or were done on, one
+    car).  Only make, model and year are sent.  Cached for an hour.
+    Raises RuntimeError with a friendly message on failure."""
+    import time
+
+    settings = get_settings()
+    if not settings.nhtsa_enabled:
+        raise RuntimeError("Looking up recalls is turned off on this server.")
+    make, model = (make or "").strip(), (model or "").strip()
+    if not (_MAKE_RE.match(make) and _MAKE_RE.match(model) and year and 1950 <= int(year) <= 2100):
+        raise RuntimeError("Recalls need the vehicle's year, make and model.")
+    key = (make.lower(), model.lower(), int(year))
+    hit = _RECALL_CACHE.get(key)
+    if hit and time.time() - hit[0] < 3600:
+        return hit[1]
+    q = urllib.parse.urlencode({"make": make, "model": model, "modelYear": int(year)})
+    req = urllib.request.Request(f"{settings.nhtsa_recalls_url}/recalls/recallsByVehicle?{q}",
+                                 headers={"User-Agent": "RatchetWrench/1.0", "Accept": "application/json"})
+    results = None
+    for attempt in range(2):  # NHTSA sometimes drops the first request: try once more
+        try:
+            # Reviewed: fixed https:// base + urlencoded, validated make/model + int year.
+            with urllib.request.urlopen(req, timeout=timeout) as resp:  # noqa: S310  # nosemgrep
+                results = json.loads(resp.read(4 * 1024 * 1024).decode("utf-8")).get("results") or []
+            break
+        except (urllib.error.URLError, TimeoutError, OSError, UnicodeDecodeError, json.JSONDecodeError, AttributeError):
+            if attempt == 1:
+                raise RuntimeError("Could not reach the NHTSA recall database. Try again later.") from None
+            time.sleep(1)
+    out = []
+    for r in results:
+        campaign = re.sub(r"[^0-9A-Z]", "", str(r.get("NHTSACampaignNumber") or "").upper())
+        if not campaign:
+            continue
+        out.append({"campaign": campaign[:16], "component": str(r.get("Component") or "")[:255],
+                    "summary": str(r.get("Summary") or "")[:5000], "consequence": str(r.get("Consequence") or "")[:5000],
+                    "remedy": str(r.get("Remedy") or "")[:5000], "report_date": _ddmmyyyy(str(r.get("ReportReceivedDate") or "")),
+                    "park_it": bool(r.get("parkIt")) or bool(r.get("parkOutSide"))})
+    if len(_RECALL_CACHE) > 200:
+        _RECALL_CACHE.clear()
+    _RECALL_CACHE[key] = (time.time(), out)
+    return out

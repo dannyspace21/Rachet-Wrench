@@ -15,6 +15,7 @@ import kotlinx.serialization.json.contentOrNull
 import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
+import kotlinx.serialization.json.booleanOrNull
 import okhttp3.OkHttpClient
 import okhttp3.Request
 import java.io.IOException
@@ -77,6 +78,51 @@ object Nhtsa {
             }
         }
         return names.toList().take(500).also { modelCache[key] = it }
+    }
+
+    /** One recall as NHTSA lists it (for a year/make/model, not a VIN). */
+    data class RecallInfo(val campaign: String, val component: String, val summary: String, val consequence: String,
+                          val remedy: String, val reportDate: String?, val parkIt: Boolean)
+
+    /**
+     * Safety recalls NHTSA lists for a year/make/model.  Only those three are
+     * sent (not the VIN).  Tries twice (NHTSA sometimes drops the first
+     * request).  Throws IOException with a friendly message.  Background thread.
+     */
+    fun recalls(make: String, model: String, year: Int): List<RecallInfo> {
+        val mk = make.trim(); val md = model.trim()
+        if (!makeOk.matches(mk) || !makeOk.matches(md) || year !in 1950..2100) throw IOException("Recalls need the vehicle's year, make and model.")
+        val url = okhttp3.HttpUrl.Builder().scheme("https").host("api.nhtsa.gov").addPathSegments("recalls/recallsByVehicle")
+            .addQueryParameter("make", mk).addQueryParameter("model", md).addQueryParameter("modelYear", year.toString()).build()
+        var body: String? = null
+        for (attempt in 0..1) {
+            try {
+                body = client.newCall(Request.Builder().url(url).header("Accept", "application/json").build()).execute().use { res ->
+                    if (!res.isSuccessful) throw IOException("NHTSA answered with an error (${res.code}).")
+                    res.body.string().take(4 * 1024 * 1024)
+                }
+                break
+            } catch (e: IOException) {
+                if (attempt == 1) throw IOException("Could not reach the NHTSA recall database. Try again later.")
+                Thread.sleep(1000)
+            }
+        }
+        return parseRecalls(body ?: "")
+    }
+
+    /** NHTSA's recall answer -> tidy rows (same rules as the server). */
+    fun parseRecalls(body: String): List<RecallInfo> {
+        val results = runCatching { JsonFormat.parseToJsonElement(body).jsonObject["results"]?.jsonArray }.getOrNull() ?: return emptyList()
+        return results.mapNotNull { el ->
+            val r = el.jsonObject
+            fun t(k: String) = r[k]?.jsonPrimitive?.contentOrNull?.trim().orEmpty()
+            fun b(k: String) = r[k]?.jsonPrimitive?.booleanOrNull == true
+            val campaign = t("NHTSACampaignNumber").uppercase().filter { it.isLetterOrDigit() }.take(16)
+            if (campaign.isEmpty()) return@mapNotNull null
+            val d = Regex("""^(\d{2})/(\d{2})/(\d{4})$""").matchEntire(t("ReportReceivedDate"))?.groupValues
+            RecallInfo(campaign, t("Component").take(255), t("Summary").take(5000), t("Consequence").take(5000), t("Remedy").take(5000),
+                d?.let { "${it[3]}-${it[2]}-${it[1]}" }, b("parkIt") || b("parkOutSide"))
+        }
     }
 
     /** Decode a VIN.  Throws IOException with a friendly message on failure.
