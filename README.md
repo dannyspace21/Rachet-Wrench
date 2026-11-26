@@ -11,7 +11,7 @@
 
 ## What it does
 
-Ratchet Wrench keeps the complete history of your vehicles **on your own devices**: no accounts with outside companies, no ads, no tracking. Use it any of these ways:
+Ratchet Wrench keeps the complete history of your vehicles **on your own devices**: no accounts with outside companies, no ads, no tracking. I don't want your information and you don't want anyone wanting your information. Use it any of these ways:
 
 | How | What you need | Guide |
 |---|---|---|
