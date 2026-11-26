@@ -11,7 +11,7 @@
 // Nothing is saved until you press the final Save button.
 
 import { api, getCatalog, getMe } from "../api.js";
-import { h, mount, icon, vehicleName, filePicker, toast, showError, typeBadge, dateText, parseIntOrNull } from "../ui.js";
+import { h, mount, icon, vehicleName, filePicker, toast, showError, typeBadge, dateText, parseIntOrNull, segmented } from "../ui.js";
 
 // ===========================================================================
 // Door sticker
@@ -232,26 +232,55 @@ export function showCarfaxReview(container, v, result, catalog) {
 // ===========================================================================
 export async function manualView(main, { params }) {
   const [id] = params;
-  const [v, catalog, atts] = await Promise.all([api(`/api/vehicles/${id}`), getCatalog(), api(`/api/attachments?vehicle_id=${id}`)]);
+  const [v, catalog, atts, links] = await Promise.all([api(`/api/vehicles/${id}`), getCatalog(), api(`/api/attachments?vehicle_id=${id}`),
+    api(`/api/vehicles/${id}/links`).catch(() => ({}))]);
   const labels = Object.fromEntries(catalog.specs.map((s) => [s.key, s.label]));
   const manuals = atts.filter((a) => a.category === "manual" && a.has_file);
+  const results = h("div", {});
+
+  // Where to find the manual: the maker's owner site (when known).
+  const portal = h("section", { class: "card stack" }, h("h2", {}, "1. Find your manual"),
+    links.owners
+      ? h("p", {}, `${v.make}'s owner website has the manuals. Sign in if asked, then download the PDF, or copy the link(s) to the manual's pages.`)
+      : h("p", {}, `Search the web for “${[v.year, v.make, v.model].filter(Boolean).join(" ")} owner's manual” on the manufacturer's website.`),
+    links.owners ? h("div", {}, h("a", { class: "btn", href: links.owners, target: "_blank", rel: "noopener noreferrer" }, icon("u-external"), `Open ${v.make} owner website`)) : null);
+
+  // How to give it to us: a PDF, links, or pasted text.
+  const mode = { value: manuals.length ? "saved" : "pdf" };
   const choices = manuals.map((a, i) => {
     const radio = h("input", { type: "radio", name: "manual", value: a.id, checked: i === 0 });
     return { a, radio, el: h("label", { class: "check" }, radio, h("span", {}, a.caption || a.original_name || "Owner's manual",
       h("span", { class: "muted small" }, ` · ${dateText(a.created_at)}${a.page_count ? ` · ${a.page_count} pages` : ""}`))) };
   });
-  const newRadio = h("input", { type: "radio", name: "manual", value: "", checked: !manuals.length });
   const picker = filePicker({ accept: "application/pdf", multiple: false, label: "Owner's manual (PDF)" });
-  picker.el.addEventListener("change", () => { newRadio.checked = true; });
-  const results = h("div", {});
+  const urls = h("textarea", { class: "input", rows: 4, maxlength: 8000, placeholder: "https://…/owners-manual.pdf\nor several pages, one link per line", "aria-label": "Links to the manual" });
+  const pasted = h("textarea", { class: "input", rows: 8, maxlength: 300000, placeholder: "Copy the “Specifications” / “Capacities” section of the manual and paste it here", "aria-label": "Manual text" });
+  const panes = {
+    saved: choices.length ? h("div", { class: "stack" }, choices.map((c) => c.el)) : null,
+    pdf: h("div", { class: "stack" }, picker.el, h("p", { class: "muted small" }, "Saved with the vehicle's documents. Scanned paper pages (photos, no text) can't be read — use links or paste the text instead.")),
+    links: h("div", { class: "stack" }, urls, h("p", { class: "muted small" },
+      "Your Ratchet Wrench server downloads only these links (public https websites — never your home network). A PDF is saved with the vehicle's documents; web pages are just read. If the site needs you to sign in, download the PDF and upload it instead.")),
+    text: h("div", { class: "stack" }, pasted, h("p", { class: "muted small" }, "Works with any format: copy the specifications from the PDF, web page or app and paste it.")),
+  };
+  const tabs = [["saved", "Saved manual"], ["pdf", "Upload PDF"], ["links", "From links"], ["text", "Paste text"]].filter(([k]) => panes[k]);
+  const paneBox = h("div", {});
+  const show = (k) => { mode.value = k; mount(paneBox, panes[k]); };
+  const tabRow = segmented(tabs.map(([value, label]) => ({ value, label })), mode.value, show, "How to read the manual");
+  show(mode.value);
+
   const readBtn = h("button", { class: "btn primary", type: "button", onclick: async () => {
     const fd = new FormData();
-    const saved = choices.find((c) => c.radio.checked);
-    if (saved) fd.append("attachment_id", saved.a.id);
-    else {
+    if (mode.value === "saved") fd.append("attachment_id", choices.find((c) => c.radio.checked).a.id);
+    else if (mode.value === "pdf") {
       const [file] = picker.files();
       if (!file) { toast("Choose the PDF first", "error"); return; }
       fd.append("file", file);
+    } else if (mode.value === "links") {
+      if (!urls.value.trim()) { toast("Paste at least one link", "error"); return; }
+      fd.append("urls", urls.value);
+    } else {
+      if (!pasted.value.trim()) { toast("Paste the manual's text first", "error"); return; }
+      fd.append("text", pasted.value);
     }
     readBtn.disabled = true;
     readBtn.replaceChildren("Reading… (a long manual can take a minute or two)");
@@ -265,11 +294,8 @@ export async function manualView(main, { params }) {
   mount(main, h("a", { class: "back", href: `#/v/${id}/specs` }, icon("u-chevron_left"), vehicleName(v)),
     h("div", { class: "page-head" }, h("div", {}, h("h1", {}, "Fill from owner's manual"),
       h("p", { class: "sub muted" }, "Finds the oil, coolant, transmission and brake fluid types and capacities in your manual. You pick and confirm each one."))),
-    h("div", { class: "stack-lg" }, h("section", { class: "card stack" },
-      choices.length ? h("div", { class: "stack" }, h("strong", {}, "Saved manuals"), choices.map((c) => c.el)) : null,
-      h("div", { class: "stack" }, choices.length ? h("label", { class: "check" }, newRadio, h("span", {}, "A different PDF:")) : null, picker.el),
-      h("p", { class: "muted small" }, "The PDF is read on your own server in a locked-down helper process — nothing is sent anywhere. A new PDF is kept with the vehicle's documents. Scanned manuals without a text layer can't be read."),
-      h("div", {}, readBtn)), results));
+    h("div", { class: "stack-lg" }, portal,
+      h("section", { class: "card stack" }, h("h2", {}, "2. Read it"), tabRow, paneBox, h("div", {}, readBtn)), results));
 }
 
 /** One block per spec: the values found (with page and line), pick one, edit it, or skip it. */
@@ -281,7 +307,7 @@ export function showManualReview(container, v, result, labels) {
       const radio = h("input", { type: "radio", name: `opt-${s.key}`, checked: i === 0 });
       radio.addEventListener("change", () => { input.value = o.value; keep.checked = true; block.classList.remove("rejected"); });
       return h("label", { class: "manual-option" }, radio, h("span", {}, h("strong", {}, o.value),
-        h("span", { class: "muted small" }, ` · page ${o.page}`), h("span", { class: "snippet small" }, o.snippet)));
+        h("span", { class: "muted small" }, ` · ${o.where || `page ${o.page}`}`), h("span", { class: "snippet small" }, o.snippet)));
     });
     const block = h("div", { class: "review-row manual-block" + (keep.checked ? "" : " rejected") }, keep,
       h("div", { class: "field" }, h("span", {}, labels[s.key] || s.label),
@@ -305,8 +331,8 @@ export function showManualReview(container, v, result, labels) {
     ? "This PDF has no readable text (it may be a scan of paper pages), so nothing could be found."
     : "No fluid specs were found in this PDF. Look for the “Specifications” or “Capacities” pages and enter them by hand.";
   mount(container, h("section", { class: "card stack" },
-    h("div", { class: "section-title" }, h("h2", {}, "Review what was found"), h("span", { class: "pill" }, `${result.readable_pages} of ${result.pages} pages read`)),
-    blocks.length ? h("p", { class: "muted" }, "Each value shows the page and line it came from. Check it against the manual, pick the right one, fix it if needed. Specs that already have a value are unticked. Nothing is saved until you press Save.") : null,
+    h("div", { class: "section-title" }, h("h2", {}, "Review what was found"), h("span", { class: "pill" }, `${result.readable_pages} of ${result.pages} page${result.pages === 1 ? "" : "s"} read`)),
+    blocks.length ? h("p", { class: "muted" }, "Each value shows where it came from and the line it was found on. Check it against the manual, pick the right one, fix it if needed. Specs that already have a value are unticked. Nothing is saved until you press Save.") : null,
     blocks.length ? h("div", {}, blocks.map((b) => b.block)) : h("div", { class: "notice" }, icon("u-warning"), h("p", {}, none)),
     blocks.length ? h("div", { class: "btn-row" }, save, h("a", { class: "btn", href: `#/v/${v.id}/specs` }, "Cancel")) : null));
   container.scrollIntoView({ behavior: "smooth" });

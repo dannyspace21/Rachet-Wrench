@@ -4,9 +4,13 @@
     {
       "version": "1.0.35",
       "date": "2026-11-26",
-      "new": [],
+      "new": [
+        "Owner's manual from links or pasted text: in Specs → Fill from owner's manual, paste the link to the manual (a PDF, or several web pages for manuals split across pages), or paste the specifications text itself — any format works. Your computer reads it; you confirm every value.",
+        "“Find your manual” button that opens the maker's owner website."
+      ],
       "improved": [
-        "Empty specs that your owner's manual usually lists (oil, coolant, transmission and brake fluid, capacities…) now say “Not set · can be filled from owner's manual”. Tap it to go straight to the manual reader."
+        "Empty specs that your owner's manual usually lists (oil, coolant, transmission and brake fluid, capacities…) now say “Not set · can be filled from owner's manual”. Tap it to go straight to the manual reader.",
+        "“Engine code” is now called “Engine model” (e.g. 2GR-FSE — the engine's name for ordering parts, not a check-engine code)."
       ],
       "fixed": []
     },

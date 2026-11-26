@@ -97,7 +97,7 @@ Build-sandbox notes: the sandbox blocks dl.google.com, api.osv.dev, semgrep.dev 
 
 - v1.0.34: more specs from the VIN; fluid types and capacities from the owner's manual (review screen, web + phone); paint colour name from the paint code (D68).
 
-- v1.0.35: empty manual-findable specs say "can be filled from owner's manual" and link to the reader.
+- v1.0.35: owner's manual from links or pasted text, owner-website button; empty manual-findable specs link to the reader; "Engine code" → "Engine model" (D69).
 
 ## Ideas for later (not started)
 - Code-sign the desktop app (paid Apple/Microsoft certificates) to remove first-launch warnings; add an Intel-Mac build if needed.

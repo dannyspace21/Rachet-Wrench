@@ -34,13 +34,15 @@ class SpecEnrichmentTest {
     @Test fun manualAnswerBecomesReviewRows() {
         val body = """{"pages": 400, "readable_pages": 398, "attachment": {}, "specs": [
             {"key": "oil_type", "label": "Engine oil", "current": null, "options": [
-               {"value": "0W-20 (API SP)", "page": 512, "snippet": "Engine oil ... 0W-20"}, {"value": "5W-20", "page": 512, "snippet": "in an emergency"}]},
+               {"value": "0W-20 (API SP)", "page": 512, "snippet": "Engine oil ... 0W-20"}, {"value": "5W-20", "page": 3, "snippet": "in an emergency", "where": "link 3 (owners.example.com)"}]},
             {"key": "brake_fluid_type", "label": "Brake fluid", "current": "DOT 3", "options": [{"value": "DOT 3", "page": 515, "snippet": "Brake fluid FMVSS No.116 DOT 3"}]},
             {"key": "coolant_type", "label": "Coolant", "options": []}]}"""
         val (pages, readable, specs) = ManualResult.parse(body)
         assertEquals(400, pages); assertEquals(398, readable)
         assertEquals(listOf("oil_type", "brake_fluid_type"), specs.map { it.key }) // empty ones dropped
         assertEquals("0W-20 (API SP)", specs[0].value)
+        assertEquals("page 512", specs[0].options[0].where)   // older servers send no "where"
+        assertEquals("link 3 (owners.example.com)", specs[0].options[1].where)
         assertTrue("empty spec is ticked", specs[0].keep)
         assertFalse("a spec that already has a value is not ticked", specs[1].keep)
     }

@@ -27,6 +27,7 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
@@ -62,7 +63,7 @@ import kotlinx.serialization.json.jsonPrimitive
 import java.io.File
 
 /** A value found in the manual: what it says, on which page, in which line. */
-data class ManualOption(val value: String, val page: Int, val snippet: String)
+data class ManualOption(val value: String, val page: Int, val snippet: String, val where: String = "page $page")
 
 /** One spec on the review screen. */
 class ManualProposal(val key: String, val label: String, val current: String?, val options: List<ManualOption>) {
@@ -83,7 +84,8 @@ object ManualResult {
                 current = s["current"]?.jsonPrimitive?.contentOrNull,
                 options = s["options"]?.jsonArray.orEmpty().map { op ->
                     val x = op.jsonObject
-                    ManualOption(x["value"]!!.jsonPrimitive.content, x["page"]?.jsonPrimitive?.intOrNull ?: 0, x["snippet"]?.jsonPrimitive?.contentOrNull ?: "")
+                    ManualOption(x["value"]!!.jsonPrimitive.content, x["page"]?.jsonPrimitive?.intOrNull ?: 0, x["snippet"]?.jsonPrimitive?.contentOrNull ?: "",
+                    x["where"]?.jsonPrimitive?.contentOrNull ?: "page ${x["page"]?.jsonPrimitive?.intOrNull ?: 0}")
                 })
         }.filter { it.options.isNotEmpty() }
         return Triple(o["pages"]?.jsonPrimitive?.intOrNull ?: 0, o["readable_pages"]?.jsonPrimitive?.intOrNull ?: 0, specs)
@@ -99,6 +101,10 @@ fun ManualScreen(nav: NavHostController, vehicleId: String) {
     val scope = rememberCoroutineScope()
     val server = repo.store.mode == "server"
     val manuals = remember { mutableStateListOf<SavedManual>() }
+    val vehicle by repo.db.vehicles().observe(vehicleId).collectAsState(initial = null)
+    var how by remember { mutableStateOf("pdf") }
+    var links by remember { mutableStateOf("") }
+    var pasted by remember { mutableStateOf("") }
     var picked by remember { mutableStateOf<String?>(null) }
     var status by remember { mutableStateOf<String?>(null) }
     var busy by remember { mutableStateOf(false) }
@@ -160,21 +166,49 @@ fun ManualScreen(nav: NavHostController, vehicleId: String) {
                         color = LocalExtra.current.muted)
                 }
             } else if (proposals.isEmpty()) {
-                SectionCard {
-                    if (manuals.isNotEmpty()) {
-                        Text("Saved manuals", fontWeight = FontWeight.SemiBold)
-                        manuals.forEach { m ->
-                            Row(Modifier.fillMaxWidth().clickable { picked = m.id }, verticalAlignment = Alignment.CenterVertically) {
-                                RadioButton(picked == m.id, { picked = m.id }); Text(m.title)
-                            }
-                        }
-                        PrimaryButton("Read manual", "book", Modifier.fillMaxWidth(), enabled = !busy && picked != null) { read(mapOf("attachment_id" to picked!!), null) }
-                    } else if (loaded) {
-                        Text("No owner's manual saved for this vehicle yet.", color = LocalExtra.current.muted)
+                vehicle?.let { v ->
+                    val owners = v.owners_url.ifBlank { Catalog.links(ctx, v.make, v.kind).owners ?: "" }
+                    SectionCard {
+                        Text("1. Find your manual", fontWeight = FontWeight.SemiBold)
+                        Text(if (owners.isNotBlank()) "${v.make}'s owner website has the manuals. Download the PDF, or copy the link(s) to the manual's pages."
+                             else "Search the web for the ${listOfNotNull(v.year?.toString(), v.make, v.model).joinToString(" ")} owner's manual on the manufacturer's website.",
+                            color = LocalExtra.current.muted)
+                        if (owners.isNotBlank()) SecondaryButton("Open ${v.make} owner website", "external", Modifier.fillMaxWidth()) { openLink(ctx, owners) }
                     }
-                    SecondaryButton("Choose a PDF…", "upload", Modifier.fillMaxWidth(), enabled = !busy) { pickPdf.launch(arrayOf("application/pdf")) }
-                    Text("The PDF is read on your own computer — nothing is sent anywhere else. A new PDF is kept with the vehicle's documents.",
-                        style = MaterialTheme.typography.bodySmall, color = LocalExtra.current.muted)
+                }
+                SectionCard {
+                    Text("2. Read it", fontWeight = FontWeight.SemiBold)
+                    com.ratchetwrench.app.ui.Segmented(listOf("pdf" to "PDF", "links" to "Links", "text" to "Paste text"), how) { how = it }
+                    when (how) {
+                        "links" -> {
+                            Field("Links (one per line)", links, { links = it })
+                            Text("Your computer downloads only these links (public https websites — never your home network). If the site needs you to sign in, download the PDF instead.",
+                                style = MaterialTheme.typography.bodySmall, color = LocalExtra.current.muted)
+                            PrimaryButton("Read manual", "book", Modifier.fillMaxWidth(), enabled = !busy && links.isNotBlank()) { read(mapOf("urls" to links), null) }
+                        }
+                        "text" -> {
+                            Field("Manual text", pasted, { pasted = it })
+                            Text("Copy the Specifications / Capacities section from the manual (PDF, web page or app) and paste it here.",
+                                style = MaterialTheme.typography.bodySmall, color = LocalExtra.current.muted)
+                            PrimaryButton("Read text", "book", Modifier.fillMaxWidth(), enabled = !busy && pasted.isNotBlank()) { read(mapOf("text" to pasted), null) }
+                        }
+                        else -> {
+                            if (manuals.isNotEmpty()) {
+                                Text("Saved manuals", fontWeight = FontWeight.SemiBold)
+                                manuals.forEach { m ->
+                                    Row(Modifier.fillMaxWidth().clickable { picked = m.id }, verticalAlignment = Alignment.CenterVertically) {
+                                        RadioButton(picked == m.id, { picked = m.id }); Text(m.title)
+                                    }
+                                }
+                                PrimaryButton("Read manual", "book", Modifier.fillMaxWidth(), enabled = !busy && picked != null) { read(mapOf("attachment_id" to picked!!), null) }
+                            } else if (loaded) {
+                                Text("No owner's manual saved for this vehicle yet.", color = LocalExtra.current.muted)
+                            }
+                            SecondaryButton("Choose a PDF…", "upload", Modifier.fillMaxWidth(), enabled = !busy) { pickPdf.launch(arrayOf("application/pdf")) }
+                            Text("Read on your own computer and kept with the vehicle's documents.",
+                                style = MaterialTheme.typography.bodySmall, color = LocalExtra.current.muted)
+                        }
+                    }
                 }
             }
             status?.let { Text(it, color = LocalExtra.current.muted) }
@@ -211,7 +245,7 @@ private fun ProposalCard(p: ManualProposal, label: String) {
             Row(Modifier.fillMaxWidth().clickable { p.chosen = i; p.value = o.value; p.keep = true }, verticalAlignment = Alignment.Top) {
                 RadioButton(p.chosen == i, { p.chosen = i; p.value = o.value; p.keep = true })
                 Column(Modifier.weight(1f).padding(top = 12.dp)) {
-                    Text("${o.value} · page ${o.page}", fontWeight = FontWeight.SemiBold)
+                    Text("${o.value} · ${o.where}", fontWeight = FontWeight.SemiBold)
                     Text(o.snippet, style = MaterialTheme.typography.bodySmall, fontStyle = FontStyle.Italic, color = LocalExtra.current.muted)
                 }
             }

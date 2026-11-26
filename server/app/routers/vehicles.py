@@ -17,6 +17,7 @@ from __future__ import annotations
 import asyncio
 from datetime import UTC, date, datetime
 import re
+import urllib.parse
 
 from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile, status
 from fastapi.responses import Response
@@ -212,44 +213,88 @@ def sticker_apply(vehicle_id: str, body: schemas.StickerApplyIn, user: User = De
 # ---------------------------------------------------------------------------
 @router.post("/vehicles/{vehicle_id}/manual/scan")
 async def manual_scan(vehicle_id: str, attachment_id: str | None = Form(None), file: UploadFile | None = File(None),
+                      urls: str | None = Form(None, max_length=8000), text: str | None = Form(None, max_length=300_000),
                       user: User = Depends(current_user), db: Session = Depends(get_db)) -> dict:
-    """Read the owner's manual (one already saved on the vehicle, or a new
-    PDF, which is then saved) and PROPOSE fluid specs and capacities, each
-    with the page and line it came from.  Nothing is saved to Specs until
-    /manual/apply."""
+    """Read the owner's manual and PROPOSE fluid specs and capacities, each
+    with where it was found.  The manual can be: a PDF saved on the vehicle
+    (attachment_id), a new PDF (file; saved), links pasted by the owner
+    (urls, one per line: PDFs are saved, web pages are read), or text pasted
+    by the owner.  Nothing is saved to Specs until /manual/apply."""
+    from ..manual_fetch import LinkError, fetch, parse_links
     from ..manual_specs import find_specs
     from ..uploads import store_bytes
 
     vehicle = get_owned(db, Vehicle, vehicle_id, user)
     settings = get_settings()
+    pages: list[str] = []
+    where: list[str] = []      # where each page came from, for the review screen
+    saved: list[Attachment] = []
+
+    async def read_pdf(data: bytes, name: str) -> None:
+        result = await asyncio.to_thread(run_pdf_worker, data, "text", settings.max_pdf_pages, settings.manual_parse_timeout_s)
+        for n, t in enumerate(result.get("text", []), start=1):
+            pages.append(t)
+            where.append(f"page {n}" + (f" of {name}" if name else ""))
+
+    def save_pdf(stored, caption: str, original: str) -> Attachment:
+        now = utcnow()
+        att = Attachment(owner_id=user.id, vehicle_id=vehicle.id, category="manual", content_type="application/pdf",
+                         stored_name=stored.stored_name, original_name=original[:255], size_bytes=stored.size_bytes,
+                         sha256=stored.sha256, page_count=stored.page_count, caption=caption[:255], has_file=True,
+                         created_at=now, updated_at=now, server_modified_at=now)
+        db.add(att)
+        db.commit()
+        return att
+
     if file is not None:
         data = await read_limited(file, settings.max_pdf_mb * 1024 * 1024)
         if sniff_type(data[:16]) != "application/pdf":
             raise HTTPException(status.HTTP_415_UNSUPPORTED_MEDIA_TYPE, "Please choose the owner's manual as a PDF.")
         stored = await asyncio.to_thread(store_bytes, data, True, False)
-        now = utcnow()
-        att = Attachment(owner_id=user.id, vehicle_id=vehicle.id, category="manual", content_type="application/pdf",
-                         stored_name=stored.stored_name, original_name="Owner's manual.pdf", size_bytes=stored.size_bytes,
-                         sha256=stored.sha256, page_count=stored.page_count, caption="Owner's manual", has_file=True,
-                         created_at=now, updated_at=now, server_modified_at=now)
-        db.add(att)
-        db.commit()
+        saved.append(save_pdf(stored, "Owner's manual", "Owner's manual.pdf"))
+        await read_pdf(data, "")
     elif attachment_id:
         att = get_owned(db, Attachment, attachment_id, user)
         if att.vehicle_id != vehicle.id or att.content_type != "application/pdf" or not att.has_file:
             raise HTTPException(status.HTTP_400_BAD_REQUEST, "That file isn't a PDF saved on this vehicle.")
         data = await asyncio.to_thread(file_path(att.stored_name).read_bytes)
+        saved.append(att)
+        await read_pdf(data, "")
+    elif urls and urls.strip():
+        if not settings.manual_links_enabled:
+            raise HTTPException(status.HTTP_403_FORBIDDEN, "Reading links is turned off on this server. Upload the PDF or paste the text instead.")
+        try:
+            links = parse_links(urls)
+        except LinkError as e:
+            raise HTTPException(status.HTTP_400_BAD_REQUEST, str(e)) from None
+        for n, link in enumerate(links, start=1):
+            try:
+                got = await asyncio.to_thread(fetch, link, settings.max_pdf_mb * 1024 * 1024)
+            except LinkError as e:
+                raise HTTPException(status.HTTP_400_BAD_REQUEST, f"Link {n}: {e}") from None
+            host = urllib.parse.urlsplit(got.url).hostname or "link"
+            if got.kind == "pdf":
+                stored = await asyncio.to_thread(store_bytes, got.data, True, False)
+                saved.append(save_pdf(stored, f"Owner's manual (from {host})", got.url.rsplit("/", 1)[-1] or "manual.pdf"))
+                await read_pdf(got.data, f"link {n}" if len(links) > 1 else "")
+            else:
+                pages.append(got.text)
+                where.append(f"link {n} ({host})" if len(links) > 1 else host)
+    elif text and text.strip():
+        pages.append(text)
+        where.append("pasted text")
     else:
-        raise HTTPException(status.HTTP_400_BAD_REQUEST, "Choose the owner's manual (PDF).")
-    result = await asyncio.to_thread(run_pdf_worker, data, "text", settings.max_pdf_pages, settings.manual_parse_timeout_s)
-    pages = result.get("text", [])
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, "Choose the owner's manual: a PDF, links to it, or pasted text.")
+
     current = {s.key: s.value for s in db.scalars(select(VehicleSpec).where(
         VehicleSpec.owner_id == user.id, VehicleSpec.vehicle_id == vehicle.id, VehicleSpec.deleted_at.is_(None))).all()}
     specs = find_specs(pages)
     for s in specs:
         s["current"] = current.get(s["key"])
+        for o in s["options"]:
+            o["where"] = where[o["page"] - 1] if 0 < o["page"] <= len(where) else f"page {o['page']}"
     return {"pages": len(pages), "readable_pages": sum(1 for t in pages if (t or "").strip()),
-            "attachment": serialize(att), "specs": specs}
+            "attachment": serialize(saved[0]) if saved else None, "attachments": [serialize(a) for a in saved], "specs": specs}
 
 
 @router.post("/vehicles/{vehicle_id}/manual/apply")

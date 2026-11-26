@@ -81,6 +81,9 @@ class Settings:
 
     # NHTSA vPIC VIN decoder (free, US government).  Can be switched off.
     nhtsa_enabled: bool = field(default_factory=lambda: _bool("RW_NHTSA_ENABLED", True))
+    # Specs > Fill from owner's manual > "Links": the server downloads the
+    # https links the owner pastes (public websites only).  False = upload / paste only.
+    manual_links_enabled: bool = field(default_factory=lambda: _bool("RW_MANUAL_LINKS_ENABLED", True))
     nhtsa_base_url: str = "https://vpic.nhtsa.dot.gov/api/vehicles"
     # NHTSA recalls by year/make/model (a different NHTSA host).
     nhtsa_recalls_url: str = field(default_factory=lambda: os.environ.get("RW_NHTSA_RECALLS_URL", "https://api.nhtsa.gov").rstrip("/"))

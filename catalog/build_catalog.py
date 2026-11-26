@@ -279,7 +279,7 @@ SPECS = [
     ("displacement_l", "Displacement", "Engine & oil", "L"),
     ("cylinders", "Cylinders", "Engine & oil", ""),
     ("fuel_type", "Fuel type", "Engine & oil", ""),
-    ("engine_code", "Engine code", "Engine & oil", "e.g. 2GR-FSE"),
+    ("engine_code", "Engine model", "Engine & oil", "e.g. 2GR-FSE (the engine's own name, used when ordering engine parts)"),
     ("horsepower", "Horsepower", "Engine & oil", "hp"),
     ("valve_train", "Valve train", "Engine & oil", "e.g. DOHC"),
     ("engine_details", "Engine details", "Engine & oil", "e.g. port + direct injection"),

@@ -589,9 +589,9 @@
     },
     {
       "key": "engine_code",
-      "label": "Engine code",
+      "label": "Engine model",
       "group": "Engine & oil",
-      "hint": "e.g. 2GR-FSE"
+      "hint": "e.g. 2GR-FSE (the engine's own name, used when ordering engine parts)"
     },
     {
       "key": "horsepower",
