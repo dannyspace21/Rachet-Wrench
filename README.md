@@ -24,9 +24,14 @@ You can start with the phone alone and connect it to a computer or server later:
 
 **Manage your vehicles**
 - **Vehicles:** cars and motorcycles with year, make, model (pick from NHTSA's lists for that make and year), nickname, VIN, mileage and a photo.
-- **VIN:** type it, or **scan the barcode** with the phone camera (only what's inside the on-screen box is read). The free US government (NHTSA) decoder fills in what it knows.
-- **Door-jamb sticker scan:** photograph the stickers inside the driver's door. The phone reads them offline and finds the VIN, tire sizes and pressures, paint and trim codes, build date and weight ratings. You **confirm, edit or reject every value** before it's saved.
-- **Specs** (oil type and capacity, tire sizes, fluids, paint code…). Decoding the VIN fills in everything NHTSA knows (engine and engine code, horsepower, transmission, drive, body, weight, wheelbase, safety equipment, plant…). **Fill from owner's manual** takes you to the maker's owner website, then reads the manual from a PDF, from links (a PDF or web-manual pages) or from pasted text, finds the oil grade, coolant, transmission and brake fluid and their capacities, and shows where each came from, for you to confirm. A known paint code (Lexus, Toyota, Kia) suggests the colour name. Every value shows where it came from: **From VIN**, **From door sticker**, **From owner's manual**, **Entered by me** or **Unverified**. Nothing is guessed.
+- **VIN:** type it, or **scan the barcode** with the phone camera (only what's inside the on-screen box is read). The free US government (NHTSA) decoder fills in the year, make, model and every spec it knows. If NHTSA lists several possible trims, you pick yours.
+- **Door-jamb sticker scan:** photograph the stickers on the driver's door and door pillar — the tire placard **and** the label with the VIN. The phone reads them offline and finds the VIN, tire sizes and pressures, paint and trim codes, build date and the weight ratings (**GVWR** and front/rear **GAWR**, in lb). You **confirm, edit or reject every value** before it's saved.
+- **Specs** — everything about the vehicle in one list, starting with VIN, year, make, model and trim. Ways to fill it in:
+  - **Decode VIN:** engine and engine model, horsepower, transmission, drive, body, curb weight, wheelbase, safety equipment, plant.
+  - **Door sticker:** tires, pressures, paint, weights (above).
+  - **Fill from owner's manual:** opens the maker's owner website to find the manual, then reads it from a **PDF**, from **links** (one PDF or several web-manual pages) or from **pasted text**. It finds oil grade, coolant, transmission and brake fluid, capacities, GVWR and more, and shows where each value came from. Empty fields the manual usually covers say "can be filled from owner's manual" — tap to go there.
+  - **Paint colour:** a known paint code (Lexus, Toyota, Kia) suggests the colour name.
+  - Every value is labelled **From VIN**, **From door sticker**, **From owner's manual**, **Entered by me** or **Unverified**. Nothing is guessed, and you confirm everything.
 - **Parts** with OEM part numbers and a link to the manufacturer's official parts site. Specs that are parts (oil type, oil filter number, tire sizes, battery group, wiper sizes…) are **added to Parts automatically**.
 - **Maintenance and repair history:** date, mileage, type (each with its own icon), description, parts, cost, shop or DIY, notes, and any number of photos and receipts. Costs with nothing entered show $0.00.
 - **Reminders** by mileage, by date, or **whichever comes first**. A vehicle opens on its reminders, **overdue first**. Tap one and **Mark as done**: it fills in today's date and mileage, adds the job to the history, and the status changes from Overdue to OK. Any matching record you log also updates the reminder.
@@ -43,7 +48,7 @@ You can start with the phone alone and connect it to a computer or server later:
 - **Shopping list:** collect what you need before a job — from a reminder, a saved part, or typed in — with quantity, OEM part number, spec and notes. Search any item, tick it off when bought. Never creates expenses or marks maintenance done by itself.
 
 **Everything else**
-- **Connect your phone by QR code:** the desktop app (or Settings → Connect a phone on the web) shows a one-time QR code; scan it in the Android app. A small banner offers **Resync** when the phone can't reach the computer (and can be dismissed).
+- **Connect your phone by QR code:** the desktop app (or Settings → Connect a phone on the web) shows a one-time QR code; scan it in the Android app. A small banner offers **Resync** when the phone can't reach the computer (and can be dismissed). *Settings → Sync* has Sync now, Change address, Reconnect with QR code and Sign in again.
 - **Report a bug** from inside the app: describe the problem, see exactly what will be sent, and press Send — it goes straight to the project's GitHub issues ([docs/BUG-REPORTS.md](docs/BUG-REPORTS.md)).
 - **"What's new"** after every update (including versions you skipped), and **Light, Dark or System** theme.
 
@@ -199,7 +204,7 @@ Security was the top priority. Highlights:
 - **File uploads:** checked by their real content type, with GPS and other metadata stripped from photos, and untrusted PDFs read in a sandbox.
 - **Server container:** runs as non-root with a read-only filesystem.
 - **Android app:** the login token is encrypted with the Android Keystore, and HTTPS is enforced.
-- **No telemetry or tracking.** Outbound connections are few, documented and mostly optional: NHTSA (VIN decoding, model lists and recalls — year/make/model only), GitHub (app updates, and bug reports only when you press Send), your own ntfy server, and AI sticker reading only if the owner turns it on. Smart Shopping links only open a retailer's site when you tap them. Full table in [SECURITY.md](SECURITY.md).
+- **No telemetry or tracking.** Outbound connections are few, documented and mostly optional: NHTSA (VIN decoding, model lists and recalls — year/make/model only), owner's-manual links you paste (only those exact links, public websites only), GitHub (app updates, and bug reports only when you press Send), your own ntfy server, and AI sticker reading only if the owner turns it on. Smart Shopping links only open a retailer's site when you tap them. Full table in [SECURITY.md](SECURITY.md).
 
 Every dependency is pinned and scanned with pip-audit, npm audit, OSV-Scanner, Trivy, Semgrep, Gitleaks, Android lint and CodeQL.
 

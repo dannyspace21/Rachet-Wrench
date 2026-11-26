@@ -2,7 +2,7 @@
   "_comment": "Release notes shown in the app ('What's new' pop-up after an update, and Settings > Release notes) and on the GitHub release page. Newest first. EVERY Android release needs an entry here whose version matches the release (1.0.<workflow run number>); the release workflow refuses to publish otherwise. Keep it high level and in plain English.",
   "releases": [
     {
-      "version": "1.0.36",
+      "version": "1.0.37",
       "date": "2026-11-26",
       "new": [],
       "improved": [

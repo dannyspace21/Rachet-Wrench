@@ -489,10 +489,10 @@ class ScreensTest {
             store.mode = "server"
             click("Settings")
             scrollTo("Sign in again")
-            val screen = rule.onAllNodes(androidx.compose.ui.test.isRoot())[0].fetchSemanticsNode().boundsInRoot.width
+            val screen = rule.onAllNodes(androidx.compose.ui.test.isRoot())[0].fetchSemanticsNode().size.width.toFloat()
             val widths = listOf("Sync now", "Change address", "Reconnect with QR code", "Sign in again").map { label ->
                 scrollTo(label)
-                rule.onAllNodesWithText(label)[0].fetchSemanticsNode().boundsInRoot.width
+                rule.onAllNodesWithText(label)[0].fetchSemanticsNode().size.width.toFloat()  // layout width (not clipped by the screen edge)
             }
             for (w in widths) {
                 org.junit.Assert.assertEquals("all Sync buttons the same width: $widths", widths[0], w, 1f)
