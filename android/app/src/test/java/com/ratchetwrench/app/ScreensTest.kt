@@ -475,6 +475,35 @@ class ScreensTest {
         }
     }
 
+    /** Settings → Sync: every button full width, one per line ("Sign in again" was squeezed to the right). */
+    @Test
+    fun syncButtonsAreFullWidth() {
+        click("Start on this phone")
+        waitForText("No vehicles yet")
+        val store = com.ratchetwrench.app.data.SecureStore(ApplicationProvider.getApplicationContext())
+        store.serverUrl = "http://127.0.0.1:9"
+        store.allowHttpLocal = true
+        com.ratchetwrench.app.data.SecureStore.tokenForTests = "t"
+        try {
+            store.token = "t"
+            store.mode = "server"
+            click("Settings")
+            scrollTo("Sign in again")
+            val screen = rule.onAllNodes(androidx.compose.ui.test.isRoot())[0].fetchSemanticsNode().boundsInRoot.width
+            val widths = listOf("Sync now", "Change address", "Reconnect with QR code", "Sign in again").map { label ->
+                scrollTo(label)
+                rule.onAllNodesWithText(label)[0].fetchSemanticsNode().boundsInRoot.width
+            }
+            for (w in widths) {
+                org.junit.Assert.assertEquals("all Sync buttons the same width: $widths", widths[0], w, 1f)
+                org.junit.Assert.assertTrue("buttons span the card ($w of $screen)", w > screen * 0.7f)
+            }
+        } finally {
+            store.mode = "local"
+            com.ratchetwrench.app.data.SecureStore.tokenForTests = null
+        }
+    }
+
     @Test
     fun settingsAboutAndTheme() {
         startPhoneOnlyWithVehicle()

@@ -12,7 +12,8 @@
         "Fill from owner's manual also finds GVWR and front/rear GAWR."
       ],
       "fixed": [
-        "When NHTSA lists several possible trims for a VIN (e.g. a 2019 Tiguan: “4Motion SE, SEL, SEL R-Line…”), the whole list no longer becomes the vehicle's trim. The trim is left for you to pick, and Specs shows “One of: …”."
+        "When NHTSA lists several possible trims for a VIN (e.g. a 2019 Tiguan: “4Motion SE, SEL, SEL R-Line…”), the whole list no longer becomes the vehicle's trim. The trim is left for you to pick, and Specs shows “One of: …”.",
+        "Settings → Sync: the buttons (Sync now, Change address, Reconnect with QR code, Sign in again) are now full width, one per line — “Sign in again” was squeezed against the right edge."
       ]
     },
     {

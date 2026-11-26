@@ -303,8 +303,9 @@ fun SettingsScreen(nav: NavHostController, onSignedOut: () -> Unit) {
                     Text("Last successful sync: ${lastOk?.let { com.ratchetwrench.app.ui.prettyDateTime(it) } ?: "never"}",
                         color = MaterialTheme.colorScheme.onSurfaceVariant)
                     lastError?.let { Text("Last sync problem: $it", color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodySmall) }
-                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        SecondaryButton(if (syncing) "Syncing…" else "Sync now", "sync", enabled = !syncing) {
+                    // One full-width button per line (side by side they got squeezed on phones).
+                    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                        SecondaryButton(if (syncing) "Syncing…" else "Sync now", "sync", Modifier.fillMaxWidth(), enabled = !syncing) {
                             syncing = true
                             scope.launch {
                                 message = try { withContext(Dispatchers.IO) { SyncEngine(ctx).run() }; "Synced." }
@@ -312,11 +313,9 @@ fun SettingsScreen(nav: NavHostController, onSignedOut: () -> Unit) {
                                 lastOk = repo.store.lastSyncOk; lastError = repo.store.lastSyncError; syncing = false
                             }
                         }
-                        SecondaryButton("Change address", "edit") { changing = true }
-                    }
-                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        SecondaryButton("Reconnect with QR code", "scan") { nav.navigate("login") }
-                        SecondaryButton("Sign in again", "key") { nav.navigate("login") }
+                        SecondaryButton("Change address", "edit", Modifier.fillMaxWidth()) { changing = true }
+                        SecondaryButton("Reconnect with QR code", "scan", Modifier.fillMaxWidth()) { nav.navigate("login") }
+                        SecondaryButton("Sign in again", "key", Modifier.fillMaxWidth()) { nav.navigate("login") }
                     }
                     Text("Tip: if your computer restarted, its address may have changed — check the desktop app's window and use “Change address”.",
                         color = LocalExtra.current.muted, style = MaterialTheme.typography.bodySmall)
