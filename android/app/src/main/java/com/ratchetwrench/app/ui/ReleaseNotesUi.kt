@@ -2,6 +2,7 @@
 // and the Release notes section in Settings.
 package com.ratchetwrench.app.ui
 
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.rememberScrollState
@@ -44,13 +45,21 @@ fun ReleaseBody(r: Release) {
 fun WhatsNewDialog(versionName: String = BuildConfig.VERSION_NAME, versionCode: Int = BuildConfig.VERSION_CODE) {
     val ctx = LocalContext.current
     val repo = LocalRepo.current
-    val notes = remember(versionName) { ReleaseNotes.forVersion(ctx, versionName) }
+    // This version's notes plus any versions skipped since the last ones seen.
+    val list = remember(versionName) { ReleaseNotes.since(ctx, versionName, repo.store.notesSeenCode) }
+    val notes = list.firstOrNull { it.version == versionName }
     var show by remember { mutableStateOf(notes != null && repo.store.notesSeenCode < versionCode) }
     if (!show || notes == null) return
     val close = { repo.store.notesSeenCode = versionCode; show = false }
     AlertDialog(onDismissRequest = close,
         title = { Text("What's new in ${notes.version}") },
-        text = { Column(Modifier.verticalScroll(rememberScrollState())) { ReleaseBody(notes) } },
+        text = { Column(Modifier.verticalScroll(rememberScrollState())) {
+            ReleaseBody(notes)
+            list.filter { it !== notes }.forEach { r ->
+                Text("Also new (from ${r.version})", fontWeight = FontWeight.Bold, modifier = Modifier.padding(top = 12.dp))
+                ReleaseBody(r)
+            }
+        } },
         confirmButton = { TextButton(close) { Text("Got it") } })
 }
 

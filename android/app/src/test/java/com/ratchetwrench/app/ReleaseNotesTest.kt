@@ -50,4 +50,16 @@ class ReleaseNotesTest {
         assertEquals(0, rule.onAllNodesWithText("What's new in ${top.version}").fetchSemanticsNodes().size)
         assertEquals("remembered", code, repo.store.notesSeenCode)
     }
+
+    /** Skipped updates (or a version never published): their notes show too. */
+    @Test fun whatsNewIncludesSkippedVersions() {
+        assertEquals(listOf("1.0.26", "1.0.25", "1.0.24"), ReleaseNotes.since(ctx, "1.0.26", 23000).map { it.version })
+        assertEquals(listOf("1.0.26"), ReleaseNotes.since(ctx, "1.0.26", 25000).map { it.version })
+        assertEquals("fresh install: just this one", listOf("1.0.26"), ReleaseNotes.since(ctx, "1.0.26", 0).map { it.version })
+        val repo = Repository(ctx)
+        repo.store.notesSeenCode = 23000 // had 1.0.23, updates straight to 1.0.25
+        rule.setContent { CompositionLocalProvider(LocalRepo provides repo) { WhatsNewDialog("1.0.25", 25000) } }
+        rule.onNodeWithText("What's new in 1.0.25").assertExists()
+        rule.onNodeWithText("Also new (from 1.0.24)").assertExists()
+    }
 }

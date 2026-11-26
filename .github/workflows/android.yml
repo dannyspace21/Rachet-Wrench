@@ -225,10 +225,13 @@ jobs:
           GH_TOKEN: ${{ github.token }}
           CERT: ${{ needs.android.outputs.cert }}
         run: |
+          # Include notes of any version since the last published release
+          # that never got its own release (e.g. a build GitHub cancelled).
+          PREV=$(gh release view --repo "$GITHUB_REPOSITORY" --json tagName -q .tagName 2>/dev/null || true)
           {
             echo "## What's new in $RW_VERSION_NAME"
             echo
-            python3 android/release_notes.py markdown "$RW_VERSION_NAME"
+            python3 android/release_notes.py markdown "$RW_VERSION_NAME" --since "${PREV#v}"
           } > notes.md
           cat >> notes.md <<EOF
           ---

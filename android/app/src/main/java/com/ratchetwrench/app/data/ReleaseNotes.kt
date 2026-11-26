@@ -29,6 +29,20 @@ object ReleaseNotes {
             context.assets.open("release_notes.json").bufferedReader().use { it.readText() }).releases
     }.getOrDefault(emptyList()).also { cached = it }
 
+    /** The build number part of "1.0.N" (version codes are N × 1000). */
+    fun patch(version: String): Int = version.substringAfterLast('.').toIntOrNull() ?: -1
+
+    /**
+     * Everything new since the version this phone last showed notes for:
+     * this version plus any in between (skipped updates, or a version that
+     * was never published), newest first.  seenCode 0 = only this version.
+     */
+    fun since(context: Context, version: String, seenCode: Int): List<Release> {
+        val cur = patch(version)
+        val seen = if (seenCode <= 0) cur - 1 else seenCode / 1000
+        return all(context).filter { patch(it.version) in (seen + 1)..cur }
+    }
+
     /** Notes for one version, or null. */
     fun forVersion(context: Context, version: String): Release? = all(context).firstOrNull { it.version == version }
 }
