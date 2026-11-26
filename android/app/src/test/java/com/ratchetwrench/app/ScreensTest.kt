@@ -157,6 +157,23 @@ class ScreensTest {
         click("Parts")
         waitForText("04152-YZZA1")
 
+        // Smart Shopping on a part: the exact OEM part number is searched.
+        tapIcon("Shop for Oil filter")
+        waitForText("Shop — Oil filter")
+        waitForText("“04152-YZZA1”")
+        waitForText("Amazon"); waitForText("Walmart"); waitForText("Advance Auto Parts")
+        click("Close")
+
+        // Smart Shopping on a reminder: oil + the saved oil filter part number;
+        // no oil type in Specs yet, so it says so instead of guessing.
+        click("Reminders")
+        tapIcon("Find supplies for Oil change")
+        waitForText("Find supplies — Oil change")
+        waitForText("“Lexus RC 350 engine oil”")
+        waitForText("“OEM 04152-YZZA1 oil filter”")
+        waitForText("Tip: add", substring = true)
+        click("Close")
+
         // History tab filters.
         click("History")
         click("Repairs")
@@ -202,6 +219,7 @@ class ScreensTest {
         click("Miles")
         waitForText("Release notes")
         waitForText("Report a bug")
+        waitForText("Smart Shopping")
         waitForText("About Ratchet Wrench")
         waitForText("Version", substring = true)
         tapIcon("Back")

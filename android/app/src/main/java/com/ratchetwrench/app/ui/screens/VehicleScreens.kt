@@ -129,6 +129,10 @@ fun VehicleScreen(nav: NavHostController, id: String) {
     val rems by repo.db.reminders().observeFor(id).collectAsState(initial = emptyList())
     val v = vehicle ?: return
     val links = Catalog.links(ctx, v.make, v.kind)
+    // Smart Shopping: what's known about this vehicle (specs, saved parts).
+    val shopCtx = com.ratchetwrench.app.ui.rememberShopContext(v)
+    val shopOn = com.ratchetwrench.app.ui.shoppingOn()
+    var shopping by remember { mutableStateOf<Pair<String, List<com.ratchetwrench.app.domain.ShopItem>>?>(null) }
     val partsUrl = v.parts_url.ifBlank { links.parts ?: "" }
     val ownersUrl = v.owners_url.ifBlank { links.owners ?: "" }
 
@@ -195,6 +199,11 @@ fun VehicleScreen(nav: NavHostController, id: String) {
                                             style = MaterialTheme.typography.bodyMedium)
                                         Text(st.describe(v.mileage_unit), color = LocalExtra.current.muted, style = MaterialTheme.typography.bodySmall)
                                     }
+                                    val shopItems = if (shopOn) com.ratchetwrench.app.domain.Shopping.itemsFor(r.type_key, shopCtx, Catalog.get(ctx)) else emptyList()
+                                    val name = r.title.ifBlank { Catalog.typeLabel(ctx, r.type_key) }
+                                    if (shopItems.isNotEmpty()) com.ratchetwrench.app.ui.ShopIconButton("Find supplies for $name") {
+                                        shopping = "Find supplies — $name" to shopItems
+                                    }
                                     StatusPill(st.status)
                                 }
                             }
@@ -214,6 +223,7 @@ fun VehicleScreen(nav: NavHostController, id: String) {
             }
         }
     }
+    shopping?.let { (title, items) -> com.ratchetwrench.app.ui.ShoppingDialog(title, items) { shopping = null } }
     if (showMileage) {
         var text by remember { mutableStateOf(v.current_mileage?.toString() ?: "") }
         AlertDialog(onDismissRequest = { showMileage = false }, title = { Text("Update mileage") },
@@ -325,6 +335,10 @@ private fun RemindersTab(v: Vehicle) {
     val rems by repo.db.reminders().observeFor(v.id).collectAsState(initial = emptyList())
     var editing by remember { mutableStateOf<Reminder?>(null) }
     var creating by remember { mutableStateOf(false) }
+    val shopCtx = com.ratchetwrench.app.ui.rememberShopContext(v)
+    val shopOn = com.ratchetwrench.app.ui.shoppingOn()
+    var shopping by remember { mutableStateOf<Pair<String, List<com.ratchetwrench.app.domain.ShopItem>>?>(null) }
+    fun shopItems(r: Reminder) = if (shopOn) com.ratchetwrench.app.domain.Shopping.itemsFor(r.type_key, shopCtx, Catalog.get(ctx)) else emptyList()
     LazyColumn(contentPadding = androidx.compose.foundation.layout.PaddingValues(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
         item { PrimaryButton("Add reminder", "plus") { creating = true } }
         if (rems.isEmpty()) item { Text("Example: oil change every 5,000 ${v.mileage_unit} or 6 months, whichever comes first.", color = LocalExtra.current.muted) }
@@ -338,6 +352,10 @@ private fun RemindersTab(v: Vehicle) {
                     Text(listOfNotNull(r.interval_miles?.let { "every %,d %s".format(it, v.mileage_unit) }, r.interval_months?.let { "every $it months" }).joinToString(" or "),
                         color = LocalExtra.current.muted, style = MaterialTheme.typography.bodySmall)
                 }
+                // Smart Shopping: only reminders with something to buy get the button.
+                val items = shopItems(r)
+                val name = r.title.ifBlank { Catalog.typeLabel(ctx, r.type_key) }
+                if (items.isNotEmpty()) com.ratchetwrench.app.ui.ShopIconButton("Find supplies for $name") { shopping = "Find supplies — $name" to items }
                 StatusPill(st.status)
             }
         }
@@ -372,10 +390,16 @@ private fun RemindersTab(v: Vehicle) {
             dismissButton = {
                 Row {
                     if (r != null) TextButton({ scope.launch { repo.deleteReminder(r.id) }; close() }) { Text("Delete", color = MaterialTheme.colorScheme.error) }
+                    // Optional, saves nothing: opens the shopping list for this reminder.
+                    val items = if (r != null) shopItems(r) else emptyList()
+                    if (r != null && items.isNotEmpty()) TextButton({
+                        shopping = "Find supplies — ${r.title.ifBlank { Catalog.typeLabel(ctx, r.type_key) }}" to items; close()
+                    }) { Text("Find supplies") }
                     TextButton(close) { Text("Cancel") }
                 }
             })
     }
+    shopping?.let { (title, items) -> com.ratchetwrench.app.ui.ShoppingDialog(title, items) { shopping = null } }
 }
 
 /** A small, low-profile action button (used in the vehicle header). */
@@ -409,6 +433,9 @@ private fun PartsTab(v: Vehicle) {
     val parts by repo.db.parts().observeFor(v.id).collectAsState(initial = emptyList())
     var editing by remember { mutableStateOf<Part?>(null) }
     val partsUrl = v.parts_url.ifBlank { Catalog.links(ctx, v.make, v.kind).parts ?: "" }
+    val shopCtx = com.ratchetwrench.app.ui.rememberShopContext(v)
+    val shopOn = com.ratchetwrench.app.ui.shoppingOn()
+    var shopping by remember { mutableStateOf<Pair<String, List<com.ratchetwrench.app.domain.ShopItem>>?>(null) }
     LazyColumn(contentPadding = androidx.compose.foundation.layout.PaddingValues(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
         item {
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -424,9 +451,18 @@ private fun PartsTab(v: Vehicle) {
                     Text(p.part_number.ifBlank { "No part number yet" }, fontWeight = FontWeight.SemiBold)
                     if (p.notes.isNotBlank()) Text(p.notes, color = LocalExtra.current.muted, style = MaterialTheme.typography.bodySmall)
                 }
+                // Smart Shopping: search this part (its exact part number when saved).
+                if (shopOn) {
+                    val name = p.name.ifBlank { Catalog.typeLabel(ctx, p.type_key) }
+                    com.ratchetwrench.app.ui.ShopIconButton("Shop for $name") {
+                        val (q, exact) = com.ratchetwrench.app.domain.Shopping.partQuery(p.part_number, p.name, Catalog.typeLabel(ctx, p.type_key), shopCtx)
+                        shopping = "Shop — $name" to listOf(com.ratchetwrench.app.domain.ShopItem(name, q, exact, null))
+                    }
+                }
             }
         }
     }
+    shopping?.let { (title, items) -> com.ratchetwrench.app.ui.ShoppingDialog(title, items) { shopping = null } }
     editing?.let { p ->
         var type by remember(p.id) { mutableStateOf(p.type_key) }
         var name by remember(p.id) { mutableStateOf(p.name) }

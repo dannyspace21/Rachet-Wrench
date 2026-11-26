@@ -496,3 +496,25 @@ The desktop app *is* the existing server plus web app, packaged to run on a PC. 
   - **Separate motorcycle links:** makes that build cars and motorcycles get `moto_parts` / `moto_owners` (Honda → powersports.honda.com).
   - **Not verified:** powersports.honda.com blocks automated checks; BMW Motorrad's site didn't answer from the build environment, so it keeps the existing BMW link.
 - **Motorcycle icon:** redrawn as a motorbike (engine block, seat and tank, raked fork). The old one looked like a bicycle.
+
+### D59. Smart Shopping (Amazon, Walmart, Advance Auto Parts)
+- **What it does:**
+  - An optional **Find supplies** action on maintenance reminders, and a **Shop** action on saved parts.
+  - Both build a search from the vehicle's specs and part numbers and open it in the retailer's own app or website.
+  - Nothing is embedded, nothing is sent by Ratchet Wrench, and no record or expense changes.
+- **One configuration:** `catalog/build_catalog.py` → `catalog.json`.
+  - **`retailers`:** each has a key, name, icon and colour (no third-party logos are bundled, because they're trademarks), a `search_url` with a `{q}` placeholder, an `enabled` flag, and an `affiliate` `{param, value}` pair for future use. The affiliate is appended only when a value is set, and none is set.
+  - **`shopping`:** maps a maintenance type to items, each with search templates in order of preference: `{part:TYPE}` (the saved part number), `{spec:KEY}` (optionally `|inches`), and `{ymm}`. The first template whose information is all known wins, so exact part numbers beat descriptions and nothing is invented. `needs` names the spec behind the tip shown when a general search was used. Types with no entry (inspection, rotation, alignment…) get no shopping action.
+  - **Retailer addresses appear nowhere else in the code.**
+- **Search builders:** `web/js/shopping.js` (web, desktop, Docker) and `android/.../domain/Shopping.kt` follow identical rules. They're tested against the **same** cases (`catalog/shopping_tests.json`), and link encoding matches `encodeURIComponent`, so web and Android produce identical links.
+- **Where the buttons appear:**
+  - **Reminders:** a cart button on reminder rows, a "Find supplies" button in the reminder form, and on the phone's Coming up card.
+  - **Parts:** a shop button on each part.
+  - **Specs:** the screen is unchanged; it only supplies the information.
+- **Settings (this device only, not synced):** turn Smart Shopping off, turn individual retailers off, and pick a preferred retailer (listed first; the last one used becomes the preferred one). Kept in browser storage on the web and in the phone's preferences.
+- **Unchanged:** no new database table or column, no API change, no sync change.
+- **Tests:**
+  - **Web:** `node --test` covers the shared cases, links, affiliate handling, preferences and catalog references. It runs in the release workflow's check job and from pytest when Node is present.
+  - **Android:** `ShoppingTest` checks the shared cases; screen tests tap Shop on a part and Find supplies on an oil-change reminder.
+  - **Server:** the catalog served by `/api/catalog` includes valid retailers and shopping rules.
+- **Docs:** SECURITY.md lists the retailer links among the user-opened links.

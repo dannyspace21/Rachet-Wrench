@@ -311,6 +311,7 @@ fun SettingsScreen(nav: NavHostController, onSignedOut: () -> Unit) {
             }
             UpdateSettingsCard()
             message?.let { Text(it, color = LocalExtra.current.muted) }
+            ShoppingSettingsCard()
             com.ratchetwrench.app.ui.ReleaseNotesCard()
             SectionCard {
                 Text("Report a bug", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
@@ -465,4 +466,42 @@ fun bugReportUrl(context: android.content.Context): String {
         .appendQueryParameter("platform", "Android")
         .appendQueryParameter("details", details.trim())
         .build().toString()
+}
+
+/** Smart Shopping settings (this phone only): on/off, retailers, preferred retailer. */
+@Composable
+fun ShoppingSettingsCard() {
+    val repo = LocalRepo.current
+    val ctx = LocalContext.current
+    val retailers = com.ratchetwrench.app.domain.Catalog.get(ctx).retailers.filter { it.enabled }
+    var on by remember { mutableStateOf(repo.store.shoppingEnabled) }
+    var disabled by remember { mutableStateOf(repo.store.shoppingDisabled) }
+    var preferred by remember { mutableStateOf(repo.store.shoppingPreferred) }
+    SectionCard {
+        Text("Smart Shopping", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+        Text("Optional “Find supplies” and shop buttons on reminders and parts. They open a search in the retailer's app or website using your vehicle's specs and part numbers. You never have to buy anything, and nothing is sent from Ratchet Wrench.",
+            color = MaterialTheme.colorScheme.onSurfaceVariant, style = MaterialTheme.typography.bodySmall)
+        Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
+            Text("Show shopping buttons", modifier = Modifier.weight(1f))
+            Switch(on, { on = it; repo.store.shoppingEnabled = it })
+        }
+        if (on) {
+            retailers.forEach { r ->
+                Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
+                    Text(r.name, modifier = Modifier.weight(1f))
+                    Switch(r.key !in disabled, { enabled ->
+                        disabled = if (enabled) disabled - r.key else disabled + r.key
+                        repo.store.shoppingDisabled = disabled
+                    })
+                }
+            }
+            Text("Preferred retailer (listed first)", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            androidx.compose.foundation.layout.FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                (listOf<Pair<String?, String>>(null to "No preference") + retailers.map { it.key to it.name }).forEach { (key, name) ->
+                    androidx.compose.material3.FilterChip(selected = preferred == key, onClick = { preferred = key; repo.store.shoppingPreferred = key },
+                        label = { Text(name) })
+                }
+            }
+        }
+    }
 }

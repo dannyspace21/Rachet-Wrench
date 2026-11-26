@@ -22,6 +22,7 @@ Everything else stays on your server and your phone:
 - **The Android app** talks only to the server address you enter (enforced on every request), plus whatever links you choose to open in your browser (parts sites, owner portals).
 - **ML Kit** text and barcode recognition run on the phone with bundled models. Google's usage logger that ML Kit includes has its upload backend removed (see §4).
 - **Manufacturer links** are plain links you click. The server never fetches or scrapes them.
+- **Smart Shopping** buttons (Amazon, Walmart, Advance Auto Parts) are links you choose to open: the app builds a search (for example "OEM 04152-YZZA1 oil filter" or "255/35R19 tires") and opens it in the retailer's own app or website. Ratchet Wrench itself sends nothing, uses no retailer account or API key, and adds no affiliate tracking. The retailer sees the search text (part numbers, sizes, year/make/model; never the VIN). Turn it off in *Settings → Smart Shopping*.
 - **Report a bug** opens a pre-filled issue form on GitHub in your browser. The app sends nothing itself: you see the whole report there (app version, device, and, if the app crashed, the first lines of the error), can edit or delete anything, and only your **Submit** sends it.
 
 ---

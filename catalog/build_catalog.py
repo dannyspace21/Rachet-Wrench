@@ -143,6 +143,94 @@ MAKE_NAMES = {
 }
 
 # ---------------------------------------------------------------------------
+# Smart Shopping — retailers.  The ONE place retailer details live; every
+# app (web, desktop, Docker, Android) reads them from catalog.json.
+#   key          stable id (saved as the user's preferred retailer)
+#   name         shown on the button
+#   icon / color UI icon name and accent colour (no third-party logos are
+#                bundled: retailer logos are trademarks)
+#   search_url   "{q}" is replaced by the URL-encoded search text
+#   enabled      on by default (each user can turn retailers off in Settings)
+#   affiliate    for future use: {"param": "...", "value": "..."} appended as
+#                &param=value ONLY when value is set.  Empty = no tracking.
+# Searches simply open the retailer's own website or app; nothing is sent
+# by Ratchet Wrench itself and no account or API key is needed.
+# ---------------------------------------------------------------------------
+RETAILERS = [
+    {"key": "amazon", "name": "Amazon", "icon": "cart", "color": "#ff9900",
+     "search_url": "https://www.amazon.com/s?k={q}", "enabled": True,
+     "affiliate": {"param": "tag", "value": ""}},
+    {"key": "walmart", "name": "Walmart", "icon": "cart", "color": "#0071ce",
+     "search_url": "https://www.walmart.com/search?q={q}", "enabled": True,
+     "affiliate": {"param": "", "value": ""}},
+    {"key": "advance_auto", "name": "Advance Auto Parts", "icon": "cart", "color": "#e31837",
+     "search_url": "https://shop.advanceautoparts.com/web/SearchResults?searchTerm={q}", "enabled": True,
+     "affiliate": {"param": "", "value": ""}},
+]
+
+# ---------------------------------------------------------------------------
+# Smart Shopping — what to buy for a maintenance type.
+#   type_key -> list of items; each item has a label and search templates in
+#   order of preference.  The FIRST template whose placeholders are all known
+#   is used, so exact part numbers win over descriptions, and nothing is
+#   invented: a template is skipped when its information is missing.
+# Placeholders:
+#   {part:TYPE}        part number of the vehicle's saved part of that type
+#   {spec:KEY}         the vehicle's spec value
+#   {spec:KEY|inches}  just the number from a spec (wiper "26 in" -> 26)
+#   {ymm}              "year make model" (needs at least make and model)
+# `needs` names the spec field that would make the search exact (a hint).
+# Types not listed here (inspection, rotation, alignment, registration…)
+# simply have no shopping action.
+# ---------------------------------------------------------------------------
+def _filter(label: str, part: str, spec: str | None, words: str) -> dict:
+    q = [f"OEM {{part:{part}}} {words}"]
+    if spec:
+        q.append(f"OEM {{spec:{spec}}} {words}")
+    q.append(f"{{ymm}} {words}")
+    return {"label": label, "queries": q, **({"needs": spec} if spec else {})}
+
+
+def _fluid(label: str, spec: str, words: str) -> dict:
+    return {"label": label, "queries": [f"{{spec:{spec}}} {words}", f"{{ymm}} {words}"], "needs": spec}
+
+
+SHOPPING = {
+    "oil_change": [
+        {"label": "Engine oil", "queries": ["{spec:oil_type} motor oil", "{ymm} engine oil"], "needs": "oil_type"},
+        _filter("Oil filter", "oil_filter", "oil_filter_part", "oil filter"),
+    ],
+    "oil_filter": [_filter("Oil filter", "oil_filter", "oil_filter_part", "oil filter")],
+    "air_filter": [_filter("Engine air filter", "air_filter", None, "engine air filter")],
+    "cabin_filter": [_filter("Cabin air filter", "cabin_filter", None, "cabin air filter")],
+    "fuel_filter": [_filter("Fuel filter", "fuel_filter", None, "fuel filter")],
+    "spark_plugs": [_filter("Spark plugs", "spark_plugs", "spark_plug_part", "spark plug")],
+    "serpentine_belt": [_filter("Serpentine belt", "serpentine_belt", None, "serpentine belt")],
+    "brake_pads": [_filter("Brake pads", "brake_pads", None, "brake pads")],
+    "brake_rotors": [_filter("Brake rotors", "brake_rotors", None, "brake rotors")],
+    "wipers": [{"label": "Wiper blades", "queries": [
+        "{spec:wiper_size_driver|inches} inch {spec:wiper_size_passenger|inches} inch windshield wiper blades",
+        "{spec:wiper_size_driver|inches} inch windshield wiper blades",
+        "OEM {part:wipers} wiper blades",
+        "{ymm} windshield wiper blades"], "needs": "wiper_size_driver"}],
+    "tire_replacement": [
+        {"label": "Front tires", "queries": ["{spec:tire_size_front} tires", "{ymm} tires"], "needs": "tire_size_front"},
+        {"label": "Rear tires", "queries": ["{spec:tire_size_rear} tires"], "needs": "tire_size_rear"},
+    ],
+    "battery": [{"label": "Battery", "queries": ["OEM {part:battery} battery", "group {spec:battery_group} battery", "{ymm} battery"],
+                 "needs": "battery_group"}],
+    "brake_fluid": [_fluid("Brake fluid", "brake_fluid_type", "brake fluid")],
+    "coolant": [_fluid("Coolant", "coolant_type", "coolant")],
+    "transmission_fluid": [_fluid("Transmission fluid", "transmission_fluid_type", "transmission fluid")],
+    "differential_fluid": [_fluid("Differential fluid", "differential_fluid_type", "gear oil")],
+    "power_steering_fluid": [_fluid("Power steering fluid", "power_steering_fluid_type", "power steering fluid")],
+    "fork_oil": [_fluid("Fork oil", "fork_oil_type", "fork oil")],
+    "chain_replacement": [{"label": "Drive chain", "queries": ["OEM {part:chain_replacement} chain", "{spec:chain_size} motorcycle chain",
+                                                              "{ymm} motorcycle chain"], "needs": "chain_size"}],
+    "chain_lube": [{"label": "Chain lube", "queries": ["motorcycle chain lube"]}],
+}
+
+# ---------------------------------------------------------------------------
 # Vehicle spec fields.  (key, label, group, unit hint)
 # These are the ONLY fields the app stores as "specs".  Values are never
 # guessed: they come from the VIN decoder, the door sticker, or the user.
@@ -272,6 +360,8 @@ def main() -> None:
         "spec_sources": SPEC_SOURCES,
         "makes": MAKES,
         "make_names": MAKE_NAMES,
+        "retailers": RETAILERS,
+        "shopping": SHOPPING,
     }
     out = HERE / "catalog.json"
     out.write_text(json.dumps(catalog, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")

@@ -126,6 +126,17 @@ class SecureStore(context: Context) {
         get() = prefs.getString("last_since", null)
         set(v) = prefs.edit().putString("last_since", v).apply()
 
+    /** Smart Shopping (this phone only, never synced): on/off, retailers turned off, preferred retailer. */
+    var shoppingEnabled: Boolean
+        get() = prefs.getBoolean("shop_enabled", true)
+        set(v) = prefs.edit().putBoolean("shop_enabled", v).apply()
+    var shoppingDisabled: Set<String>
+        get() = prefs.getStringSet("shop_disabled", emptySet()) ?: emptySet()
+        set(v) = prefs.edit().putStringSet("shop_disabled", v.toSet()).apply()
+    var shoppingPreferred: String?
+        get() = prefs.getString("shop_preferred", null)
+        set(v) = prefs.edit().putString("shop_preferred", v).apply()
+
     /** The app version whose "What's new" notes were last shown (versionCode). */
     var notesSeenCode: Int
         get() = prefs.getInt("notes_seen", 0)

@@ -64,6 +64,9 @@ jobs:
         # (shown in the app after updating, and on the release page).
         run: python3 android/release_notes.py check "$RW_VERSION_NAME"
 
+      - name: Web app tests (Smart Shopping searches, shared cases with Android)
+        run: node --test web/tests/*.test.mjs
+
   android:
     needs: check
     runs-on: ubuntu-latest

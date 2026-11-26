@@ -2,6 +2,7 @@
 // docs, sign out) and the icon set overview.
 
 import { api, getCatalog, getMe, refreshMe, forgetMe } from "../api.js";
+import { prefs as shopPrefs, savePrefs as saveShopPrefs } from "../shopping.js";
 import { h, mount, icon, field, segmented, toast, showError, setPrefs, modal, applyTheme } from "../ui.js";
 
 export async function settingsView(main) {
@@ -72,6 +73,7 @@ export async function settingsView(main) {
       h("section", { class: "card stack" }, h("h2", {}, "Password"), pwForm),
       usersCard,
       pairCard(),
+      await shoppingCard(),
       bugCard(me),
       h("section", { class: "card stack" }, h("h2", {}, "More"),
         h("div", { class: "btn-row" },
@@ -154,4 +156,31 @@ function bugCard(me) {
     h("p", { class: "muted" }, "Opens a bug report on the project's GitHub page with your browser details filled in. Review it, describe what happened, and press Submit (a free GitHub account is needed). Nothing is sent automatically."),
     h("div", {}, h("a", { class: "btn", href: bugReportUrl(platform === "Macintosh" ? "macOS" : platform, details), target: "_blank", rel: "noopener noreferrer" },
       icon("u-warning"), "Report a bug")));
+}
+
+// ---------------------------------------------------------------------------
+// Smart Shopping: on/off, which retailers to show, preferred retailer.
+// Kept in this browser only (like a display preference); nothing is synced.
+// ---------------------------------------------------------------------------
+async function shoppingCard() {
+  const catalog = await getCatalog();
+  const p = shopPrefs();
+  const save = () => { saveShopPrefs(p); toast("Saved"); };
+  const on = h("input", { type: "checkbox", checked: p.enabled });
+  on.addEventListener("change", () => { p.enabled = on.checked; save(); });
+  const boxes = (catalog.retailers || []).filter((r) => r.enabled).map((r) => {
+    const b = h("input", { type: "checkbox", checked: !p.disabled.includes(r.key) });
+    b.addEventListener("change", () => {
+      p.disabled = b.checked ? p.disabled.filter((k) => k !== r.key) : [...new Set([...p.disabled, r.key])];
+      save();
+    });
+    return h("label", { class: "row option-row" }, b, h("span", {}, r.name));
+  });
+  const preferred = field("Preferred retailer (listed first)", { tag: "select", value: p.preferred || "",
+    options: [{ value: "", label: "No preference" }, ...(catalog.retailers || []).filter((r) => r.enabled).map((r) => ({ value: r.key, label: r.name }))] });
+  preferred.input.addEventListener("change", () => { p.preferred = preferred.input.value || null; save(); });
+  return h("section", { class: "card stack" }, h("h2", {}, "Smart Shopping"),
+    h("p", { class: "muted" }, "Optional “Find supplies” and “Shop” buttons on reminders and parts. They open a search on the retailer's own website using your vehicle's specs and part numbers. You never have to buy anything, and nothing is sent from Ratchet Wrench."),
+    h("label", { class: "row option-row" }, on, h("span", {}, "Show shopping buttons")),
+    h("div", { class: "stack" }, h("strong", {}, "Retailers"), boxes), preferred);
 }

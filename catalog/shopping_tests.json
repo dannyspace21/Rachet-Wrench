@@ -1,0 +1,69 @@
+{
+  "_comment": "Shared test cases for Smart Shopping. The web app (web/tests/shopping.test.mjs) and the Android app (ShoppingTest.kt) must both produce exactly these searches and links, so the platforms can never drift apart.",
+  "vehicles": {
+    "lexus": {
+      "vehicle": {"year": 2015, "make": "Lexus", "model": "RC 350", "kind": "car"},
+      "specs": {"oil_type": "0W-20 full synthetic", "oil_filter_part": "04152-YZZA1", "wiper_size_driver": "26 in",
+                "wiper_size_passenger": "18\"", "tire_size_front": "235/40R19", "tire_size_rear": "255/35R19", "battery_group": "24F"},
+      "parts": [
+        {"type_key": "cabin_filter", "part_number": " 87139-YZZ08 ", "name": "Cabin filter", "updated_at": "2026-01-01T00:00:00Z"},
+        {"type_key": "oil_filter", "part_number": "", "name": "Oil filter (no number yet)", "updated_at": "2026-02-01T00:00:00Z"}
+      ]
+    },
+    "bare": {
+      "vehicle": {"year": null, "make": "Kia", "model": "Forte", "kind": "car"},
+      "specs": {"tire_size_front": "215/45R17", "tire_size_rear": "215/45R17"},
+      "parts": []
+    },
+    "nothing": {
+      "vehicle": {"year": null, "make": "", "model": "", "nickname": "Project car", "kind": "car"},
+      "specs": {},
+      "parts": []
+    },
+    "ducati": {
+      "vehicle": {"year": 2012, "make": "Ducati", "model": "Monster 696", "kind": "motorcycle"},
+      "specs": {"chain_size": "520 x 104"},
+      "parts": []
+    }
+  },
+  "reminders": [
+    {"vehicle": "lexus", "type_key": "oil_change", "items": [
+      {"label": "Engine oil", "query": "0W-20 full synthetic motor oil", "exact": true, "hint": null},
+      {"label": "Oil filter", "query": "OEM 04152-YZZA1 oil filter", "exact": true, "hint": null}]},
+    {"vehicle": "lexus", "type_key": "cabin_filter", "items": [
+      {"label": "Cabin air filter", "query": "OEM 87139-YZZ08 cabin air filter", "exact": true, "hint": null}]},
+    {"vehicle": "lexus", "type_key": "wipers", "items": [
+      {"label": "Wiper blades", "query": "26 inch 18 inch windshield wiper blades", "exact": true, "hint": null}]},
+    {"vehicle": "lexus", "type_key": "tire_replacement", "items": [
+      {"label": "Front tires", "query": "235/40R19 tires", "exact": true, "hint": null},
+      {"label": "Rear tires", "query": "255/35R19 tires", "exact": true, "hint": null}]},
+    {"vehicle": "lexus", "type_key": "battery", "items": [
+      {"label": "Battery", "query": "group 24F battery", "exact": true, "hint": null}]},
+    {"vehicle": "lexus", "type_key": "tire_rotation", "items": []},
+    {"vehicle": "lexus", "type_key": "inspection", "items": []},
+    {"vehicle": "bare", "type_key": "oil_change", "items": [
+      {"label": "Engine oil", "query": "Kia Forte engine oil", "exact": false, "hint": "oil_type"},
+      {"label": "Oil filter", "query": "Kia Forte oil filter", "exact": false, "hint": "oil_filter_part"}]},
+    {"vehicle": "bare", "type_key": "tire_replacement", "items": [
+      {"label": "Front tires", "query": "215/45R17 tires", "exact": true, "hint": null}]},
+    {"vehicle": "nothing", "type_key": "oil_change", "items": []},
+    {"vehicle": "nothing", "type_key": "chain_lube", "items": [
+      {"label": "Chain lube", "query": "motorcycle chain lube", "exact": false, "hint": null}]},
+    {"vehicle": "ducati", "type_key": "chain_replacement", "items": [
+      {"label": "Drive chain", "query": "520 x 104 motorcycle chain", "exact": true, "hint": null}]}
+  ],
+  "parts": [
+    {"vehicle": "lexus", "part": {"type_key": "cabin_filter", "part_number": " 87139-YZZ08 ", "name": "Cabin filter"}, "type_label": "Cabin air filter", "query": "87139-YZZ08", "exact": true},
+    {"vehicle": "lexus", "part": {"type_key": "oil_filter", "part_number": "", "name": "Oil filter (no number yet)"}, "type_label": "Oil filter", "query": "2015 Lexus RC 350 Oil filter (no number yet)", "exact": false},
+    {"vehicle": "nothing", "part": {"type_key": "brake_pads", "part_number": "", "name": ""}, "type_label": "Brake pads", "query": "Brake pads", "exact": false}
+  ],
+  "urls": [
+    {"retailer": "amazon", "query": "0W-20 full synthetic motor oil", "url": "https://www.amazon.com/s?k=0W-20%20full%20synthetic%20motor%20oil"},
+    {"retailer": "walmart", "query": "OEM 04152-YZZA1 oil filter", "url": "https://www.walmart.com/search?q=OEM%2004152-YZZA1%20oil%20filter"},
+    {"retailer": "advance_auto", "query": "255/35R19 tires", "url": "https://shop.advanceautoparts.com/web/SearchResults?searchTerm=255%2F35R19%20tires"},
+    {"retailer": "amazon", "query": "26\" & 18\" blades", "url": "https://www.amazon.com/s?k=26%22%20%26%2018%22%20blades"}
+  ],
+  "affiliate": {"retailer": {"key": "x", "name": "X", "search_url": "https://shop.example/s?k={q}", "enabled": true,
+                             "affiliate": {"param": "tag", "value": "rw-20"}},
+                "query": "oil", "url": "https://shop.example/s?k=oil&tag=rw-20"}
+}

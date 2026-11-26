@@ -364,3 +364,9 @@ a.item:hover { border-color: color-mix(in srgb, var(--brand) 40%, var(--border))
   .btn-row > .btn { flex: 1 1 auto; }
   main { padding: 20px 16px 96px; }
 }
+
+/* Smart Shopping */
+.shop-item { display: grid; gap: 8px; padding: 10px 0; border-bottom: 1px solid var(--border); }
+.shop-item:last-of-type { border-bottom: 0; }
+.shop-retailer { border-left: 4px solid var(--retailer, var(--brand)); }
+.shop-btn { min-height: 36px; }

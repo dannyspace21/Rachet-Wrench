@@ -6,6 +6,7 @@ import {
   segmented, modal, confirmBox, toast, showError, lineChart, parseIntOrNull, filePicker,
 } from "../ui.js";
 import { reminderItem } from "./dashboard.js";
+import { partShopButton, reminderShopButton, shoppingContext } from "./shopping-ui.js";
 
 const TABS = [
   ["history", "History", "u-list"], ["specs", "Specs", "u-spec"], ["reminders", "Reminders", "u-bell"],
@@ -181,7 +182,7 @@ async function decodeIntoSpecs(v) {
 // Reminders tab
 // ---------------------------------------------------------------------------
 async function remindersTab(body, v, { catalog, label }) {
-  const rems = await api(`/api/reminders?vehicle_id=${v.id}`);
+  const [rems, shopCtx] = await Promise.all([api(`/api/reminders?vehicle_id=${v.id}`), shoppingContext(v)]);
   const add = h("button", { class: "btn primary", type: "button", onclick: () => editReminder(v, null, catalog) }, icon("u-plus"), "Add reminder");
   mount(body, h("div", { class: "stack" },
     h("div", { class: "row between" }, h("p", { class: "muted" }, "Get reminded by mileage, by date, or whichever comes first."), add),
@@ -190,15 +191,18 @@ async function remindersTab(body, v, { catalog, label }) {
       item.removeAttribute("href");
       item.setAttribute("role", "button");
       item.setAttribute("tabindex", "0");
-      item.addEventListener("click", () => editReminder(v, r, catalog));
-      item.addEventListener("keydown", (e) => { if (e.key === "Enter") editReminder(v, r, catalog); });
+      item.addEventListener("click", () => editReminder(v, r, catalog, shopCtx));
+      item.addEventListener("keydown", (e) => { if (e.key === "Enter") editReminder(v, r, catalog, shopCtx); });
+      // Smart Shopping: a small "Find supplies" button, only for reminders that have something to buy.
+      const shop = reminderShopButton(r, shopCtx, catalog);
+      if (shop) item.querySelector(".pill").before(shop);
       const every = [r.interval_miles ? `every ${r.interval_miles.toLocaleString()} ${v.mileage_unit}` : null, r.interval_months ? `every ${r.interval_months} months` : null].filter(Boolean).join(" or ");
       item.querySelector(".meta").append(h("span", {}, every + (r.interval_miles && r.interval_months ? ", whichever first" : "")));
       return item;
     })) : emptyState("u-bell", "No reminders", "Example: oil change every 5,000 miles or 6 months.")));
 }
 
-async function editReminder(v, r, catalog) {
+async function editReminder(v, r, catalog, shopCtx = null) {
   const types = catalog.types.filter((t) => t.applies_to === "both" || t.applies_to === v.kind);
   const type = field("What", { tag: "select", value: r?.type_key || "oil_change", options: types.map((t) => ({ value: t.key, label: t.label })) });
   const title = field("Name (optional)", { value: r?.title || "", maxlength: 128 });
@@ -206,7 +210,10 @@ async function editReminder(v, r, catalog) {
   const mo = field("Every … months", { inputmode: "numeric", value: r?.interval_months ?? "" }, "Leave blank for mileage-only");
   const ld = field("Last done (date)", { type: "date", value: r?.last_done_date || "" });
   const lm = field(`Last done (${v.mileage_unit})`, { inputmode: "numeric", value: r?.last_done_mileage ?? "" });
-  const choice = await modal({ title: r ? "Edit reminder" : "New reminder", body: h("div", { class: "form" }, type, title, h("div", { class: "form-grid" }, im, mo, ld, lm)),
+  // Optional "Find supplies" (doesn't save or change anything).
+  const shop = r && shopCtx ? reminderShopButton(r, shopCtx, catalog, "Find supplies") : null;
+  const choice = await modal({ title: r ? "Edit reminder" : "New reminder", body: h("div", { class: "form" }, type, title, h("div", { class: "form-grid" }, im, mo, ld, lm),
+    shop ? h("div", {}, shop) : null),
     actions: [r ? { label: "Delete", danger: true, value: "delete" } : null, { label: "Cancel", value: null }, { label: "Save", primary: true, value: "save" }].filter(Boolean) });
   try {
     if (choice === "delete") await api(`/api/reminders/${r.id}`, { method: "DELETE" });
@@ -240,6 +247,7 @@ async function partsTab(body, v, { catalog, label }) {
       h("div", { class: "right" }, h("div", { class: "btn-row" },
         p.part_number ? h("button", { class: "btn small", type: "button", onclick: () => navigator.clipboard?.writeText(p.part_number).then(() => toast("Part number copied")) }, "Copy") : null,
         links.parts && p.part_number ? h("a", { class: "btn small", href: links.parts, target: "_blank", rel: "noopener noreferrer" }, icon("u-external"), "Find") : null,
+        partShopButton(p, v, catalog),
         h("button", { class: "btn small ghost", type: "button", "aria-label": "Edit part", onclick: () => editPart(v, p, catalog) }, icon("u-edit")))))))
       : emptyState("u-part", "No parts saved", "Add your oil filter, air filter, spark plugs, brake pads…")));
 }

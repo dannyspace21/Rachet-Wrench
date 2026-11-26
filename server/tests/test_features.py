@@ -458,3 +458,45 @@ def test_seed_data_loads(client):
         seed_sample_data(db)
         names = sorted(v.model for v in db.query(Vehicle).all())
     assert names == ["Forte", "IS 350", "Monster 696", "RC 350", "RC F"]
+
+
+# ---------------------------------------------------------------------------
+# Smart Shopping (catalog-driven; the search building itself is tested in
+# web/tests/shopping.test.mjs and Android's ShoppingTest with shared cases)
+# ---------------------------------------------------------------------------
+def test_catalog_serves_smart_shopping_config(client, admin):
+    cat = client.get("/api/catalog", headers=admin).json()
+    retailers = {r["key"]: r for r in cat["retailers"]}
+    assert set(retailers) == {"amazon", "walmart", "advance_auto"}
+    for r in retailers.values():
+        assert r["name"] and r["enabled"] is True
+        assert r["search_url"].startswith("https://") and "{q}" in r["search_url"]
+        assert r["affiliate"]["value"] == ""  # no affiliate tracking configured
+    types = {t["key"] for t in cat["types"]}
+    specs = {s["key"] for s in cat["specs"]}
+    assert "oil_change" in cat["shopping"] and "inspection" not in cat["shopping"]
+    import re
+    for type_key, items in cat["shopping"].items():
+        assert type_key in types
+        for item in items:
+            for q in item["queries"]:
+                for kind, key in re.findall(r"\{(spec|part):([a-z_]+)", q):
+                    assert key in (specs if kind == "spec" else types), (type_key, q)
+
+
+def test_web_shopping_logic_with_shared_cases():
+    """Runs the web app's Smart Shopping tests (node) when Node.js is available."""
+    import shutil
+    import subprocess
+    from pathlib import Path
+
+    import pytest
+
+    node = shutil.which("node")
+    if not node:
+        pytest.skip("Node.js not installed")
+    root = Path(__file__).resolve().parents[2]
+    tests = sorted(str(p) for p in (root / "web" / "tests").glob("*.test.mjs"))
+    # Reviewed: fixed program + our own test files, no shell.
+    r = subprocess.run([node, "--test", *tests], cwd=root, capture_output=True, text=True, timeout=120, check=False)  # noqa: S603  # nosemgrep
+    assert r.returncode == 0, r.stdout[-3000:] + r.stderr[-2000:]

@@ -81,7 +81,15 @@ object Reminders {
     val makes: Map<String, MakeLinks>,
     /** Make names for the Add vehicle form: {"car": [...], "motorcycle": [...]}. */
     val make_names: Map<String, List<String>> = emptyMap(),
+    /** Smart Shopping: retailers and "what to buy" per maintenance type. */
+    val retailers: List<Retailer> = emptyList(),
+    val shopping: Map<String, List<ShopRecipe>> = emptyMap(),
 )
+
+@Serializable data class Affiliate(val param: String = "", val value: String = "")
+@Serializable data class Retailer(val key: String, val name: String, val icon: String = "cart", val color: String = "",
+                                  val search_url: String, val enabled: Boolean = true, val affiliate: Affiliate = Affiliate())
+@Serializable data class ShopRecipe(val label: String, val queries: List<String>, val needs: String? = null)
 
 private val catalogJson = Json { ignoreUnknownKeys = true }
 

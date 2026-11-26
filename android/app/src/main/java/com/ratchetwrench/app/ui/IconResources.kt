@@ -125,6 +125,7 @@ val UI_ICON_RES: Map<String, Int> = mapOf(
     "settings" to R.drawable.ic_ui_settings,
     "sticker" to R.drawable.ic_ui_sticker,
     "carfax" to R.drawable.ic_ui_carfax,
+    "cart" to R.drawable.ic_ui_cart,
     "list" to R.drawable.ic_ui_list,
     "spec" to R.drawable.ic_ui_spec,
     "info" to R.drawable.ic_ui_info,

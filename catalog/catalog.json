@@ -1046,5 +1046,259 @@
       "Yamaha",
       "Zero"
     ]
+  },
+  "retailers": [
+    {
+      "key": "amazon",
+      "name": "Amazon",
+      "icon": "cart",
+      "color": "#ff9900",
+      "search_url": "https://www.amazon.com/s?k={q}",
+      "enabled": true,
+      "affiliate": {
+        "param": "tag",
+        "value": ""
+      }
+    },
+    {
+      "key": "walmart",
+      "name": "Walmart",
+      "icon": "cart",
+      "color": "#0071ce",
+      "search_url": "https://www.walmart.com/search?q={q}",
+      "enabled": true,
+      "affiliate": {
+        "param": "",
+        "value": ""
+      }
+    },
+    {
+      "key": "advance_auto",
+      "name": "Advance Auto Parts",
+      "icon": "cart",
+      "color": "#e31837",
+      "search_url": "https://shop.advanceautoparts.com/web/SearchResults?searchTerm={q}",
+      "enabled": true,
+      "affiliate": {
+        "param": "",
+        "value": ""
+      }
+    }
+  ],
+  "shopping": {
+    "oil_change": [
+      {
+        "label": "Engine oil",
+        "queries": [
+          "{spec:oil_type} motor oil",
+          "{ymm} engine oil"
+        ],
+        "needs": "oil_type"
+      },
+      {
+        "label": "Oil filter",
+        "queries": [
+          "OEM {part:oil_filter} oil filter",
+          "OEM {spec:oil_filter_part} oil filter",
+          "{ymm} oil filter"
+        ],
+        "needs": "oil_filter_part"
+      }
+    ],
+    "oil_filter": [
+      {
+        "label": "Oil filter",
+        "queries": [
+          "OEM {part:oil_filter} oil filter",
+          "OEM {spec:oil_filter_part} oil filter",
+          "{ymm} oil filter"
+        ],
+        "needs": "oil_filter_part"
+      }
+    ],
+    "air_filter": [
+      {
+        "label": "Engine air filter",
+        "queries": [
+          "OEM {part:air_filter} engine air filter",
+          "{ymm} engine air filter"
+        ]
+      }
+    ],
+    "cabin_filter": [
+      {
+        "label": "Cabin air filter",
+        "queries": [
+          "OEM {part:cabin_filter} cabin air filter",
+          "{ymm} cabin air filter"
+        ]
+      }
+    ],
+    "fuel_filter": [
+      {
+        "label": "Fuel filter",
+        "queries": [
+          "OEM {part:fuel_filter} fuel filter",
+          "{ymm} fuel filter"
+        ]
+      }
+    ],
+    "spark_plugs": [
+      {
+        "label": "Spark plugs",
+        "queries": [
+          "OEM {part:spark_plugs} spark plug",
+          "OEM {spec:spark_plug_part} spark plug",
+          "{ymm} spark plug"
+        ],
+        "needs": "spark_plug_part"
+      }
+    ],
+    "serpentine_belt": [
+      {
+        "label": "Serpentine belt",
+        "queries": [
+          "OEM {part:serpentine_belt} serpentine belt",
+          "{ymm} serpentine belt"
+        ]
+      }
+    ],
+    "brake_pads": [
+      {
+        "label": "Brake pads",
+        "queries": [
+          "OEM {part:brake_pads} brake pads",
+          "{ymm} brake pads"
+        ]
+      }
+    ],
+    "brake_rotors": [
+      {
+        "label": "Brake rotors",
+        "queries": [
+          "OEM {part:brake_rotors} brake rotors",
+          "{ymm} brake rotors"
+        ]
+      }
+    ],
+    "wipers": [
+      {
+        "label": "Wiper blades",
+        "queries": [
+          "{spec:wiper_size_driver|inches} inch {spec:wiper_size_passenger|inches} inch windshield wiper blades",
+          "{spec:wiper_size_driver|inches} inch windshield wiper blades",
+          "OEM {part:wipers} wiper blades",
+          "{ymm} windshield wiper blades"
+        ],
+        "needs": "wiper_size_driver"
+      }
+    ],
+    "tire_replacement": [
+      {
+        "label": "Front tires",
+        "queries": [
+          "{spec:tire_size_front} tires",
+          "{ymm} tires"
+        ],
+        "needs": "tire_size_front"
+      },
+      {
+        "label": "Rear tires",
+        "queries": [
+          "{spec:tire_size_rear} tires"
+        ],
+        "needs": "tire_size_rear"
+      }
+    ],
+    "battery": [
+      {
+        "label": "Battery",
+        "queries": [
+          "OEM {part:battery} battery",
+          "group {spec:battery_group} battery",
+          "{ymm} battery"
+        ],
+        "needs": "battery_group"
+      }
+    ],
+    "brake_fluid": [
+      {
+        "label": "Brake fluid",
+        "queries": [
+          "{spec:brake_fluid_type} brake fluid",
+          "{ymm} brake fluid"
+        ],
+        "needs": "brake_fluid_type"
+      }
+    ],
+    "coolant": [
+      {
+        "label": "Coolant",
+        "queries": [
+          "{spec:coolant_type} coolant",
+          "{ymm} coolant"
+        ],
+        "needs": "coolant_type"
+      }
+    ],
+    "transmission_fluid": [
+      {
+        "label": "Transmission fluid",
+        "queries": [
+          "{spec:transmission_fluid_type} transmission fluid",
+          "{ymm} transmission fluid"
+        ],
+        "needs": "transmission_fluid_type"
+      }
+    ],
+    "differential_fluid": [
+      {
+        "label": "Differential fluid",
+        "queries": [
+          "{spec:differential_fluid_type} gear oil",
+          "{ymm} gear oil"
+        ],
+        "needs": "differential_fluid_type"
+      }
+    ],
+    "power_steering_fluid": [
+      {
+        "label": "Power steering fluid",
+        "queries": [
+          "{spec:power_steering_fluid_type} power steering fluid",
+          "{ymm} power steering fluid"
+        ],
+        "needs": "power_steering_fluid_type"
+      }
+    ],
+    "fork_oil": [
+      {
+        "label": "Fork oil",
+        "queries": [
+          "{spec:fork_oil_type} fork oil",
+          "{ymm} fork oil"
+        ],
+        "needs": "fork_oil_type"
+      }
+    ],
+    "chain_replacement": [
+      {
+        "label": "Drive chain",
+        "queries": [
+          "OEM {part:chain_replacement} chain",
+          "{spec:chain_size} motorcycle chain",
+          "{ymm} motorcycle chain"
+        ],
+        "needs": "chain_size"
+      }
+    ],
+    "chain_lube": [
+      {
+        "label": "Chain lube",
+        "queries": [
+          "motorcycle chain lube"
+        ]
+      }
+    ]
   }
 }
