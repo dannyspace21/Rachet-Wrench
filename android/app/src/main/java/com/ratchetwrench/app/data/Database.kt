@@ -146,6 +146,9 @@ interface ReminderDao {
     @Query("SELECT * FROM reminders WHERE id = :id")
     suspend fun get(id: String): Reminder?
 
+    @Query("SELECT * FROM reminders WHERE id = :id")
+    fun observe(id: String): Flow<Reminder?>
+
     @Query("SELECT * FROM reminders WHERE dirty = 1")
     suspend fun dirty(): List<Reminder>
 

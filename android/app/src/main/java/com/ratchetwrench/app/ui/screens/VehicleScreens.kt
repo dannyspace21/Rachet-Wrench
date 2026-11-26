@@ -191,7 +191,7 @@ fun VehicleScreen(nav: NavHostController, id: String) {
                                 if (due.size > 3) TextButton({ tab = 2 }) { Text("See all ${due.size}") }
                             }
                             due.take(3).forEach { (r, st) ->
-                                Row(Modifier.fillMaxWidth().clickable { tab = 2 }, verticalAlignment = Alignment.CenterVertically,
+                                Row(Modifier.fillMaxWidth().clickable { nav.navigate("reminder/${r.id}") }, verticalAlignment = Alignment.CenterVertically,
                                     horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                                     TypeBadge(r.type_key, "neutral", 32.dp)
                                     Column(Modifier.weight(1f)) {
@@ -217,7 +217,7 @@ fun VehicleScreen(nav: NavHostController, id: String) {
             when (tab) {
                 0 -> HistoryTab(nav, v)
                 1 -> SpecsTab(v)
-                2 -> RemindersTab(v)
+                2 -> RemindersTab(nav, v)
                 3 -> PartsTab(v)
                 else -> OdometerTab(v)
             }
@@ -328,12 +328,11 @@ private fun SpecsTab(v: Vehicle) {
 }
 
 @Composable
-private fun RemindersTab(v: Vehicle) {
+private fun RemindersTab(nav: NavHostController, v: Vehicle) {
     val repo = LocalRepo.current
     val ctx = LocalContext.current
     val scope = rememberCoroutineScope()
     val rems by repo.db.reminders().observeFor(v.id).collectAsState(initial = emptyList())
-    var editing by remember { mutableStateOf<Reminder?>(null) }
     var creating by remember { mutableStateOf(false) }
     val shopCtx = com.ratchetwrench.app.ui.rememberShopContext(v)
     val shopOn = com.ratchetwrench.app.ui.shoppingOn()
@@ -344,7 +343,8 @@ private fun RemindersTab(v: Vehicle) {
         if (rems.isEmpty()) item { Text("Example: oil change every 5,000 ${v.mileage_unit} or 6 months, whichever comes first.", color = LocalExtra.current.muted) }
         items(rems, key = { it.id }) { r ->
             val st = Reminders.status(r, v.current_mileage)
-            ListRow(onClick = { editing = r }) {
+            // Tap: the reminder's page (Mark as done, Edit schedule, Find supplies).
+            ListRow(onClick = { nav.navigate("reminder/${r.id}") }) {
                 TypeBadge(r.type_key, "neutral")
                 Column(Modifier.weight(1f)) {
                     Text(r.title.ifBlank { Catalog.typeLabel(ctx, r.type_key) }, fontWeight = FontWeight.Bold)
@@ -360,46 +360,44 @@ private fun RemindersTab(v: Vehicle) {
             }
         }
     }
-    if (creating || editing != null) {
-        val r = editing
-        var type by remember(r) { mutableStateOf(r?.type_key ?: "oil_change") }
-        var miles by remember(r) { mutableStateOf(r?.interval_miles?.toString() ?: "") }
-        var months by remember(r) { mutableStateOf(r?.interval_months?.toString() ?: "") }
-        var lastDate by remember(r) { mutableStateOf(r?.last_done_date ?: "") }
-        var lastMiles by remember(r) { mutableStateOf(r?.last_done_mileage?.toString() ?: "") }
-        val close = { creating = false; editing = null }
-        AlertDialog(onDismissRequest = close, title = { Text(if (r == null) "New reminder" else "Edit reminder") },
-            text = {
-                Column(Modifier.verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    TypeDropdown(v.kind, type) { type = it }
-                    Field("Every … ${v.mileage_unit}", miles, { miles = it }, numeric = true)
-                    Field("Every … months", months, { months = it }, numeric = true)
-                    Field("Last done (YYYY-MM-DD)", lastDate, { lastDate = it })
-                    Field("Last done (${v.mileage_unit})", lastMiles, { lastMiles = it }, numeric = true)
-                }
-            },
-            confirmButton = { TextButton({
-                val date = lastDate.trim().takeIf { runCatching { LocalDate.parse(it) }.isSuccess }
-                val base = r ?: Reminder(vehicle_id = v.id)
-                scope.launch {
-                    repo.saveReminder(base.copy(type_key = type, interval_miles = miles.filter { it.isDigit() }.toIntOrNull(),
-                        interval_months = months.filter { it.isDigit() }.toIntOrNull(), last_done_date = date, last_done_mileage = lastMiles.filter { it.isDigit() }.toIntOrNull()))
-                }
-                close()
-            }) { Text("Save") } },
-            dismissButton = {
-                Row {
-                    if (r != null) TextButton({ scope.launch { repo.deleteReminder(r.id) }; close() }) { Text("Delete", color = MaterialTheme.colorScheme.error) }
-                    // Optional, saves nothing: opens the shopping list for this reminder.
-                    val items = if (r != null) shopItems(r) else emptyList()
-                    if (r != null && items.isNotEmpty()) TextButton({
-                        shopping = "Find supplies — ${r.title.ifBlank { Catalog.typeLabel(ctx, r.type_key) }}" to items; close()
-                    }) { Text("Find supplies") }
-                    TextButton(close) { Text("Cancel") }
-                }
-            })
-    }
+    if (creating) ReminderEditor(v, null) { creating = false }
     shopping?.let { (title, items) -> com.ratchetwrench.app.ui.ShoppingDialog(title, items) { shopping = null } }
+}
+
+/**
+ * Add or edit a reminder's schedule ("every N miles or M months") and when it
+ * was last done.  Used for "Add reminder" and by the reminder page's
+ * "Edit schedule".
+ */
+@Composable
+fun ReminderEditor(v: Vehicle, r: Reminder?, onClose: () -> Unit) {
+    val repo = LocalRepo.current
+    val scope = rememberCoroutineScope()
+    var type by remember(r) { mutableStateOf(r?.type_key ?: "oil_change") }
+    var miles by remember(r) { mutableStateOf(r?.interval_miles?.toString() ?: "") }
+    var months by remember(r) { mutableStateOf(r?.interval_months?.toString() ?: "") }
+    var lastDate by remember(r) { mutableStateOf(r?.last_done_date ?: "") }
+    var lastMiles by remember(r) { mutableStateOf(r?.last_done_mileage?.toString() ?: "") }
+    AlertDialog(onDismissRequest = onClose, title = { Text(if (r == null) "New reminder" else "Edit schedule") },
+        text = {
+            Column(Modifier.verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                TypeDropdown(v.kind, type) { type = it }
+                Field("Every … ${v.mileage_unit}", miles, { miles = it }, numeric = true)
+                Field("Every … months", months, { months = it }, numeric = true)
+                Field("Last done (YYYY-MM-DD)", lastDate, { lastDate = it })
+                Field("Last done (${v.mileage_unit})", lastMiles, { lastMiles = it }, numeric = true)
+            }
+        },
+        confirmButton = { TextButton({
+            val date = lastDate.trim().takeIf { runCatching { LocalDate.parse(it) }.isSuccess }
+            val base = r ?: Reminder(vehicle_id = v.id)
+            scope.launch {
+                repo.saveReminder(base.copy(type_key = type, interval_miles = miles.filter { it.isDigit() }.toIntOrNull(),
+                    interval_months = months.filter { it.isDigit() }.toIntOrNull(), last_done_date = date, last_done_mileage = lastMiles.filter { it.isDigit() }.toIntOrNull()))
+            }
+            onClose()
+        }) { Text("Save") } },
+        dismissButton = { TextButton(onClose) { Text("Cancel") } })
 }
 
 /** A small, low-profile action button (used in the vehicle header). */

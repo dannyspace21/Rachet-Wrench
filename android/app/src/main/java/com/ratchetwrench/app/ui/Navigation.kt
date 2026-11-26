@@ -98,6 +98,7 @@ fun AppRoot() {
                 composable("entry-edit/{vehicleId}/{entryId}") {
                     EntryEditScreen(nav, it.arguments!!.getString("vehicleId")!!, it.arguments!!.getString("entryId")!!.takeIf { id -> id != "new" })
                 }
+                composable("reminder/{id}") { com.ratchetwrench.app.ui.screens.ReminderScreen(nav, it.arguments!!.getString("id")!!) }
                 composable("entry/{id}") { EntryDetailScreen(nav, it.arguments!!.getString("id")!!) }
                 composable("sticker/{vehicleId}") { StickerScreen(nav, it.arguments!!.getString("vehicleId")!!) }
                 composable("scan-vin") { VinScanScreen(onResult = { vin -> nav.returnResult("vin", vin) }, onCancel = { nav.popBackStack() }) }

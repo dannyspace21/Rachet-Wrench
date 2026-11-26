@@ -49,7 +49,9 @@ class Repository(private val context: Context) {
     suspend fun saveEntry(e: Entry, isNew: Boolean) {
         db.entries().upsert(e.copy(updated_at = nowIso(), dirty = true))
         bumpMileage(e.vehicle_id, e.mileage)
-        if (isNew && e.kind == "maintenance") markRemindersDone(e)
+        // Any new record of this type (maintenance OR repair, e.g. a brake job
+        // logged as a repair) moves matching reminders' "last done" forward.
+        if (isNew) markRemindersDone(e)
         requestSync()
     }
 
@@ -79,6 +81,24 @@ class Repository(private val context: Context) {
             db.attachments().upsert(a.copy(deleted_at = nowIso(), updated_at = nowIso(), dirty = true))
         }
         requestSync()
+    }
+
+    /**
+     * "Mark as done" from a reminder: sets when (and at what mileage) it was
+     * last done — both, so a "whichever comes first" reminder can't stay
+     * overdue on the mileage side — and, if asked, adds the matching record to
+     * the vehicle's history.  The vehicle's mileage goes up if this is higher.
+     */
+    suspend fun markReminderDone(r: Reminder, date: String, mileage: Int?, addToHistory: Boolean, note: String = "") {
+        if (addToHistory) {
+            saveEntry(Entry(vehicle_id = r.vehicle_id, date = date, type_key = r.type_key, kind = "maintenance",
+                mileage = mileage, description = note.ifBlank { r.title }), isNew = true)
+        } else {
+            bumpMileage(r.vehicle_id, mileage)
+        }
+        // Exactly what was entered (even an earlier date, to correct a mistake).
+        val fresh = db.reminders().get(r.id) ?: r
+        saveReminder(fresh.copy(last_done_date = date, last_done_mileage = mileage ?: fresh.last_done_mileage))
     }
 
     suspend fun saveReminder(r: Reminder) { db.reminders().upsert(r.copy(updated_at = nowIso(), dirty = true)); requestSync() }

@@ -518,3 +518,8 @@ The desktop app *is* the existing server plus web app, packaged to run on a PC. 
   - **Android:** `ShoppingTest` checks the shared cases; screen tests tap Shop on a part and Find supplies on an oil-change reminder.
   - **Server:** the catalog served by `/api/catalog` includes valid retailers and shopping rules.
 - **Docs:** SECURITY.md lists the retailer links among the user-opened links.
+
+### D60. Reminders: tap to mark as done
+- **Problem:** tapping a reminder opened the schedule editor. Changing only the last-done *date* left the old last-done *mileage*, so a "whichever comes first" reminder stayed Overdue on the mileage side. Records saved as repairs didn't move reminders at all.
+- **Now:** tapping a reminder opens it (Android: its own screen; web: a dialog) with **Mark as done** first: date = today, mileage = the vehicle's current mileage, "Also add it to the vehicle's history" on. It sets both last-done date and mileage and (by default) adds a maintenance record. **Edit schedule**, Find supplies and Delete are secondary.
+- **Any new record** (maintenance or repair) with a reminder's type moves that reminder forward — server (`records.upsert`) and phone (`Repository.saveEntry`) alike, only if the record is newer than what the reminder knew.

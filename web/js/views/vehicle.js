@@ -191,8 +191,10 @@ async function remindersTab(body, v, { catalog, label }) {
       item.removeAttribute("href");
       item.setAttribute("role", "button");
       item.setAttribute("tabindex", "0");
-      item.addEventListener("click", () => editReminder(v, r, catalog, shopCtx));
-      item.addEventListener("keydown", (e) => { if (e.key === "Enter") editReminder(v, r, catalog, shopCtx); });
+      // Tapping a reminder opens "Mark as done" (the common case); the
+      // schedule is edited from there.
+      item.addEventListener("click", () => reminderActions(v, r, catalog, shopCtx, label));
+      item.addEventListener("keydown", (e) => { if (e.key === "Enter") reminderActions(v, r, catalog, shopCtx, label); });
       // Smart Shopping: a small "Find supplies" button, only for reminders that have something to buy.
       const shop = reminderShopButton(r, shopCtx, catalog);
       if (shop) item.querySelector(".pill").before(shop);
@@ -200,6 +202,52 @@ async function remindersTab(body, v, { catalog, label }) {
       item.querySelector(".meta").append(h("span", {}, every + (r.interval_miles && r.interval_months ? ", whichever first" : "")));
       return item;
     })) : emptyState("u-bell", "No reminders", "Example: oil change every 5,000 miles or 6 months.")));
+}
+
+/**
+ * One reminder: where it stands + "Mark as done".  Marking it done sets the
+ * last-done date AND mileage (so a "whichever comes first" reminder can't stay
+ * overdue on the mileage side) and, unless unticked, adds the record to the
+ * history.  "Edit schedule" opens the full editor.
+ */
+/** The reminder's row (status pill etc.) as plain, non-clickable content. */
+function statusRow(r, label) {
+  const row = reminderItem(r, null, label);
+  row.removeAttribute("href");
+  return h("div", { class: "list" }, row);
+}
+
+async function reminderActions(v, r, catalog, shopCtx, label) {
+  const name = r.title || label[r.type_key] || "Reminder";
+  const date = field("Done on", { type: "date", value: today(), max: today() });
+  const miles = field(`Mileage (${v.mileage_unit})`, { inputmode: "numeric", value: v.current_mileage ?? "" });
+  const addHist = h("input", { type: "checkbox", checked: true });
+  const lastDone = r.last_done_date ? `${dateText(r.last_done_date)}${r.last_done_mileage != null ? ` · ${r.last_done_mileage.toLocaleString()} ${v.mileage_unit}` : ""}` : "not yet";
+  const shop = shopCtx ? reminderShopButton(r, shopCtx, catalog, "Find supplies") : null;
+  const choice = await modal({ title: name, body: h("div", { class: "form" },
+    statusRow(r, label),
+    h("p", { class: "muted small" }, `Last done: ${lastDone}`),
+    h("h3", {}, "Mark as done"),
+    h("div", { class: "form-grid" }, date, miles),
+    h("label", { class: "check" }, addHist, " Also add it to the vehicle's history"),
+    shop ? h("div", {}, shop) : null),
+    actions: [{ label: "Edit schedule", value: "edit" }, { label: "Close", value: null }, { label: "Mark as done", primary: true, value: "done" }] });
+  if (choice === "edit") return editReminder(v, r, catalog, shopCtx);
+  if (choice !== "done") return;
+  const when = date.input.value || today();
+  const mileage = parseIntOrNull(miles.input.value);
+  try {
+    if (addHist.checked) {
+      // The server moves this (and any other matching) reminder forward.
+      await api("/api/entries", { method: "POST", body: { vehicle_id: v.id, kind: "maintenance", type_key: r.type_key,
+        date: when, mileage, description: name } });
+    }
+    // Set it explicitly too: covers "don't add to history" and an older date.
+    await api(`/api/reminders/${r.id}`, { method: "PATCH", body: { last_done_date: when,
+      last_done_mileage: mileage ?? r.last_done_mileage ?? null } });
+    toast(addHist.checked ? "Marked as done and added to the history" : "Marked as done");
+    window.dispatchEvent(new HashChangeEvent("hashchange"));
+  } catch (e) { showError(e); }
 }
 
 async function editReminder(v, r, catalog, shopCtx = null) {
@@ -212,7 +260,7 @@ async function editReminder(v, r, catalog, shopCtx = null) {
   const lm = field(`Last done (${v.mileage_unit})`, { inputmode: "numeric", value: r?.last_done_mileage ?? "" });
   // Optional "Find supplies" (doesn't save or change anything).
   const shop = r && shopCtx ? reminderShopButton(r, shopCtx, catalog, "Find supplies") : null;
-  const choice = await modal({ title: r ? "Edit reminder" : "New reminder", body: h("div", { class: "form" }, type, title, h("div", { class: "form-grid" }, im, mo, ld, lm),
+  const choice = await modal({ title: r ? "Edit schedule" : "New reminder", body: h("div", { class: "form" }, type, title, h("div", { class: "form-grid" }, im, mo, ld, lm),
     shop ? h("div", {}, shop) : null),
     actions: [r ? { label: "Delete", danger: true, value: "delete" } : null, { label: "Cancel", value: null }, { label: "Save", primary: true, value: "save" }].filter(Boolean) });
   try {

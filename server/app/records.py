@@ -221,7 +221,9 @@ def upsert(db: Session, user: User, kind: str, data: BaseModel, record_id: str |
     # Side effects that keep related data consistent.
     if kind == "entries":
         _bump_vehicle_mileage(db, obj.vehicle_id, obj.mileage)
-        if obj.kind == "maintenance" and existing is None:
+        # Any new record (maintenance OR repair, e.g. a tire rotation logged as
+        # a repair) moves the matching reminders forward.
+        if existing is None:
             mark_done_from_entry(db, user.id, obj.vehicle_id, obj.type_key, obj.date, obj.mileage)
     elif kind == "odometer":
         _bump_vehicle_mileage(db, obj.vehicle_id, obj.mileage)

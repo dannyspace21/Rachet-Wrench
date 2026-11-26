@@ -34,6 +34,32 @@ def test_vehicle_entry_flow_updates_mileage_and_reminders(client, admin):
     assert rem["due"]["status"] == "ok" and rem["due"]["due_mileage"] == 6500
 
 
+def test_repair_entry_also_marks_reminder_done(client, admin):
+    """A tire rotation logged as a repair (not maintenance) still updates the reminder."""
+    v = make_vehicle(client, admin, current_mileage=40000)
+    rem = client.post("/api/reminders", headers=admin, json={
+        "vehicle_id": v["id"], "type_key": "tire_rotation", "interval_miles": 5000, "interval_months": 6,
+        "last_done_date": (date.today() - timedelta(days=30)).isoformat(), "last_done_mileage": 30000}).json()
+    assert rem["due"]["status"] == "overdue"  # miles side
+    client.post("/api/entries", headers=admin, json={
+        "vehicle_id": v["id"], "kind": "repair", "type_key": "tire_rotation", "date": date.today().isoformat(),
+        "mileage": 40100})
+    rem = client.get(f"/api/reminders/{rem['id']}", headers=admin).json()
+    assert rem["last_done_mileage"] == 40100 and rem["due"]["status"] == "ok"
+
+
+def test_marking_reminder_done_by_editing_date_and_mileage(client, admin):
+    """Updating last-done date AND mileage clears an overdue reminder."""
+    v = make_vehicle(client, admin, current_mileage=40000)
+    rem = client.post("/api/reminders", headers=admin, json={
+        "vehicle_id": v["id"], "type_key": "oil_change", "interval_miles": 5000, "interval_months": 6,
+        "last_done_date": "2024-01-01", "last_done_mileage": 20000}).json()
+    assert rem["due"]["status"] == "overdue"
+    rem = client.patch(f"/api/reminders/{rem['id']}", headers=admin, json={
+        "last_done_date": date.today().isoformat(), "last_done_mileage": 40000}).json()
+    assert rem["due"]["status"] == "ok"
+
+
 def test_reminder_whichever_first():
     from app.models import Reminder
     from app.reminders import add_months, reminder_status

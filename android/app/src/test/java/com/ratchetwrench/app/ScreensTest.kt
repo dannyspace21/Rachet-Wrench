@@ -206,6 +206,34 @@ class ScreensTest {
             rule.onAllNodesWithText("Coming up").fetchSemanticsNodes().isEmpty() && rule.onAllNodesWithText("Recent work").fetchSemanticsNodes().isEmpty())
     }
 
+    /** Tapping an overdue reminder -> "Mark as done" -> it's OK and in the history. */
+    @Test
+    fun markReminderDoneClearsOverdueAndAddsHistory() {
+        startPhoneOnlyWithVehicle()
+        val ctx = ApplicationProvider.getApplicationContext<Context>()
+        val repo = com.ratchetwrench.app.data.Repository(ctx)
+        kotlinx.coroutines.runBlocking {
+            val v = repo.db.vehicles().observeAll().first().first()
+            // Last done long ago at 30,000 mi, every 5,000 mi or 6 months: overdue both ways.
+            repo.saveReminder(com.ratchetwrench.app.data.Reminder(vehicle_id = v.id, type_key = "tire_rotation",
+                interval_miles = 5000, interval_months = 6, last_done_mileage = 30000, last_done_date = "2025-01-01"))
+        }
+        click("Reminders")
+        waitForText("Overdue")
+        click("Tire rotation")
+        waitForText("Did it? Log it as done")
+        waitForText("42000")          // mileage pre-filled with the vehicle's current mileage
+        click("Mark as done")
+        waitForText("Marked as done and added to the history.")
+        waitForText("OK")
+        tapIcon("Back")
+        // The list shows it as OK now, and the history has the record.
+        waitForText("OK")
+        org.junit.Assert.assertTrue(rule.onAllNodesWithText("Overdue").fetchSemanticsNodes().isEmpty())
+        click("History")
+        waitForText("Tire rotation")
+    }
+
     @Test
     fun settingsAboutAndTheme() {
         startPhoneOnlyWithVehicle()
