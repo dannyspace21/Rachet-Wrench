@@ -1,0 +1,18 @@
+{
+  "_comment": "GVWR / GAWR from sticker text (upper-cased OCR). server/app/sticker_parser.py parse_weights and Android StickerParser must both pass. Values in lb.",
+  "cases": [
+    {"name": "Same line, lb", "text": "GVWR 4,520 LB", "expect": {"gvwr": "4520"}},
+    {"name": "kg then lb", "text": "MFD BY TOYOTA 03/15\nGVWR: 2050 KG (4520 LB)\nGAWR FRONT: 1150 KG (2535 LB)\nGAWR REAR: 1000 KG (2205 LB)",
+     "expect": {"gvwr": "4520", "gawr_front": "2535", "gawr_rear": "2205"}},
+    {"name": "Canadian bilingual, front and rear on one line",
+     "text": "GVWR/PNBV: 2,050 KG (4,519 LB)\nGAWR/PNBE FRONT/AV: 1,090 KG (2,403 LB) REAR/AR: 1,010 KG (2,227 LB)",
+     "expect": {"gvwr": "4519", "gawr_front": "2403", "gawr_rear": "2227"}},
+    {"name": "Table: headings, then kg and lb rows",
+     "text": "GVWR / PNBV   GAWR FR / PNBE AV   GAWR RR / PNBE AR\n2155 KG   1135 KG   1055 KG\n4750 LB   2500 LB   2330 LB\nTHIS VEHICLE CONFORMS",
+     "expect": {"gvwr": "4750", "gawr_front": "2500", "gawr_rear": "2330"}},
+    {"name": "Table with kg only", "text": "GVWR  GAWR F  GAWR R\n2268 KG  1180 KG  1130 KG",
+     "expect": {"gvwr": "5000", "gawr_front": "2601", "gawr_rear": "2491"}},
+    {"name": "Dotted label, value on the next line", "text": "G.V.W.R.\n5,000 LBS", "expect": {"gvwr": "5000"}},
+    {"name": "Tire placard FRONT pressure is not a weight", "text": "TIRE AND LOADING INFORMATION\nFRONT 240 KPA 35 PSI\nREAR 240 KPA 35 PSI", "expect": {}}
+  ]
+}

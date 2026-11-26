@@ -2,6 +2,20 @@
   "_comment": "Release notes shown in the app ('What's new' pop-up after an update, and Settings > Release notes) and on the GitHub release page. Newest first. EVERY Android release needs an entry here whose version matches the release (1.0.<workflow run number>); the release workflow refuses to publish otherwise. Keep it high level and in plain English.",
   "releases": [
     {
+      "version": "1.0.36",
+      "date": "2026-11-26",
+      "new": [],
+      "improved": [
+        "Specs now starts with a Vehicle section — VIN, year, make, model and trim — so everything the VIN filled in shows up there too.",
+        "“Model / chassis code” is now “Series / chassis code”, and it explains that NHTSA doesn't list it for every vehicle.",
+        "Door sticker scan reads GVWR and front/rear GAWR from more label layouts: the certification label by the VIN (door pillar), tables with the weights on the line below, Canadian bilingual labels (PNBV/PNBE), dotted “G.V.W.R.” and kilograms-only labels (converted to lb). Take a photo of that label along with the tire sticker.",
+        "Fill from owner's manual also finds GVWR and front/rear GAWR."
+      ],
+      "fixed": [
+        "When NHTSA lists several possible trims for a VIN (e.g. a 2019 Tiguan: “4Motion SE, SEL, SEL R-Line…”), the whole list no longer becomes the vehicle's trim. The trim is left for you to pick, and Specs shows “One of: …”."
+      ]
+    },
+    {
       "version": "1.0.35",
       "date": "2026-11-26",
       "new": [

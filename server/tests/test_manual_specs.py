@@ -147,3 +147,10 @@ def test_catalog_lists_the_same_specs_as_the_manual_reader():
     cat = json.loads((Path(__file__).resolve().parents[2] / "catalog" / "catalog.json").read_text())
     assert cat["manual_specs"] == list(RULES)
     assert set(cat["manual_specs"]) <= {s["key"] for s in cat["specs"]}
+
+
+def test_weights_from_the_manual():
+    pages = ["Vehicle specifications\nGross vehicle weight rating (GVWR) 5,000 lb (2,268 kg)\n"
+             "Gross axle weight rating, front 2,535 lb (1,150 kg)\nGross axle weight rating, rear 2,205 lb (1,000 kg)"]
+    got = {s["key"]: s["options"][0]["value"] for s in find_specs(pages)}
+    assert (got["gvwr"], got["gawr_front"], got["gawr_rear"]) == ("5000", "2535", "2205")

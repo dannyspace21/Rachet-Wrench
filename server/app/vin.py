@@ -149,7 +149,10 @@ def parse_nhtsa_result(r: dict) -> dict:
         "year": int(r["ModelYear"]) if r.get("ModelYear") and str(r["ModelYear"]).isdigit() else None,
         "make": (r.get("Make") or "").title() if r.get("Make") else None,
         "model": r.get("Model"),
-        "trim": r.get("Trim"),
+        # NHTSA sometimes lists every trim the VIN could be ("SE, SEL, SEL
+        # R-Line"): then the vehicle's trim stays empty (it isn't known) and
+        # the Trim spec says "One of: …".
+        "trim": r.get("Trim") if "," not in (r.get("Trim") or "") else None,
         "kind": "motorcycle" if "MOTORCYCLE" in vehicle_type else ("car" if vehicle_type else None),
     }
     # Lexus/Kia etc. come back upper-case; keep well-known spellings.
@@ -160,6 +163,8 @@ def parse_nhtsa_result(r: dict) -> dict:
         if r.get(src):
             specs[key] = str(r[src])
     specs.update(_formatted_specs(r))
+    if "," in specs.get("trim", ""):
+        specs["trim"] = "One of: " + specs["trim"]
     engine = _engine_text(r)
     if engine:
         specs["engine"] = engine

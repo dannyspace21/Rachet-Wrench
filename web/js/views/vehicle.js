@@ -160,7 +160,7 @@ async function specsTab(body, v, { catalog }) {
       } }, "Use it"))) : null;
   const filled = rows.filter((r) => r.value).length;
   mount(body, h("div", { class: "stack" }, intro, paintTip, h("div", { class: "row between" }, h("p", { class: "muted" }, `${filled} of ${rows.length} fields filled`), actions),
-    h("div", { class: "card" }, Object.entries(groups).map(([g, list]) => h("div", { class: "spec-group" }, h("h3", {}, g),
+    h("div", { class: "card" }, vehicleGroup(v), Object.entries(groups).map(([g, list]) => h("div", { class: "spec-group" }, h("h3", {}, g),
       list.map((r) => h("div", { class: "spec-row" },
         h("span", {}, r.label),
         r.value ? h("span", { class: "v" }, r.value)
@@ -168,6 +168,18 @@ async function specsTab(body, v, { catalog }) {
             : h("span", { class: "v unknown" }, "Unknown"),
         r.source ? h("span", { class: "pill " + (SOURCE_CLASS[r.source] || "") }, sources[r.source] || r.source) : h("span", {}),
         h("button", { class: "btn small ghost", type: "button", "aria-label": `Edit ${r.label}`, onclick: () => editSpec(v, r, sources) }, icon("u-edit")))))))));
+}
+
+/** VIN, year, make, model and trim live on the vehicle itself (they're the
+ *  page title too); shown at the top of Specs, edited with Edit vehicle. */
+function vehicleGroup(v) {
+  const edit = () => { location.hash = `#/v/${v.id}/edit`; };
+  return h("div", { class: "spec-group" }, h("h3", {}, "Vehicle"),
+    [["VIN", v.vin], ["Year", v.year], ["Make", v.make], ["Model", v.model], ["Trim", v.trim]].map(([label, value]) => h("div", { class: "spec-row" },
+      h("span", {}, label),
+      h("span", { class: "v" + (value ? "" : " unknown") }, value ? String(value) : "Unknown"),
+      h("span", {}),
+      h("button", { class: "btn small ghost", type: "button", "aria-label": `Edit ${label} (Edit vehicle)`, onclick: edit }, icon("u-edit")))));
 }
 
 async function editSpec(v, row, sources) {

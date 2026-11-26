@@ -313,7 +313,7 @@ SPECS = [
     ("drive_type", "Drive type", "Body & build", "e.g. RWD"),
     ("transmission", "Transmission", "Body & build", ""),
     ("trim", "Trim", "Body & build", ""),
-    ("model_code", "Model / chassis code", "Body & build", "e.g. GSC10L"),
+    ("model_code", "Series / chassis code", "Body & build", "e.g. GSC10L (NHTSA doesn't list it for every vehicle)"),
     ("doors", "Doors", "Body & build", ""),
     ("curb_weight", "Curb weight", "Body & build", "lb"),
     ("wheelbase", "Wheelbase", "Body & build", "in"),
@@ -448,7 +448,7 @@ METRIC_GROUPS = [
 # ---------------------------------------------------------------------------
 MANUAL_SPECS = ["oil_type", "oil_capacity", "coolant_type", "coolant_capacity", "transmission_fluid_type",
                 "transmission_fluid_capacity", "brake_fluid_type", "differential_fluid_type", "fuel_capacity",
-                "spark_plug_part", "lug_nut_torque"]
+                "spark_plug_part", "lug_nut_torque", "gvwr", "gawr_front", "gawr_rear"]
 
 PAINT_CODES = {
     "lexus": {

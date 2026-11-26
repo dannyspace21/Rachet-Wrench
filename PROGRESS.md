@@ -99,6 +99,8 @@ Build-sandbox notes: the sandbox blocks dl.google.com, api.osv.dev, semgrep.dev 
 
 - v1.0.35: owner's manual from links or pasted text, owner-website button; empty manual-findable specs link to the reader; "Engine code" → "Engine model" (D69).
 
+- v1.0.36: Specs → Vehicle section (VIN/year/make/model/trim); several-trims VINs no longer set a list as the trim (Tiguan added to shared VIN tests); GVWR/GAWR from more sticker layouts and from the manual (D70).
+
 ## Ideas for later (not started)
 - Code-sign the desktop app (paid Apple/Microsoft certificates) to remove first-launch warnings; add an Intel-Mac build if needed.
 - Database migrations with Alembic once the schema needs to change.

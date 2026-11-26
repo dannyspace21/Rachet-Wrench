@@ -169,6 +169,8 @@ object Nhtsa {
         if (make == "Bmw" || make == "Gmc") make = make.uppercase()
         val specs = linkedMapOf<String, String>()
         for ((src, key) in specFields) v(src)?.let { specs[key] = it }
+        // Several possible trims ("SE, SEL, SEL R-Line"): the trim isn't known.
+        specs["trim"]?.takeIf { "," in it }?.let { specs["trim"] = "One of: $it" }
         v("DisplacementL")?.toDoubleOrNull()?.let { specs["displacement_l"] = "%.1f".format(java.util.Locale.US, it) }
         v("TransmissionStyle")?.let { style ->
             val speeds = num(v("TransmissionSpeeds"), 0)
@@ -192,7 +194,7 @@ object Nhtsa {
         if (vin.isNotEmpty() && !Vin.isValid(vin)) warnings += "The VIN's check digit doesn't match. Double-check it (normal for some non-US vehicles)."
         if (v("ErrorCode") != null && v("ErrorCode") != "0") v("ErrorText")?.let { warnings += it.take(300) }
         return VinResult(
-            year = v("ModelYear")?.toIntOrNull(), make = make, model = v("Model"), trim = v("Trim"),
+            year = v("ModelYear")?.toIntOrNull(), make = make, model = v("Model"), trim = v("Trim")?.takeIf { "," !in it },
             kind = when { "MOTORCYCLE" in type -> "motorcycle"; type.isNotEmpty() -> "car"; else -> null },
             specs = specs, warning = warnings.joinToString(" ").ifBlank { null },
         )

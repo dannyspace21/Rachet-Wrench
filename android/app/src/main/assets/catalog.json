@@ -775,9 +775,9 @@
     },
     {
       "key": "model_code",
-      "label": "Model / chassis code",
+      "label": "Series / chassis code",
       "group": "Body & build",
-      "hint": "e.g. GSC10L"
+      "hint": "e.g. GSC10L (NHTSA doesn't list it for every vehicle)"
     },
     {
       "key": "doors",
@@ -938,7 +938,10 @@
     "differential_fluid_type",
     "fuel_capacity",
     "spark_plug_part",
-    "lug_nut_torque"
+    "lug_nut_torque",
+    "gvwr",
+    "gawr_front",
+    "gawr_rear"
   ],
   "makes": {
     "Acura": {

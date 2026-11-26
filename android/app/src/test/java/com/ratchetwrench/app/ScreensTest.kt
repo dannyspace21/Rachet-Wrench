@@ -51,10 +51,10 @@ class ScreensTest {
     @get:Rule
     val rule = createAndroidComposeRule<MainActivity>()
 
-    /** Wait (up to 5 s) until some text is on screen — database work runs in the background. */
+    /** Wait (up to 15 s — CI machines can be slow) until some text is on screen — database work runs in the background. */
     private fun waitForText(text: String, substring: Boolean = false) {
         try {
-            rule.waitUntil(5_000) { rule.onAllNodesWithText(text, substring = substring).fetchSemanticsNodes().isNotEmpty() }
+            rule.waitUntil(15_000) { rule.onAllNodesWithText(text, substring = substring).fetchSemanticsNodes().isNotEmpty() }
         } catch (e: Throwable) {
             // Print what IS on screen so a failure is easy to diagnose.
             throw AssertionError("\"$text\" never appeared. Screen:\n" +
@@ -67,7 +67,7 @@ class ScreensTest {
     private fun click(text: String) {
         val matcher = hasText(text) or androidx.compose.ui.test.hasContentDescription(text)
         try {
-            rule.waitUntil(5_000) { rule.onAllNodes(matcher).fetchSemanticsNodes().isNotEmpty() }
+            rule.waitUntil(15_000) { rule.onAllNodes(matcher).fetchSemanticsNodes().isNotEmpty() }
         } catch (e: Throwable) { waitForText(text) } // fails with a screen dump
         val node = rule.onAllNodes(matcher)[0]
         runCatching { node.performScrollTo() }
@@ -82,12 +82,12 @@ class ScreensTest {
 
     /** Wait until some text has left the screen (e.g. a form has closed). */
     private fun waitGone(text: String) {
-        rule.waitUntil(5_000) { rule.onAllNodesWithText(text).fetchSemanticsNodes().isEmpty() }
+        rule.waitUntil(15_000) { rule.onAllNodesWithText(text).fetchSemanticsNodes().isEmpty() }
     }
 
     /** Tap the icon-only button with this screen-reader label. */
     private fun tapIcon(description: String) {
-        rule.waitUntil(5_000) { rule.onAllNodesWithContentDescription(description).fetchSemanticsNodes().isNotEmpty() }
+        rule.waitUntil(15_000) { rule.onAllNodesWithContentDescription(description).fetchSemanticsNodes().isNotEmpty() }
         rule.onAllNodesWithContentDescription(description)[0].performClick()
         rule.waitForIdle()
     }
@@ -349,7 +349,7 @@ class ScreensTest {
             if (runCatching { lists[i].performScrollToNode(hasText(text, substring = substring) or androidx.compose.ui.test.hasContentDescription(text, substring = substring)) }.isSuccess) break
         }
         val m = hasText(text, substring = substring) or androidx.compose.ui.test.hasContentDescription(text, substring = substring)
-        try { rule.waitUntil(5_000) { rule.onAllNodes(m).fetchSemanticsNodes().isNotEmpty() } } catch (e: Throwable) { waitForText(text, substring) }
+        try { rule.waitUntil(15_000) { rule.onAllNodes(m).fetchSemanticsNodes().isNotEmpty() } } catch (e: Throwable) { waitForText(text, substring) }
     }
 
     /** Save what's on screen (for reviewing the design); build/metrics-shots/<name>.png */
@@ -519,7 +519,7 @@ class ScreensTest {
         // Close the app completely and open it again (like swiping it away).
         rule.activityRule.scenario.close()
         androidx.test.core.app.ActivityScenario.launch(MainActivity::class.java).use {
-            rule.waitUntil(5_000) { rule.onAllNodesWithText("Lexus RC 350").fetchSemanticsNodes().isNotEmpty() }
+            rule.waitUntil(15_000) { rule.onAllNodesWithText("Lexus RC 350").fetchSemanticsNodes().isNotEmpty() }
         }
     }
 

@@ -547,4 +547,6 @@ def test_vin_decode_fills_every_field_nhtsa_returns():
 
     cases = json.loads((Path(__file__).resolve().parents[2] / "catalog" / "vin_tests.json").read_text())["cases"]
     for c in cases:
-        assert parse_nhtsa_result(dict(c["result"]))["specs"] == c["specs"], c["name"]
+        got = parse_nhtsa_result(dict(c["result"]))
+        assert got["specs"] == c["specs"], c["name"]
+        assert got["vehicle"] == c["vehicle"], c["name"]

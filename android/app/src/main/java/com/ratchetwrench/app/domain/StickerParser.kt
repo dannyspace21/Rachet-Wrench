@@ -50,6 +50,64 @@ object StickerParser {
         return if (g[5].isNotEmpty()) "$size ${g[5].uppercase()}" else size
     }
 
+    // GVWR / GAWR labels as printed on certification labels (the one with the
+    // VIN), incl. dotted and French/Canadian bilingual forms.  Same rules as
+    // the server (server/app/sticker_parser.py); shared cases in
+    // catalog/sticker_weight_tests.json.
+    private val WEIGHT_LABEL = Regex(
+        """\bG\.?\s?V\.?\s?W\.?\s?R\b\.?(?:\s*/\s*PNBV)?""" +
+        """|\bG\.?\s?A\.?\s?W\.?\s?R\b\.?(?:\s*/\s*PNBE)?\s*[:\-]?\s*(FRONT|FRT|FR|F|REAR|RR|R)\b(?:\s*/?\s*(?:PNBE\s*)?(?:AV|AR)\b)?""" +
+        """|\b(FRONT|REAR)\b(?:\s*/\s*(?:AV|AR)\b)?""")
+    private val W_KG_LB = Regex("""(\d[\d,.]{2,6})\s*KGS?[^0-9]{0,6}(\d[\d,.]{2,6})\s*LBS?\b""")
+    private val W_LB = Regex("""(\d[\d,.]{2,6})\s*LBS?\b""")
+    private val W_KG = Regex("""(\d[\d,.]{2,6})\s*KGS?\b""")
+
+    private fun kgToLb(kg: String) = Math.round(num(kg).toDouble() * 2.20462).toString()
+
+    private fun weight(seg: String): String? =
+        W_KG_LB.find(seg)?.let { num(it.groupValues[2]) }
+            ?: W_LB.find(seg)?.let { num(it.groupValues[1]) }
+            ?: W_KG.find(seg)?.let { kgToLb(it.groupValues[1]) }
+
+    /** GVWR and front/rear GAWR in lb from upper-case sticker text. */
+    fun parseWeights(upper: String): Map<String, String> {
+        val out = linkedMapOf<String, String>()
+        val lines = upper.lines().filter { it.isNotBlank() }
+        for ((i, line) in lines.withIndex()) {
+            val found = mutableListOf<Pair<String, MatchResult>>()
+            var gawrSeen = false
+            for (m in WEIGHT_LABEL.findAll(line)) {
+                val side = m.groups[1]?.value ?: m.groups[2]?.value
+                // A bare FRONT/REAR only counts after a GAWR label (not "FRONT 35 PSI").
+                val key = when {
+                    side == null -> "gvwr"
+                    m.groups[2] != null && !gawrSeen -> null
+                    side.startsWith("F") -> "gawr_front"
+                    else -> "gawr_rear"
+                }
+                if (m.groups[1] != null) gawrSeen = true
+                if (key != null) found += key to m
+            }
+            if (found.isEmpty()) continue
+            val missing = mutableListOf<String>()
+            for ((n, pair) in found.withIndex()) {
+                val (key, m) = pair
+                val end = if (n + 1 < found.size) found[n + 1].second.range.first else line.length
+                val w = weight(line.substring(m.range.last + 1, end))
+                if (w != null) { if (key !in out) out[key] = w } else missing += key
+            }
+            if (missing.isNotEmpty()) {
+                // Table layout: headings on this line, values (kg and/or lb) below.
+                val below = lines.drop(i + 1).take(3).joinToString(" ")
+                val lbs = W_LB.findAll(below).map { num(it.groupValues[1]) }.toList()
+                val kgs = W_KG.findAll(below).map { kgToLb(it.groupValues[1]) }.toList()
+                val vals = if (lbs.size >= missing.size) lbs else if (kgs.size >= missing.size) kgs else emptyList()
+                for ((key, v) in missing.zip(vals)) out.putIfAbsent(key, v)
+            }
+        }
+        return out
+    }
+
     fun parse(text: String): Map<String, String> {
         val fields = linkedMapOf<String, String>()
         if (text.isBlank()) return fields
@@ -103,11 +161,7 @@ object StickerParser {
         }
 
         // Weights.
-        for ((label, key) in listOf("GVWR" to "gvwr", """GAWR\s*(?:FRONT|FRT|F)""" to "gawr_front", """GAWR\s*(?:REAR|RR|R)""" to "gawr_rear")) {
-            val withKg = Regex(label + """[^0-9]{0,15}(?:""" + KG + """[^0-9]{0,6})?""" + LB).find(upper)
-            if (withKg != null) fields[key] = num(withKg.groupValues[2])
-            else Regex(label + """[^0-9]{0,15}""" + LB).find(upper)?.let { fields[key] = num(it.groupValues[1]) }
-        }
+        fields.putAll(parseWeights(upper))
 
         // Paint & trim.
         Regex("""\b(?:PAINT|COLOU?R|C/TR|PNT)\b(?:\s*CODE)?\s*[:#]?\s*([A-Z0-9]{2,4})\b""").find(upper)?.let {

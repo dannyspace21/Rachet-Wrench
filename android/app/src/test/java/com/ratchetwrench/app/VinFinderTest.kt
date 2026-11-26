@@ -50,8 +50,14 @@ class NhtsaSpecsTest {
         for (c in cases) {
             val o = c as kotlinx.serialization.json.JsonObject
             val expected = (o["specs"] as kotlinx.serialization.json.JsonObject).mapValues { (it.value as kotlinx.serialization.json.JsonPrimitive).content }
-            val got = com.ratchetwrench.app.data.Nhtsa.parse(o["result"] as kotlinx.serialization.json.JsonObject).specs
-            org.junit.Assert.assertEquals((o["name"] as kotlinx.serialization.json.JsonPrimitive).content, expected, got.toMap())
+            val res = com.ratchetwrench.app.data.Nhtsa.parse(o["result"] as kotlinx.serialization.json.JsonObject)
+            val name = (o["name"] as kotlinx.serialization.json.JsonPrimitive).content
+            org.junit.Assert.assertEquals(name, expected, res.specs.toMap())
+            // Year, make, model and trim (missing = not known) match the server too.
+            val veh = (o["vehicle"] as kotlinx.serialization.json.JsonObject).mapValues { (it.value as kotlinx.serialization.json.JsonPrimitive).content }
+            val gotVeh = mapOf("year" to res.year?.toString(), "make" to res.make, "model" to res.model, "trim" to res.trim, "kind" to res.kind)
+                .filterValues { it != null }.mapValues { it.value!! }
+            org.junit.Assert.assertEquals(name, veh, gotVeh)
         }
     }
 }

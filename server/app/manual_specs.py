@@ -47,6 +47,9 @@ RULES: dict[str, tuple[re.Pattern, str]] = {
     "fuel_capacity": (re.compile(r"fuel\s+tank|fuel\s+capacit", re.I), "qty"),
     "spark_plug_part": (re.compile(r"spark\s+plug", re.I), "plug"),
     "lug_nut_torque": (re.compile(r"(?:lug|wheel)\s+nut[^.]{0,40}torque|torque[^.]{0,30}(?:lug|wheel)\s+nut", re.I), "torque"),
+    "gvwr": (re.compile(r"gross\s+vehicle\s+weight(?:\s+rating)?|\bG\.?V\.?W\.?R\b", re.I), "weight"),
+    "gawr_front": (re.compile(r"(?:gross\s+axle\s+weight(?:\s+rating)?|\bG\.?A\.?W\.?R\b)[^.]{0,25}\bfront\b|\bfront\b[^.]{0,15}(?:gross\s+axle\s+weight|\bGAWR\b)", re.I), "weight"),
+    "gawr_rear": (re.compile(r"(?:gross\s+axle\s+weight(?:\s+rating)?|\bG\.?A\.?W\.?R\b)[^.]{0,25}\brear\b|\brear\b[^.]{0,15}(?:gross\s+axle\s+weight|\bGAWR\b)", re.I), "weight"),
 }
 
 LABELS = {
@@ -55,6 +58,7 @@ LABELS = {
     "transmission_fluid_type": "Transmission fluid type", "transmission_fluid_capacity": "Transmission fluid capacity",
     "brake_fluid_type": "Brake fluid type", "differential_fluid_type": "Differential fluid type",
     "fuel_capacity": "Fuel tank capacity", "spark_plug_part": "Spark plug part number", "lug_nut_torque": "Lug nut torque",
+    "gvwr": "GVWR (lb)", "gawr_front": "GAWR front (lb)", "gawr_rear": "GAWR rear (lb)",
 }
 
 _PLUG_NOT = {"FOR", "TYPE", "AND", "THE", "WITH", "NGK", "DENSO", "SAE", "API", "DOT", "LF", "RF", "MPH"}
@@ -95,6 +99,10 @@ def _value(kind: str, text: str) -> str | None:
                 continue
             return f"{m.group(1)} {part}" if m.group(1) else part
         return None
+    if kind == "weight":
+        # In lb, like the door sticker ("5,000 lb (2,268 kg)" -> "5000").
+        from .sticker_parser import _weight
+        return _weight(text.upper())
     if kind == "torque":
         m = TORQUE_RE.search(text)
         if not m:

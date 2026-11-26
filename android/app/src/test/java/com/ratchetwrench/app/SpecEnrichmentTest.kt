@@ -31,6 +31,15 @@ class SpecEnrichmentTest {
         }
     }
 
+    @Test fun stickerWeightsSameAsTheServer() {
+        val cases = Json.parseToJsonElement(File(root, "catalog/sticker_weight_tests.json").readText()).jsonObject["cases"]!!.jsonArray
+        for (c in cases) {
+            val o = c.jsonObject
+            val expect = o["expect"]!!.jsonObject.mapValues { it.value.jsonPrimitive.content }
+            assertEquals(o["name"]!!.jsonPrimitive.content, expect, com.ratchetwrench.app.domain.StickerParser.parseWeights(o["text"]!!.jsonPrimitive.content))
+        }
+    }
+
     @Test fun manualAnswerBecomesReviewRows() {
         val body = """{"pages": 400, "readable_pages": 398, "attachment": {}, "specs": [
             {"key": "oil_type", "label": "Engine oil", "current": null, "options": [

@@ -299,6 +299,17 @@ private fun SpecsTab(nav: NavHostController, v: Vehicle) {
                 SecondaryButton("Use it", "check") { scope.launch { repo.saveSpec(v.id, "paint_color", colour, "user") } }
             }
         }
+        // VIN, year, make, model, trim are part of the vehicle (and its title); edited with Edit vehicle.
+        item { Text("VEHICLE", style = MaterialTheme.typography.labelMedium, color = LocalExtra.current.muted, modifier = Modifier.padding(top = 10.dp)) }
+        items(listOf("VIN" to v.vin, "Year" to v.year?.toString(), "Make" to v.make, "Model" to v.model, "Trim" to v.trim), key = { "veh-" + it.first }) { (label, value) ->
+            ListRow(onClick = { nav.navigate("vehicle-edit/${v.id}") }) {
+                Column(Modifier.weight(1f)) {
+                    Text(label, style = MaterialTheme.typography.bodySmall, color = LocalExtra.current.muted)
+                    if (value.isNullOrBlank()) Text("Unknown", fontStyle = FontStyle.Italic, color = LocalExtra.current.muted)
+                    else Text(value, fontWeight = FontWeight.SemiBold)
+                }
+            }
+        }
         defs.groupBy { it.group }.forEach { (group, list) ->
             item { Text(group.uppercase(), style = MaterialTheme.typography.labelMedium, color = LocalExtra.current.muted, modifier = Modifier.padding(top = 10.dp)) }
             items(list, key = { it.key }) { d ->

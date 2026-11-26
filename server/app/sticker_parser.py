@@ -45,6 +45,80 @@ def _num(raw: str) -> str:
     return raw.replace(",", "").replace(" ", "").rstrip(".")
 
 
+# GVWR / GAWR labels as printed on certification labels (the one with the
+# VIN, often on the driver's door pillar), incl. dotted and French/Canadian
+# bilingual forms.  Same rules in Android's StickerParser (shared cases in
+# catalog/sticker_weight_tests.json).
+WEIGHT_LABEL_RE = re.compile(
+    r"\bG\.?\s?V\.?\s?W\.?\s?R\b\.?(?:\s*/\s*PNBV)?"
+    r"|\bG\.?\s?A\.?\s?W\.?\s?R\b\.?(?:\s*/\s*PNBE)?\s*[:\-]?\s*(FRONT|FRT|FR|F|REAR|RR|R)\b(?:\s*/?\s*(?:PNBE\s*)?(?:AV|AR)\b)?"
+    r"|\b(FRONT|REAR)\b(?:\s*/\s*(?:AV|AR)\b)?")
+W_KG_LB_RE = re.compile(r"(\d[\d,\.]{2,6})\s*KGS?[^0-9]{0,6}(\d[\d,\.]{2,6})\s*LBS?\b")
+W_LB_RE = re.compile(r"(\d[\d,\.]{2,6})\s*LBS?\b")
+W_KG_RE = re.compile(r"(\d[\d,\.]{2,6})\s*KGS?\b")
+
+
+def _kg_to_lb(kg: str) -> str:
+    return str(round(float(_num(kg)) * 2.20462))
+
+
+def _weight(seg: str) -> str | None:
+    """The weight in lb in a piece of text ("2050 KG (4520 LB)" -> "4520")."""
+    m = W_KG_LB_RE.search(seg)
+    if m:
+        return _num(m.group(2))
+    m = W_LB_RE.search(seg)
+    if m:
+        return _num(m.group(1))
+    m = W_KG_RE.search(seg)
+    return _kg_to_lb(m.group(1)) if m else None
+
+
+def _weight_key(m: re.Match, gawr_seen: bool) -> str | None:
+    """Which weight a label is: GVWR (no side), or GAWR front / rear."""
+    side = m.group(1) or m.group(2)
+    if side is None:
+        return "gvwr"
+    if m.group(2) and not gawr_seen:
+        return None
+    return "gawr_front" if side.startswith("F") else "gawr_rear"
+
+
+def parse_weights(upper: str) -> dict[str, str]:
+    """GVWR and front/rear GAWR in lb from upper-case sticker text."""
+    out: dict[str, str] = {}
+    lines = [ln for ln in upper.splitlines() if ln.strip()]
+    for i, line in enumerate(lines):
+        found = []
+        gawr_seen = False
+        for m in WEIGHT_LABEL_RE.finditer(line):
+            # A bare FRONT/REAR only counts after a GAWR label (not "FRONT 35 PSI").
+            key = _weight_key(m, gawr_seen)
+            if m.group(1):
+                gawr_seen = True
+            if key:
+                found.append((key, m))
+        if not found:
+            continue
+        missing = []
+        for n, (key, m) in enumerate(found):
+            seg = line[m.end(): found[n + 1][1].start() if n + 1 < len(found) else len(line)]
+            w = _weight(seg)
+            if w and key not in out:
+                out[key] = w
+            elif not w:
+                missing.append(key)
+        if missing:
+            # Table layout: headings on this line, values (kg and/or lb) below.
+            below = " ".join(lines[i + 1:i + 4])
+            lbs = [_num(x) for x in W_LB_RE.findall(below)]
+            kgs = [_kg_to_lb(x) for x in W_KG_RE.findall(below)]
+            vals = lbs if len(lbs) >= len(missing) else kgs if len(kgs) >= len(missing) else []
+            for key, v in zip(missing, vals):
+                out.setdefault(key, v)
+    return out
+
+
 def find_vin(text: str) -> str | None:
     """Find a 17-character VIN with a correct check digit.  OCR often reads
     letters as digits and vice-versa; normalize_vin() fixes the common ones
@@ -158,14 +232,7 @@ def parse_sticker_text(text: str) -> dict[str, str]:
                 fields[k] = remaining.pop(0)
 
     # --- Weights ----------------------------------------------------------
-    for label, key in (("GVWR", "gvwr"), ("GAWR\\s*(?:FRONT|FRT|F)", "gawr_front"), ("GAWR\\s*(?:REAR|RR|R)", "gawr_rear")):
-        m = re.search(label + r"[^0-9]{0,15}(?:" + KG_RE + r"[^0-9]{0,6})?" + LB_RE, upper)
-        if m:
-            fields[key] = _num(m.group(2))
-        else:
-            m = re.search(label + r"[^0-9]{0,15}" + LB_RE, upper)
-            if m:
-                fields[key] = _num(m.group(1))
+    fields.update(parse_weights(upper))
 
     # --- Paint & trim -----------------------------------------------------
     m = re.search(r"\b(?:PAINT|COLOU?R|C/TR|PNT)\b(?:\s*CODE)?\s*[:#]?\s*([A-Z0-9]{2,4})\b", upper)
