@@ -31,3 +31,4 @@ scan-results/
 *.keystore
 desktop/build/
 desktop/dist/
+android/.kotlin/
