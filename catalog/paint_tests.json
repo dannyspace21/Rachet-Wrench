@@ -1,0 +1,15 @@
+{
+  "_comment": "Shared cases for the paint-code lookup (web/js/paint.js and Android Paint.kt must both pass).",
+  "cases": [
+    {"make": "Lexus", "code": "1J7", "expect": "Atomic Silver"},
+    {"make": "LEXUS", "code": "c/tr 223/LA10", "expect": "Caviar"},
+    {"make": "Toyota", "code": "1G3", "expect": "Magnetic Gray Metallic"},
+    {"make": "Toyota", "code": "212", "expect": null},
+    {"make": "Lexus", "code": "202", "expect": null},
+    {"make": "Kia", "code": " swp ", "expect": "Snow White Pearl"},
+    {"make": "Kia", "code": "Paint: ABP", "expect": "Aurora Black Pearl"},
+    {"make": "Kia", "code": "B4U", "expect": null},
+    {"make": "Honda", "code": "NH731P", "expect": null},
+    {"make": "Kia", "code": "", "expect": null}
+  ]
+}

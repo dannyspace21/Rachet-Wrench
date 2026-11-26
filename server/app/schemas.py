@@ -15,7 +15,7 @@ from typing import Annotated, Literal
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
-from .catalog import SPEC_SOURCES, spec_keys, type_keys
+from .catalog import spec_keys, spec_sources, type_keys
 
 UUID_RE = r"^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$"
 UUIDStr = Annotated[str, Field(pattern=UUID_RE)]
@@ -138,7 +138,7 @@ class SpecIn(SyncFields):
     @field_validator("source")
     @classmethod
     def known_source(cls, v):
-        if v is not None and v not in SPEC_SOURCES:
+        if v is not None and v not in spec_sources():
             raise ValueError("Unknown spec source")
         return v
 

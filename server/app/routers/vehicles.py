@@ -208,6 +208,58 @@ def sticker_apply(vehicle_id: str, body: schemas.StickerApplyIn, user: User = De
 
 
 # ---------------------------------------------------------------------------
+# Owner's manual -> fluid specs
+# ---------------------------------------------------------------------------
+@router.post("/vehicles/{vehicle_id}/manual/scan")
+async def manual_scan(vehicle_id: str, attachment_id: str | None = Form(None), file: UploadFile | None = File(None),
+                      user: User = Depends(current_user), db: Session = Depends(get_db)) -> dict:
+    """Read the owner's manual (one already saved on the vehicle, or a new
+    PDF, which is then saved) and PROPOSE fluid specs and capacities, each
+    with the page and line it came from.  Nothing is saved to Specs until
+    /manual/apply."""
+    from ..manual_specs import find_specs
+    from ..uploads import store_bytes
+
+    vehicle = get_owned(db, Vehicle, vehicle_id, user)
+    settings = get_settings()
+    if file is not None:
+        data = await read_limited(file, settings.max_pdf_mb * 1024 * 1024)
+        if sniff_type(data[:16]) != "application/pdf":
+            raise HTTPException(status.HTTP_415_UNSUPPORTED_MEDIA_TYPE, "Please choose the owner's manual as a PDF.")
+        stored = await asyncio.to_thread(store_bytes, data, True, False)
+        now = utcnow()
+        att = Attachment(owner_id=user.id, vehicle_id=vehicle.id, category="manual", content_type="application/pdf",
+                         stored_name=stored.stored_name, original_name="Owner's manual.pdf", size_bytes=stored.size_bytes,
+                         sha256=stored.sha256, page_count=stored.page_count, caption="Owner's manual", has_file=True,
+                         created_at=now, updated_at=now, server_modified_at=now)
+        db.add(att)
+        db.commit()
+    elif attachment_id:
+        att = get_owned(db, Attachment, attachment_id, user)
+        if att.vehicle_id != vehicle.id or att.content_type != "application/pdf" or not att.has_file:
+            raise HTTPException(status.HTTP_400_BAD_REQUEST, "That file isn't a PDF saved on this vehicle.")
+        data = await asyncio.to_thread(file_path(att.stored_name).read_bytes)
+    else:
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, "Choose the owner's manual (PDF).")
+    result = await asyncio.to_thread(run_pdf_worker, data, "text", settings.max_pdf_pages, settings.manual_parse_timeout_s)
+    pages = result.get("text", [])
+    current = {s.key: s.value for s in db.scalars(select(VehicleSpec).where(
+        VehicleSpec.owner_id == user.id, VehicleSpec.vehicle_id == vehicle.id, VehicleSpec.deleted_at.is_(None))).all()}
+    specs = find_specs(pages)
+    for s in specs:
+        s["current"] = current.get(s["key"])
+    return {"pages": len(pages), "readable_pages": sum(1 for t in pages if (t or "").strip()),
+            "attachment": serialize(att), "specs": specs}
+
+
+@router.post("/vehicles/{vehicle_id}/manual/apply")
+def manual_apply(vehicle_id: str, body: schemas.StickerApplyIn, user: User = Depends(current_user),
+                 db: Session = Depends(get_db)) -> list[dict]:
+    """Save the values approved on the review screen as "From owner's manual"."""
+    return _save_fields(db, user, vehicle_id, body, "manual")
+
+
+# ---------------------------------------------------------------------------
 # Carfax
 # ---------------------------------------------------------------------------
 @router.post("/vehicles/{vehicle_id}/carfax/parse")

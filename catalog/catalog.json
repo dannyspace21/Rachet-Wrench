@@ -588,6 +588,42 @@
       "hint": ""
     },
     {
+      "key": "engine_code",
+      "label": "Engine code",
+      "group": "Engine & oil",
+      "hint": "e.g. 2GR-FSE"
+    },
+    {
+      "key": "horsepower",
+      "label": "Horsepower",
+      "group": "Engine & oil",
+      "hint": "hp"
+    },
+    {
+      "key": "valve_train",
+      "label": "Valve train",
+      "group": "Engine & oil",
+      "hint": "e.g. DOHC"
+    },
+    {
+      "key": "engine_details",
+      "label": "Engine details",
+      "group": "Engine & oil",
+      "hint": "e.g. port + direct injection"
+    },
+    {
+      "key": "turbo",
+      "label": "Turbo / supercharger",
+      "group": "Engine & oil",
+      "hint": ""
+    },
+    {
+      "key": "electrification",
+      "label": "Electrification",
+      "group": "Engine & oil",
+      "hint": "e.g. hybrid, BEV"
+    },
+    {
       "key": "oil_type",
       "label": "Engine oil type / viscosity",
       "group": "Engine & oil",
@@ -738,6 +774,30 @@
       "hint": ""
     },
     {
+      "key": "model_code",
+      "label": "Model / chassis code",
+      "group": "Body & build",
+      "hint": "e.g. GSC10L"
+    },
+    {
+      "key": "doors",
+      "label": "Doors",
+      "group": "Body & build",
+      "hint": ""
+    },
+    {
+      "key": "curb_weight",
+      "label": "Curb weight",
+      "group": "Body & build",
+      "hint": "lb"
+    },
+    {
+      "key": "wheelbase",
+      "label": "Wheelbase",
+      "group": "Body & build",
+      "hint": "in"
+    },
+    {
       "key": "trim_code",
       "label": "Trim / option code",
       "group": "Body & build",
@@ -798,6 +858,24 @@
       "hint": ""
     },
     {
+      "key": "tpms_type",
+      "label": "Tire pressure monitoring",
+      "group": "Safety & equipment",
+      "hint": "direct or indirect"
+    },
+    {
+      "key": "abs",
+      "label": "Anti-lock brakes (ABS)",
+      "group": "Safety & equipment",
+      "hint": ""
+    },
+    {
+      "key": "stability_control",
+      "label": "Stability control (ESC)",
+      "group": "Safety & equipment",
+      "hint": ""
+    },
+    {
       "key": "wiper_size_driver",
       "label": "Wiper size — driver",
       "group": "Electrical",
@@ -846,7 +924,8 @@
     "user": "Entered by me",
     "unverified": "Unverified",
     "provider": "From VIN spec service",
-    "carfax": "From Carfax"
+    "carfax": "From Carfax",
+    "manual": "From owner's manual"
   },
   "makes": {
     "Acura": {
@@ -1480,5 +1559,68 @@
         "Other"
       ]
     }
-  ]
+  ],
+  "paint_codes": {
+    "lexus": {
+      "083": "Ultra White",
+      "085": "Eminent White Pearl",
+      "077": "Starfire Pearl",
+      "212": "Obsidian",
+      "223": "Caviar",
+      "1J7": "Atomic Silver",
+      "1J4": "Silver Lining Metallic",
+      "1H9": "Nebula Gray Pearl",
+      "3T5": "Infrared",
+      "4W7": "Molten Pearl",
+      "8X1": "Ultrasonic Blue Mica 2.0",
+      "1L1": "Cloudburst Gray",
+      "1L2": "Iridium",
+      "1L8": "Incognito",
+      "8Y6": "Grecian Water",
+      "5C1": "Flare Yellow",
+      "8Z1": "Electric Surge",
+      "3R1": "Matador Red Mica",
+      "3T2": "Redline",
+      "8V3": "Deep Sea Mica"
+    },
+    "toyota": {
+      "040": "Super White",
+      "070": "Blizzard Pearl",
+      "090": "Oxygen White",
+      "1F7": "Classic Silver Metallic",
+      "1G3": "Magnetic Gray Metallic",
+      "1H5": "Cement",
+      "202": "Black",
+      "218": "Midnight Black Metallic",
+      "3U5": "Supersonic Red",
+      "6X3": "Lunar Rock",
+      "8X8": "Blueprint"
+    },
+    "kia": {
+      "UD": "Clear White",
+      "1D": "Clear White",
+      "SWP": "Snow White Pearl",
+      "SWA": "Snow White Pearl",
+      "ABP": "Aurora Black Pearl",
+      "EB": "Ebony Black",
+      "4SS": "Silky Silver Metallic",
+      "3D": "Bright Silver Metallic",
+      "A3D": "Bright Silver Metallic",
+      "D7U": "Planet Blue Pearl",
+      "M9Y": "Desert Sand Metallic",
+      "DRR": "Racing Red",
+      "K3U": "Abyss Blue Pearl",
+      "MST": "Metal Stream Metallic",
+      "B2R": "Deep Sea Blue Metallic",
+      "B4N": "Garnet Red Metallic",
+      "MBN": "Titanium Brown Pearl",
+      "R4R": "Currant Red Metallic",
+      "U4G": "Phantom Gray Metallic",
+      "ABT": "Platinum Graphite Metallic",
+      "DRG": "Fire Orange Metallic",
+      "KDG": "Gravity Grey Pearl",
+      "KDT": "Gravity Grey Pearl",
+      "SPB": "Sporty Blue Pearl"
+    }
+  }
 }

@@ -11,6 +11,7 @@ import { addPartToList, addReminderToList } from "./shopping-list.js";
 import { metricsTab } from "./metrics-tab.js";
 import { recallsPanel } from "./recalls-panel.js";
 import { sortRecalls } from "../recalls.js";
+import { paintName } from "../paint.js";
 
 // In the order you use them: what's due, what fits, what was done, the specs.
 // (Mileage is updated with the "Update mileage" button; no separate tab.)
@@ -18,7 +19,7 @@ const TABS = [
   ["reminders", "Reminders", "u-bell"], ["parts", "Parts", "u-part"], ["history", "History", "u-list"],
   ["metrics", "Metrics", "u-chart"], ["specs", "Specs", "u-spec"], ["docs", "Documents", "u-book"],
 ];
-const SOURCE_CLASS = { vin: "src-vin", provider: "src-vin", sticker: "src-sticker", user: "src-user", unverified: "src-unverified", carfax: "src-vin" };
+const SOURCE_CLASS = { vin: "src-vin", provider: "src-vin", sticker: "src-sticker", user: "src-user", unverified: "src-unverified", carfax: "src-vin", manual: "src-manual" };
 
 // ===========================================================================
 // Vehicle page
@@ -138,13 +139,26 @@ async function specsTab(body, v, { catalog }) {
   const sources = catalog.spec_sources;
   const intro = h("div", { class: "notice info" }, icon("u-info"),
     h("p", {}, "Specs are never guessed. Each value shows where it came from — ", h("strong", {}, "From VIN"), ", ",
-      h("strong", {}, "From door sticker"), ", ", h("strong", {}, "Entered by me"), " or ", h("strong", {}, "Unverified"),
+      h("strong", {}, "From door sticker"), ", ", h("strong", {}, "From owner's manual"), ", ", h("strong", {}, "Entered by me"), " or ", h("strong", {}, "Unverified"),
       ". Blank means unknown. Tap Edit to confirm or change a value."));
   const actions = h("div", { class: "btn-row" },
     v.vin ? h("button", { class: "btn small", type: "button", onclick: () => decodeIntoSpecs(v) }, icon("u-barcode"), "Fill from VIN") : null,
-    h("a", { class: "btn small", href: `#/v/${v.id}/sticker` }, icon("u-sticker"), "Fill from door sticker"));
+    h("a", { class: "btn small", href: `#/v/${v.id}/sticker` }, icon("u-sticker"), "Fill from door sticker"),
+    h("a", { class: "btn small", href: `#/v/${v.id}/manual` }, icon("u-book"), "Fill from owner's manual"));
+  // Paint code known but no colour name: suggest one from the curated table.
+  const code = rows.find((r) => r.key === "paint_code")?.value;
+  const colour = rows.find((r) => r.key === "paint_color");
+  const suggestion = code && colour && !colour.value ? paintName(catalog.paint_codes, v.make, code) : null;
+  const paintTip = suggestion ? h("div", { class: "notice info" }, icon("u-info"),
+    h("p", {}, `Paint code ${code} on a ${v.make} is `, h("strong", {}, suggestion), ". ",
+      h("button", { class: "btn small", type: "button", onclick: async () => {
+        try {
+          await api("/api/specs", { method: "POST", body: { vehicle_id: v.id, key: "paint_color", value: suggestion, source: "user" } });
+          toast("Colour saved"); window.dispatchEvent(new HashChangeEvent("hashchange"));
+        } catch (e) { showError(e); }
+      } }, "Use it"))) : null;
   const filled = rows.filter((r) => r.value).length;
-  mount(body, h("div", { class: "stack" }, intro, h("div", { class: "row between" }, h("p", { class: "muted" }, `${filled} of ${rows.length} fields filled`), actions),
+  mount(body, h("div", { class: "stack" }, intro, paintTip, h("div", { class: "row between" }, h("p", { class: "muted" }, `${filled} of ${rows.length} fields filled`), actions),
     h("div", { class: "card" }, Object.entries(groups).map(([g, list]) => h("div", { class: "spec-group" }, h("h3", {}, g),
       list.map((r) => h("div", { class: "spec-row" },
         h("span", {}, r.label),

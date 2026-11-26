@@ -193,7 +193,7 @@ def minimal_env(**extra: str) -> dict[str, str]:
     return env
 
 
-def run_pdf_worker(data: bytes, mode: str, max_pages: int) -> dict:
+def run_pdf_worker(data: bytes, mode: str, max_pages: int, timeout: int | None = None) -> dict:
     """Ask the sandboxed helper to read a PDF.
 
     mode "info" returns {"pages": N}; mode "text" also returns the text of
@@ -214,7 +214,7 @@ def run_pdf_worker(data: bytes, mode: str, max_pages: int) -> dict:
             argv,
             input=data,
             capture_output=True,
-            timeout=settings.pdf_parse_timeout_s,
+            timeout=timeout or settings.pdf_parse_timeout_s,
             preexec_fn=_limit_child_resources if resource is not None else None,  # noqa: PLW1509
             env=minimal_env(),  # -I + almost-empty environment: no outside influence
             check=False,

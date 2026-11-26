@@ -537,3 +537,14 @@ def test_carfax_recognises_oil_change_wordings():
         assert classify(line)[0] == "oil_change", line
     assert classify("Engine air filter replaced")[0] == "air_filter"
     assert classify("Oil filter replaced")[0] == "oil_filter"
+
+
+def test_vin_decode_fills_every_field_nhtsa_returns():
+    """Shared cases with Android (catalog/vin_tests.json): same specs, same formatting."""
+    from pathlib import Path
+
+    from app.vin import parse_nhtsa_result
+
+    cases = json.loads((Path(__file__).resolve().parents[2] / "catalog" / "vin_tests.json").read_text())["cases"]
+    for c in cases:
+        assert parse_nhtsa_result(dict(c["result"]))["specs"] == c["specs"], c["name"]

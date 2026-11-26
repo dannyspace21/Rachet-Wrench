@@ -59,7 +59,9 @@ def spec_label(key: str) -> str:
     return key
 
 
-SPEC_SOURCES = {"vin", "sticker", "user", "unverified", "provider", "carfax"}
+def spec_sources() -> set[str]:
+    """The allowed spec source labels (from the shared catalog)."""
+    return set(load_catalog().get("spec_sources", {}))
 
 
 def make_links(make: str, kind: str = "car") -> dict:

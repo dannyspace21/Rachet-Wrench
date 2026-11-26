@@ -65,18 +65,58 @@ def is_valid_vin(vin: str, require_check_digit: bool = True) -> bool:
 # NHTSA vPIC decoder
 # ---------------------------------------------------------------------------
 # Map of vPIC field name -> our spec key (only fields we trust and show).
+# Same rules on Android (Nhtsa.kt); both are checked against
+# catalog/vin_tests.json.  Fields NHTSA leaves empty stay absent.
 _NHTSA_SPEC_FIELDS = {
-    "DisplacementL": "displacement_l",
     "EngineCylinders": "cylinders",
     "FuelTypePrimary": "fuel_type",
     "BodyClass": "body_style",
     "DriveType": "drive_type",
-    "TransmissionStyle": "transmission",
     "Trim": "trim",
-    "PlantCity": "plant",
     "Seats": "seating_capacity",
-    "GVWR": "gvwr_class",
+    "EngineModel": "engine_code",
+    "ValveTrainDesign": "valve_train",
+    "OtherEngineInfo": "engine_details",
+    "Turbo": "turbo",
+    "ElectrificationLevel": "electrification",
+    "Series": "model_code",
+    "Doors": "doors",
+    "TPMS": "tpms_type",
+    "ABS": "abs",
+    "ESC": "stability_control",
 }
+
+
+def _num(v, digits: int = 1) -> str | None:
+    """'113.20' -> '113.2', '240.0' -> '240'; None if not a number."""
+    try:
+        x = round(float(v), digits)
+    except (TypeError, ValueError):
+        return None
+    return str(int(x)) if x == int(x) else f"{x:.{digits}f}".rstrip("0").rstrip(".")
+
+
+def _formatted_specs(r: dict) -> dict:
+    """Specs that need a little formatting (units, joined fields)."""
+    out = {}
+    if r.get("DisplacementL"):
+        try:
+            out["displacement_l"] = f"{float(r['DisplacementL']):.1f}"
+        except ValueError:
+            pass
+    if r.get("TransmissionStyle"):
+        speeds = _num(r.get("TransmissionSpeeds"), 0)
+        out["transmission"] = r["TransmissionStyle"] + (f", {speeds}-speed" if speeds and speeds != "1" else "")
+    if (hp := _num(r.get("EngineHP"), 0)):
+        out["horsepower"] = f"{hp} hp"
+    if (w := _num(r.get("CurbWeightLB"), 0)):
+        out["curb_weight"] = f"{w} lb"
+    if (wb := _num(r.get("WheelBaseShort"), 1)):
+        out["wheelbase"] = f"{wb} in"
+    place = [re.sub(r"\s*\(.*?\)", "", str(r[k])).strip().title() for k in ("PlantCity", "PlantState", "PlantCountry") if r.get(k)]
+    if place:
+        out["plant"] = ", ".join(place)
+    return out
 
 
 def _engine_text(r: dict) -> str:
@@ -117,8 +157,9 @@ def parse_nhtsa_result(r: dict) -> dict:
         vehicle["make"] = vehicle["make"].upper()
     specs = {}
     for src, key in _NHTSA_SPEC_FIELDS.items():
-        if r.get(src) and key != "gvwr_class":
+        if r.get(src):
             specs[key] = str(r[src])
+    specs.update(_formatted_specs(r))
     engine = _engine_text(r)
     if engine:
         specs["engine"] = engine

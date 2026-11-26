@@ -95,6 +95,8 @@ Build-sandbox notes: the sandbox blocks dl.google.com, api.osv.dev, semgrep.dev 
 
 - v1.0.33: issues #3 (VIN decode fallback), #4 (scan box + double read), #5 (notification permission + Check now); compact dismissible sync banner; README + new web and Android screenshots (D67).
 
+- v1.0.34: more specs from the VIN; fluid types and capacities from the owner's manual (review screen, web + phone); paint colour name from the paint code (D68).
+
 ## Ideas for later (not started)
 - Code-sign the desktop app (paid Apple/Microsoft certificates) to remove first-launch warnings; add an Intel-Mac build if needed.
 - Database migrations with Alembic once the schema needs to change.

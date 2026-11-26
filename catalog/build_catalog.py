@@ -279,6 +279,12 @@ SPECS = [
     ("displacement_l", "Displacement", "Engine & oil", "L"),
     ("cylinders", "Cylinders", "Engine & oil", ""),
     ("fuel_type", "Fuel type", "Engine & oil", ""),
+    ("engine_code", "Engine code", "Engine & oil", "e.g. 2GR-FSE"),
+    ("horsepower", "Horsepower", "Engine & oil", "hp"),
+    ("valve_train", "Valve train", "Engine & oil", "e.g. DOHC"),
+    ("engine_details", "Engine details", "Engine & oil", "e.g. port + direct injection"),
+    ("turbo", "Turbo / supercharger", "Engine & oil", ""),
+    ("electrification", "Electrification", "Engine & oil", "e.g. hybrid, BEV"),
     ("oil_type", "Engine oil type / viscosity", "Engine & oil", "e.g. 0W-20 full synthetic"),
     ("oil_capacity", "Engine oil capacity (with filter)", "Engine & oil", "qt or L"),
     ("oil_filter_part", "Oil filter part number", "Engine & oil", ""),
@@ -307,6 +313,10 @@ SPECS = [
     ("drive_type", "Drive type", "Body & build", "e.g. RWD"),
     ("transmission", "Transmission", "Body & build", ""),
     ("trim", "Trim", "Body & build", ""),
+    ("model_code", "Model / chassis code", "Body & build", "e.g. GSC10L"),
+    ("doors", "Doors", "Body & build", ""),
+    ("curb_weight", "Curb weight", "Body & build", "lb"),
+    ("wheelbase", "Wheelbase", "Body & build", "in"),
     ("trim_code", "Trim / option code", "Body & build", ""),
     ("paint_code", "Paint code", "Body & build", ""),
     ("paint_color", "Paint color name", "Body & build", ""),
@@ -317,6 +327,9 @@ SPECS = [
     ("gawr_rear", "GAWR — rear axle", "Body & build", "lb"),
     ("seating_capacity", "Seating capacity", "Body & build", ""),
     ("battery_group", "Battery group size", "Electrical", ""),
+    ("tpms_type", "Tire pressure monitoring", "Safety & equipment", "direct or indirect"),
+    ("abs", "Anti-lock brakes (ABS)", "Safety & equipment", ""),
+    ("stability_control", "Stability control (ESC)", "Safety & equipment", ""),
     ("wiper_size_driver", "Wiper size — driver", "Electrical", "in"),
     ("wiper_size_passenger", "Wiper size — passenger", "Electrical", "in"),
     ("spark_plug_part", "Spark plug part number", "Electrical", ""),
@@ -334,6 +347,7 @@ SPEC_SOURCES = {
     "unverified": "Unverified",
     "provider": "From VIN spec service",
     "carfax": "From Carfax",
+    "manual": "From owner's manual",
 }
 
 # ---------------------------------------------------------------------------
@@ -422,6 +436,41 @@ METRIC_GROUPS = [
 ]
 
 
+# ---------------------------------------------------------------------------
+# Paint code -> colour name, for turning the code on the door-jamb sticker into
+# a name.  Only codes where the sources agree are listed (conflicting or
+# low-confidence ones were left out); the app SUGGESTS the name and the owner
+# confirms it.  Sources (retailer and reference listings, Nov 2026):
+#   importarchive.com/lexus/rc, importarchive.com/lexus/is/2014-,
+#   paintscratch.com (Lexus RC 350, Kia Forte 2014-2024 pages),
+#   automotivetouchup.com (Lexus RC / IS), paintref.com (Toyota 2021, Kia),
+#   chipfixx.ca/pages/kia-paint-codes.
+# ---------------------------------------------------------------------------
+PAINT_CODES = {
+    "lexus": {
+        "083": "Ultra White", "085": "Eminent White Pearl", "077": "Starfire Pearl", "212": "Obsidian", "223": "Caviar",
+        "1J7": "Atomic Silver", "1J4": "Silver Lining Metallic", "1H9": "Nebula Gray Pearl", "3T5": "Infrared",
+        "4W7": "Molten Pearl", "8X1": "Ultrasonic Blue Mica 2.0", "1L1": "Cloudburst Gray", "1L2": "Iridium",
+        "1L8": "Incognito", "8Y6": "Grecian Water", "5C1": "Flare Yellow", "8Z1": "Electric Surge",
+        "3R1": "Matador Red Mica", "3T2": "Redline", "8V3": "Deep Sea Mica",
+    },
+    "toyota": {
+        "040": "Super White", "070": "Blizzard Pearl", "090": "Oxygen White", "1F7": "Classic Silver Metallic", "1G3": "Magnetic Gray Metallic", "1H5": "Cement",
+        "202": "Black", "218": "Midnight Black Metallic", "3U5": "Supersonic Red",
+        "6X3": "Lunar Rock", "8X8": "Blueprint",
+    },
+    "kia": {
+        "UD": "Clear White", "1D": "Clear White", "SWP": "Snow White Pearl", "SWA": "Snow White Pearl",
+        "ABP": "Aurora Black Pearl", "EB": "Ebony Black", "4SS": "Silky Silver Metallic", "3D": "Bright Silver Metallic",
+        "A3D": "Bright Silver Metallic", "D7U": "Planet Blue Pearl", "M9Y": "Desert Sand Metallic", "DRR": "Racing Red",
+        "K3U": "Abyss Blue Pearl", "MST": "Metal Stream Metallic", "B2R": "Deep Sea Blue Metallic",
+        "B4N": "Garnet Red Metallic", "MBN": "Titanium Brown Pearl", "R4R": "Currant Red Metallic",
+        "U4G": "Phantom Gray Metallic", "ABT": "Platinum Graphite Metallic",
+        "DRG": "Fire Orange Metallic", "KDG": "Gravity Grey Pearl", "KDT": "Gravity Grey Pearl", "SPB": "Sporty Blue Pearl",
+    },
+}
+
+
 def main() -> None:
     """Assemble the three lists into one JSON document and write it to disk."""
     keys = [t[0] for t in TYPES]
@@ -455,6 +504,7 @@ def main() -> None:
         "shopping": SHOPPING,
         "spec_parts": SPEC_PARTS,
         "metric_groups": METRIC_GROUPS,
+        "paint_codes": PAINT_CODES,
     }
     out = HERE / "catalog.json"
     out.write_text(json.dumps(catalog, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")

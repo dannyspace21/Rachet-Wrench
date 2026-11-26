@@ -76,6 +76,8 @@ class Settings:
     max_pdf_mb: int = field(default_factory=lambda: _int("RW_MAX_PDF_MB", 40, 1, 500))
     max_pdf_pages: int = field(default_factory=lambda: _int("RW_MAX_PDF_PAGES", 1500, 1, 10000))
     pdf_parse_timeout_s: int = field(default_factory=lambda: _int("RW_PDF_PARSE_TIMEOUT_SECONDS", 30, 1, 600))
+    # Owner's manuals run to hundreds of pages: reading one may take longer.
+    manual_parse_timeout_s: int = field(default_factory=lambda: _int("RW_MANUAL_PARSE_TIMEOUT_SECONDS", 240, 10, 1200))
 
     # NHTSA vPIC VIN decoder (free, US government).  Can be switched off.
     nhtsa_enabled: bool = field(default_factory=lambda: _bool("RW_NHTSA_ENABLED", True))

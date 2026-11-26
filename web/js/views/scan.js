@@ -4,6 +4,9 @@
 //    field (keep / edit / reject) -> save as "From door sticker".
 //  * Carfax: upload the PDF -> proposed entries -> review every row ->
 //    save the approved ones.
+//  * Owner's manual: pick the saved manual (or upload one) -> fluid types and
+//    capacities found in it, each with its page and the line it came from ->
+//    pick / edit / skip each -> save as "From owner's manual".
 //
 // Nothing is saved until you press the final Save button.
 
@@ -221,5 +224,90 @@ export function showCarfaxReview(container, v, result, catalog) {
     allRows.length ? visits.map((vi) => vi.el) : h("div", { class: "notice" }, icon("u-warning"), h("p", {}, "No service records were found in this PDF.")),
     allRows.length ? options : null,
     allRows.length ? h("div", { class: "btn-row review-actions" }, save, h("a", { class: "btn", href: `#/v/${v.id}` }, "Cancel")) : null));
+  container.scrollIntoView({ behavior: "smooth" });
+}
+
+// ===========================================================================
+// Owner's manual -> fluid specs
+// ===========================================================================
+export async function manualView(main, { params }) {
+  const [id] = params;
+  const [v, catalog, atts] = await Promise.all([api(`/api/vehicles/${id}`), getCatalog(), api(`/api/attachments?vehicle_id=${id}`)]);
+  const labels = Object.fromEntries(catalog.specs.map((s) => [s.key, s.label]));
+  const manuals = atts.filter((a) => a.category === "manual" && a.has_file);
+  const choices = manuals.map((a, i) => {
+    const radio = h("input", { type: "radio", name: "manual", value: a.id, checked: i === 0 });
+    return { a, radio, el: h("label", { class: "check" }, radio, h("span", {}, a.caption || a.original_name || "Owner's manual",
+      h("span", { class: "muted small" }, ` · ${dateText(a.created_at)}${a.page_count ? ` · ${a.page_count} pages` : ""}`))) };
+  });
+  const newRadio = h("input", { type: "radio", name: "manual", value: "", checked: !manuals.length });
+  const picker = filePicker({ accept: "application/pdf", multiple: false, label: "Owner's manual (PDF)" });
+  picker.el.addEventListener("change", () => { newRadio.checked = true; });
+  const results = h("div", {});
+  const readBtn = h("button", { class: "btn primary", type: "button", onclick: async () => {
+    const fd = new FormData();
+    const saved = choices.find((c) => c.radio.checked);
+    if (saved) fd.append("attachment_id", saved.a.id);
+    else {
+      const [file] = picker.files();
+      if (!file) { toast("Choose the PDF first", "error"); return; }
+      fd.append("file", file);
+    }
+    readBtn.disabled = true;
+    readBtn.replaceChildren("Reading… (a long manual can take a minute or two)");
+    try {
+      const r = await api(`/api/vehicles/${id}/manual/scan`, { method: "POST", body: fd });
+      picker.clear();
+      showManualReview(results, v, r, labels);
+    } catch (e) { showError(e); } finally { readBtn.disabled = false; readBtn.replaceChildren(icon("u-book"), "Read manual"); }
+  } }, icon("u-book"), "Read manual");
+
+  mount(main, h("a", { class: "back", href: `#/v/${id}/specs` }, icon("u-chevron_left"), vehicleName(v)),
+    h("div", { class: "page-head" }, h("div", {}, h("h1", {}, "Fill from owner's manual"),
+      h("p", { class: "sub muted" }, "Finds the oil, coolant, transmission and brake fluid types and capacities in your manual. You pick and confirm each one."))),
+    h("div", { class: "stack-lg" }, h("section", { class: "card stack" },
+      choices.length ? h("div", { class: "stack" }, h("strong", {}, "Saved manuals"), choices.map((c) => c.el)) : null,
+      h("div", { class: "stack" }, choices.length ? h("label", { class: "check" }, newRadio, h("span", {}, "A different PDF:")) : null, picker.el),
+      h("p", { class: "muted small" }, "The PDF is read on your own server in a locked-down helper process — nothing is sent anywhere. A new PDF is kept with the vehicle's documents. Scanned manuals without a text layer can't be read."),
+      h("div", {}, readBtn)), results));
+}
+
+/** One block per spec: the values found (with page and line), pick one, edit it, or skip it. */
+export function showManualReview(container, v, result, labels) {
+  const blocks = result.specs.map((s) => {
+    const keep = h("input", { type: "checkbox", checked: !s.current, "aria-label": `Save ${labels[s.key] || s.label}` });
+    const input = h("input", { class: "input", value: s.options[0].value, maxlength: 255, "aria-label": labels[s.key] || s.label });
+    const opts = s.options.map((o, i) => {
+      const radio = h("input", { type: "radio", name: `opt-${s.key}`, checked: i === 0 });
+      radio.addEventListener("change", () => { input.value = o.value; keep.checked = true; block.classList.remove("rejected"); });
+      return h("label", { class: "manual-option" }, radio, h("span", {}, h("strong", {}, o.value),
+        h("span", { class: "muted small" }, ` · page ${o.page}`), h("span", { class: "snippet small" }, o.snippet)));
+    });
+    const block = h("div", { class: "review-row manual-block" + (keep.checked ? "" : " rejected") }, keep,
+      h("div", { class: "field" }, h("span", {}, labels[s.key] || s.label),
+        s.current ? h("span", { class: "hint" }, "Saved now: ", h("strong", {}, s.current)) : null,
+        opts.length > 1 ? h("div", { class: "stack" }, opts) : h("div", {}, opts), input,
+        h("span", { class: "hint" }, h("span", { class: "pill src-manual" }, "From owner's manual"))));
+    keep.addEventListener("change", () => block.classList.toggle("rejected", !keep.checked));
+    return { s, keep, input, block };
+  });
+  const save = h("button", { class: "btn primary", type: "button", onclick: async () => {
+    const fields = blocks.filter((b) => b.keep.checked && b.input.value.trim()).map((b) => ({ key: b.s.key, value: b.input.value.trim() }));
+    if (!fields.length) { toast("Nothing selected to save", "error"); return; }
+    save.disabled = true;
+    try {
+      await api(`/api/vehicles/${v.id}/manual/apply`, { method: "POST", body: { fields } });
+      toast(`${fields.length} spec${fields.length === 1 ? "" : "s"} saved`);
+      location.hash = `#/v/${v.id}/specs`;
+    } catch (e) { showError(e); save.disabled = false; }
+  } }, icon("u-check"), "Save selected");
+  const none = result.readable_pages === 0
+    ? "This PDF has no readable text (it may be a scan of paper pages), so nothing could be found."
+    : "No fluid specs were found in this PDF. Look for the “Specifications” or “Capacities” pages and enter them by hand.";
+  mount(container, h("section", { class: "card stack" },
+    h("div", { class: "section-title" }, h("h2", {}, "Review what was found"), h("span", { class: "pill" }, `${result.readable_pages} of ${result.pages} pages read`)),
+    blocks.length ? h("p", { class: "muted" }, "Each value shows the page and line it came from. Check it against the manual, pick the right one, fix it if needed. Specs that already have a value are unticked. Nothing is saved until you press Save.") : null,
+    blocks.length ? h("div", {}, blocks.map((b) => b.block)) : h("div", { class: "notice" }, icon("u-warning"), h("p", {}, none)),
+    blocks.length ? h("div", { class: "btn-row" }, save, h("a", { class: "btn", href: `#/v/${v.id}/specs` }, "Cancel")) : null));
   container.scrollIntoView({ behavior: "smooth" });
 }

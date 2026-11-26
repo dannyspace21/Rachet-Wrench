@@ -40,3 +40,18 @@ class VinFinderTest {
         assertTrue(VinFinder.fromText("").isEmpty())
     }
 }
+
+/** NHTSA answers -> specs: the same results as the server (catalog/vin_tests.json). */
+class NhtsaSpecsTest {
+    @org.junit.Test fun sameSpecsAsTheServer() {
+        val root = generateSequence(java.io.File("").absoluteFile) { it.parentFile }.first { java.io.File(it, "catalog/vin_tests.json").isFile }
+        val cases = kotlinx.serialization.json.Json.parseToJsonElement(java.io.File(root, "catalog/vin_tests.json").readText())
+            .let { kotlinx.serialization.json.JsonObject::class.java.cast(it) }["cases"]!!.let { it as kotlinx.serialization.json.JsonArray }
+        for (c in cases) {
+            val o = c as kotlinx.serialization.json.JsonObject
+            val expected = (o["specs"] as kotlinx.serialization.json.JsonObject).mapValues { (it.value as kotlinx.serialization.json.JsonPrimitive).content }
+            val got = com.ratchetwrench.app.data.Nhtsa.parse(o["result"] as kotlinx.serialization.json.JsonObject).specs
+            org.junit.Assert.assertEquals((o["name"] as kotlinx.serialization.json.JsonPrimitive).content, expected, got.toMap())
+        }
+    }
+}

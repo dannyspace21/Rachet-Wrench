@@ -88,7 +88,7 @@ Everything else stays on your server and your phone:
 - **Metadata removal:** images are **fully re-encoded from their pixels**. This removes **EXIF, including GPS location**, camera details, embedded thumbnails, comments and anything appended to the file. HEIC is converted to JPEG. Tests check that GPS and camera data are gone.
 - **Untrusted PDFs** (Carfax reports, manuals) are opened only by a separate **sandboxed helper process**:
   - isolated Python (`-I`) with an empty environment
-  - **1 GB memory cap, CPU-time cap and wall-clock timeout** (30 s)
+  - **1 GB memory cap, CPU-time cap and wall-clock timeout** (30 s; 240 s when reading a whole owner's manual for specs, which happens only on your own server — nothing is sent out)
   - page limits: 1,500 pages for manuals, 60 for Carfax
   - parsed with pypdf, which never runs embedded scripts
 - **Storage and serving:**

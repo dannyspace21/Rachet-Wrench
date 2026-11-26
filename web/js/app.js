@@ -9,6 +9,7 @@
 //   #/e/<id>               one entry;  #/e/<id>/edit to change it
 //   #/v/<id>/sticker       door-jamb sticker scan + review
 //   #/v/<id>/carfax        Carfax import + review
+//   #/v/<id>/manual        owner's manual -> fluid specs + review
 //   #/shopping             the shopping list
 //   #/settings, #/icons, #/login
 
@@ -18,7 +19,7 @@ import { loginView, setupView } from "./views/login.js";
 import { dashboardView } from "./views/dashboard.js";
 import { vehicleView, vehicleFormView } from "./views/vehicle.js";
 import { entryFormView, entryDetailView } from "./views/entry.js";
-import { stickerView, carfaxView } from "./views/scan.js";
+import { stickerView, carfaxView, manualView } from "./views/scan.js";
 import { settingsView, iconsView } from "./views/settings.js";
 import { shoppingListView } from "./views/shopping-list.js";
 
@@ -32,6 +33,7 @@ const routes = [
   [new RegExp(`^/v/${UUID}/entry/new$`), entryFormView, { nav: "home" }],
   [new RegExp(`^/v/${UUID}/sticker$`), stickerView, { nav: "home" }],
   [new RegExp(`^/v/${UUID}/carfax$`), carfaxView, { nav: "home" }],
+  [new RegExp(`^/v/${UUID}/manual$`), manualView, { nav: "home" }],
   [new RegExp(`^/v/${UUID}(?:/(history|specs|reminders|parts|metrics|odometer|docs))?$`), vehicleView, { nav: "home" }],
   [new RegExp(`^/e/${UUID}/edit$`), entryFormView, { nav: "home", entryEdit: true }],
   [new RegExp(`^/e/${UUID}$`), entryDetailView, { nav: "home" }],

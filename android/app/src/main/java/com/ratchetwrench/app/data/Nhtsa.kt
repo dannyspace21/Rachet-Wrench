@@ -42,12 +42,28 @@ object Nhtsa {
         .followSslRedirects(false)
         .build()
 
-    // vPIC field -> our spec key (same list as the server).
+    // vPIC field -> our spec key (same rules as the server's vin.py; both
+    // checked against catalog/vin_tests.json).  Empty fields stay absent.
     private val specFields = mapOf(
-        "DisplacementL" to "displacement_l", "EngineCylinders" to "cylinders", "FuelTypePrimary" to "fuel_type",
-        "BodyClass" to "body_style", "DriveType" to "drive_type", "TransmissionStyle" to "transmission",
-        "Trim" to "trim", "PlantCity" to "plant", "Seats" to "seating_capacity",
+        "EngineCylinders" to "cylinders", "FuelTypePrimary" to "fuel_type", "BodyClass" to "body_style",
+        "DriveType" to "drive_type", "Trim" to "trim", "Seats" to "seating_capacity", "EngineModel" to "engine_code",
+        "ValveTrainDesign" to "valve_train", "OtherEngineInfo" to "engine_details", "Turbo" to "turbo",
+        "ElectrificationLevel" to "electrification", "Series" to "model_code", "Doors" to "doors",
+        "TPMS" to "tpms_type", "ABS" to "abs", "ESC" to "stability_control",
     )
+
+    /** "113.20" -> "113.2", "240.0" -> "240" (like the server's _num). */
+    private fun num(v: String?, digits: Int): String? {
+        val x = v?.toBigDecimalOrNull()?.setScale(digits, java.math.RoundingMode.HALF_EVEN) ?: return null
+        return x.stripTrailingZeros().toPlainString()
+    }
+
+    /** Like Python's str.title(): capital after any non-letter. */
+    private fun title(s: String): String {
+        val b = StringBuilder(); var prevLetter = false
+        for (c in s.lowercase()) { b.append(if (!prevLetter && c.isLetter()) c.uppercaseChar() else c); prevLetter = c.isLetter() }
+        return b.toString()
+    }
 
     private val modelCache = java.util.concurrent.ConcurrentHashMap<String, List<String>>()
     private val makeOk = Regex("^[A-Za-z0-9 .&'-]{1,40}$")
@@ -153,9 +169,19 @@ object Nhtsa {
         if (make == "Bmw" || make == "Gmc") make = make.uppercase()
         val specs = linkedMapOf<String, String>()
         for ((src, key) in specFields) v(src)?.let { specs[key] = it }
+        v("DisplacementL")?.toDoubleOrNull()?.let { specs["displacement_l"] = "%.1f".format(java.util.Locale.US, it) }
+        v("TransmissionStyle")?.let { style ->
+            val speeds = num(v("TransmissionSpeeds"), 0)
+            specs["transmission"] = style + if (speeds != null && speeds != "1") ", $speeds-speed" else ""
+        }
+        num(v("EngineHP"), 0)?.let { specs["horsepower"] = "$it hp" }
+        num(v("CurbWeightLB"), 0)?.let { specs["curb_weight"] = "$it lb" }
+        num(v("WheelBaseShort"), 1)?.let { specs["wheelbase"] = "$it in" }
+        listOf("PlantCity", "PlantState", "PlantCountry").mapNotNull { k -> v(k)?.let { title(it.replace(Regex("""\s*\(.*?\)"""), "").trim()) } }
+            .takeIf { it.isNotEmpty() }?.let { specs["plant"] = it.joinToString(", ") }
         // Short engine description, only from returned fields, e.g. "1.8L In-Line4".
         val engine = buildList {
-            v("DisplacementL")?.toDoubleOrNull()?.let { add("%.1fL".format(it)) }
+            v("DisplacementL")?.toDoubleOrNull()?.let { add("%.1fL".format(java.util.Locale.US, it)) }
             val cyl = v("EngineCylinders")
             val cfg = v("EngineConfiguration")?.substringBefore('-')?.trim()
             if (cyl != null) add(if (cfg != null) "$cfg$cyl" else "$cyl-cyl")

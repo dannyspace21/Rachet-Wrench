@@ -183,7 +183,7 @@ fun VehicleScreen(nav: NavHostController, id: String) {
                 1 -> PartsTab(v)
                 2 -> HistoryTab(nav, v)
                 3 -> MetricsTab(nav, v)
-                else -> SpecsTab(v)
+                else -> SpecsTab(nav, v)
             }
         }
     }
@@ -255,16 +255,19 @@ private fun HistoryTab(nav: NavHostController, v: Vehicle) {
 @Composable
 fun SourcePill(source: String) {
     val x = LocalExtra.current
+    // Labels come from the shared catalog, so they match the web app.
+    val label = Catalog.get(LocalContext.current).spec_sources[source] ?: "Unverified"
     when (source) {
-        "vin", "provider", "carfax" -> Pill(if (source == "vin") "From VIN" else "From VIN spec service", MaterialTheme.colorScheme.surfaceVariant, MaterialTheme.colorScheme.onSurface)
-        "sticker" -> Pill("From door sticker", MaterialTheme.colorScheme.primaryContainer, MaterialTheme.colorScheme.onPrimaryContainer)
-        "user" -> Pill("Entered by me", x.okSoft, x.ok)
-        else -> Pill("Unverified", x.warnSoft, x.warn)
+        "vin", "provider", "carfax" -> Pill(label, MaterialTheme.colorScheme.surfaceVariant, MaterialTheme.colorScheme.onSurface)
+        "sticker" -> Pill(label, MaterialTheme.colorScheme.primaryContainer, MaterialTheme.colorScheme.onPrimaryContainer)
+        "manual" -> Pill(label, MaterialTheme.colorScheme.tertiaryContainer, MaterialTheme.colorScheme.onTertiaryContainer)
+        "user" -> Pill(label, x.okSoft, x.ok)
+        else -> Pill(label, x.warnSoft, x.warn)
     }
 }
 
 @Composable
-private fun SpecsTab(v: Vehicle) {
+private fun SpecsTab(nav: NavHostController, v: Vehicle) {
     val repo = LocalRepo.current
     val ctx = LocalContext.current
     val scope = rememberCoroutineScope()
@@ -278,6 +281,22 @@ private fun SpecsTab(v: Vehicle) {
         item {
             Text("Specs are never guessed. Each value shows where it came from. Blank means unknown — tap a row to confirm or edit.",
                 color = LocalExtra.current.muted, style = MaterialTheme.typography.bodySmall)
+        }
+        item {
+            Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                ActionChip("Owner's manual", "book") { nav.navigate("manual/${v.id}") }
+                ActionChip("Door sticker", "sticker") { nav.navigate("sticker/${v.id}") }
+            }
+        }
+        // Paint code known but no colour name: suggest one from the curated table.
+        val code = byKey["paint_code"]?.value
+        val colour = if (!code.isNullOrBlank() && byKey["paint_color"]?.value.isNullOrBlank())
+            com.ratchetwrench.app.domain.Paint.name(Catalog.get(ctx).paint_codes, v.make, code) else null
+        if (colour != null) item {
+            SectionCard {
+                Text("Paint code $code on a ${v.make} is $colour.")
+                SecondaryButton("Use it", "check") { scope.launch { repo.saveSpec(v.id, "paint_color", colour, "user") } }
+            }
         }
         defs.groupBy { it.group }.forEach { (group, list) ->
             item { Text(group.uppercase(), style = MaterialTheme.typography.labelMedium, color = LocalExtra.current.muted, modifier = Modifier.padding(top = 10.dp)) }

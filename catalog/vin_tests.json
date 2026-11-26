@@ -1,0 +1,30 @@
+{
+  "_comment": "Real NHTSA vPIC DecodeVinValues answers (trimmed) and the specs both the server (vin.py) and Android (Nhtsa.kt) must produce. Values are formatted, never guessed: a field NHTSA leaves empty stays absent.",
+  "cases": [
+    {"name": "2003 Honda Accord coupe",
+     "result": {"ModelYear": "2003", "Make": "HONDA", "Model": "Accord", "Trim": "EX-V6", "VehicleType": "PASSENGER CAR", "BodyClass": "Coupe",
+                "DisplacementL": "2.998832712", "EngineCylinders": "6", "EngineConfiguration": "V-Shaped", "EngineHP": "240", "EngineModel": "J30A4",
+                "FuelTypePrimary": "Gasoline", "TransmissionSpeeds": "5", "TransmissionStyle": "Automatic", "ValveTrainDesign": "Single Overhead Cam (SOHC)",
+                "Doors": "2", "PlantCity": "MARYSVILLE", "PlantState": "OHIO", "PlantCountry": "UNITED STATES (USA)", "DriveType": "", "Seats": "", "ErrorCode": "0"},
+     "specs": {"displacement_l": "3.0", "cylinders": "6", "fuel_type": "Gasoline", "body_style": "Coupe", "transmission": "Automatic, 5-speed",
+               "trim": "EX-V6", "plant": "Marysville, Ohio, United States", "engine_code": "J30A4", "horsepower": "240 hp",
+               "valve_train": "Single Overhead Cam (SOHC)", "doors": "2", "engine": "3.0L V6 (J30A4)"}},
+    {"name": "2019 Tesla Model 3",
+     "result": {"ModelYear": "2019", "Make": "TESLA", "Model": "Model 3", "VehicleType": "PASSENGER CAR", "BodyClass": "Sedan/Saloon",
+                "FuelTypePrimary": "Electric", "ElectrificationLevel": "BEV (Battery Electric Vehicle)", "OtherEngineInfo": "Single Motor - Standard",
+                "TransmissionSpeeds": "1", "TransmissionStyle": "Automatic", "Doors": "4", "Seats": "5", "CurbWeightLB": "4100", "WheelBaseShort": "113.20",
+                "TPMS": "Direct", "ABS": "Standard", "ESC": "Standard", "PlantCity": "FREMONT", "PlantState": "CALIFORNIA", "PlantCountry": "UNITED STATES (USA)",
+                "EngineCylinders": "Not Applicable", "ErrorCode": "0"},
+     "specs": {"fuel_type": "Electric", "body_style": "Sedan/Saloon", "transmission": "Automatic", "seating_capacity": "5",
+               "plant": "Fremont, California, United States", "engine_details": "Single Motor - Standard", "electrification": "BEV (Battery Electric Vehicle)",
+               "doors": "4", "curb_weight": "4100 lb", "wheelbase": "113.2 in", "tpms_type": "Direct", "abs": "Standard", "stability_control": "Standard"}},
+    {"name": "2015 Lexus RC 350",
+     "result": {"ModelYear": "2015", "Make": "LEXUS", "Model": "RC", "Trim": "350", "VehicleType": "PASSENGER CAR", "BodyClass": "Coupe",
+                "DisplacementL": "3.5", "EngineCylinders": "6", "EngineConfiguration": "V-Shaped", "EngineModel": "2GR-FSE", "FuelTypePrimary": "Gasoline",
+                "OtherEngineInfo": "Engine Type: PORT+DIRECT", "ValveTrainDesign": "Dual Overhead Cam (DOHC)", "DriveType": "4x2", "Doors": "2",
+                "Series": "GSC10L/GSC15L/ASC10L/GSC16L", "TPMS": "Direct", "PlantCity": "TAHARA", "PlantState": "AICHI", "PlantCountry": "JAPAN", "ErrorCode": "0"},
+     "specs": {"displacement_l": "3.5", "cylinders": "6", "fuel_type": "Gasoline", "body_style": "Coupe", "drive_type": "4x2", "trim": "350",
+               "plant": "Tahara, Aichi, Japan", "engine_code": "2GR-FSE", "valve_train": "Dual Overhead Cam (DOHC)", "engine_details": "Engine Type: PORT+DIRECT",
+               "model_code": "GSC10L/GSC15L/ASC10L/GSC16L", "doors": "2", "tpms_type": "Direct", "engine": "3.5L V6 (2GR-FSE)"}}
+  ]
+}

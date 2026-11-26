@@ -197,6 +197,26 @@ class Api(private val store: SecureStore) {
         return execute(request(path).post(form.build() as RequestBody).build())
     }
 
+    /**
+     * POST a multipart form (optionally with one file under "file") and wait
+     * up to [timeoutSeconds] for the answer — reading a long owner's manual
+     * on the computer can take a few minutes.
+     */
+    fun postForm(path: String, fields: Map<String, String>, file: File? = null, mime: String = "application/pdf", timeoutSeconds: Long = 300): String {
+        val form = MultipartBody.Builder().setType(MultipartBody.FORM)
+        fields.forEach { (k, v) -> form.addFormDataPart(k, v) }
+        if (file != null) form.addFormDataPart("file", file.name, file.asRequestBody(mime.toMediaType()))
+        val slow = client.newBuilder().readTimeout(timeoutSeconds, TimeUnit.SECONDS).callTimeout(timeoutSeconds + 30, TimeUnit.SECONDS).build()
+        slow.newCall(request(path).post(form.build() as RequestBody).build()).execute().use { res ->
+            val body = res.body.string()
+            if (!res.isSuccessful) {
+                val msg = runCatching { json.parseToJsonElement(body).jsonObject["detail"]?.jsonPrimitive?.content }.getOrNull()
+                throw ApiException(res.code, msg ?: "Request failed (${res.code}).")
+            }
+            return body
+        }
+    }
+
     // ---- Convenience calls ------------------------------------------------
     /** Is a Ratchet Wrench server answering at this address? (GET /api/health) */
     fun isRatchetWrench(): Boolean = try {

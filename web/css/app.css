@@ -249,6 +249,9 @@ a.item:hover { border-color: color-mix(in srgb, var(--brand) 40%, var(--border))
 .pill.ok { background: var(--ok-soft); color: var(--ok); }
 .pill.src-vin { background: #e7efff; color: #1d4ed8; }
 .pill.src-sticker { background: var(--brand-soft); color: var(--brand-strong); }
+.pill.src-manual { background: #f1e8ff; color: #6b21a8; }
+:root[data-theme="dark"] .pill.src-manual { background: #2a1840; color: #d8b4fe; }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .pill.src-manual { background: #2a1840; color: #d8b4fe; } }
 .pill.src-user { background: var(--ok-soft); color: var(--ok); }
 .pill.src-unverified { background: var(--warn-soft); color: var(--warn); }
 :root[data-theme="dark"] .pill.src-vin { background: #16264a; color: #93b4ff; }
@@ -298,6 +301,9 @@ a.item:hover { border-color: color-mix(in srgb, var(--brand) 40%, var(--border))
 /* Review screens (sticker / Carfax) */
 .review-row { display: grid; grid-template-columns: auto 1fr; gap: 14px; align-items: start; padding: 14px 0; border-bottom: 1px solid var(--border); }
 .review-row.rejected { opacity: .5; }
+.manual-option { display: flex; gap: 10px; align-items: flex-start; padding: 6px 0; cursor: pointer; }
+.manual-option .snippet { display: block; color: var(--muted); font-style: italic; overflow-wrap: anywhere; }
+.manual-block .field > .input { margin-top: 6px; }
 .pair-qr { width: 240px; height: 240px; background: #fff; border-radius: 12px; padding: 6px; image-rendering: pixelated; }
 .review-fields { display: grid; gap: 10px; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); }
 /* Carfax review: one compact line per item — tick, icon, type, kind —
