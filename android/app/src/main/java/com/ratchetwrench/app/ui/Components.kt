@@ -219,6 +219,12 @@ fun prettyDate(iso: String?): String = try {
     if (iso == null) "—" else LocalDate.parse(iso.take(10)).format(DateTimeFormatter.ofLocalizedDate(FormatStyle.MEDIUM))
 } catch (e: Exception) { iso ?: "—" }
 
+/** "Nov 26, 2026, 2:15 PM" (local time) from an ISO timestamp. */
+fun prettyDateTime(iso: String?): String = try {
+    if (iso == null) "—" else java.time.Instant.parse(iso).atZone(java.time.ZoneId.systemDefault())
+        .format(DateTimeFormatter.ofLocalizedDateTime(FormatStyle.MEDIUM, FormatStyle.SHORT))
+} catch (e: Exception) { prettyDate(iso) }
+
 fun parseMoney(text: String): Int? = text.filter { it.isDigit() || it == '.' }.toBigDecimalOrNull()?.movePointRight(2)?.toInt()
 
 @Composable

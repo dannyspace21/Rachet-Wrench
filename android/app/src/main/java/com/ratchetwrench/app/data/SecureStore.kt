@@ -23,9 +23,14 @@ import javax.crypto.spec.GCMParameterSpec
 class SecureStore(context: Context) {
     private val prefs: SharedPreferences = context.getSharedPreferences("rw_prefs", Context.MODE_PRIVATE)
 
-    private companion object {
-        const val KEY_ALIAS = "ratchet_wrench_token_key"
-        const val TRANSFORM = "AES/GCM/NoPadding"
+    companion object {
+        private const val KEY_ALIAS = "ratchet_wrench_token_key"
+        private const val TRANSFORM = "AES/GCM/NoPadding"
+
+        /** Tests only: the build machine has no Android Keystore, so a
+         *  test can hold the token here instead.  Never set by the app. */
+        @androidx.annotation.VisibleForTesting
+        @Volatile internal var tokenForTests: String? = null
     }
 
     /** Get (or create on first use) the Keystore key. */
@@ -46,6 +51,7 @@ class SecureStore(context: Context) {
     /** The login token (decrypted), or null when signed out. */
     var token: String?
         get() {
+            tokenForTests?.let { return it }
             val stored = prefs.getString("token_enc", null) ?: return null
             return try {
                 val bytes = Base64.decode(stored, Base64.NO_WRAP)
@@ -58,6 +64,7 @@ class SecureStore(context: Context) {
             }
         }
         set(value) {
+            if (tokenForTests != null) { tokenForTests = value; return }
             if (value == null) {
                 prefs.edit().remove("token_enc").apply()
                 return
@@ -123,6 +130,11 @@ class SecureStore(context: Context) {
     var notesSeenCode: Int
         get() = prefs.getInt("notes_seen", 0)
         set(v) = prefs.edit().putInt("notes_seen", v).apply()
+
+    /** Why the last sync failed (plain English), or null after a good sync. */
+    var lastSyncError: String?
+        get() = prefs.getString("last_sync_error", null)
+        set(v) = prefs.edit().putString("last_sync_error", v).apply()
 
     var lastSyncOk: String?
         get() = prefs.getString("last_sync_ok", null)

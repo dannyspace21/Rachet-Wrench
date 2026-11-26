@@ -441,3 +441,19 @@ The desktop app *is* the existing server plus web app, packaged to run on a PC. 
   - A synthetic two-column Car Care PDF covers DIY detection, shop-name cleanup, each mapping above, the left column being ignored, reminders with the newest "last done", odometer, duplicate skipping and replacing.
   - The classic-format test is updated to the per-service grouping.
   - All 60 server tests pass.
+
+### D56. Sync problems are shown and fixable; a tighter Carfax review screen
+- **What you reported:** after the first connection, the phone and the computer "no longer see each other".
+- **What testing showed:**
+  - **The sync logic is sound.** A new opt-in `LiveSyncTest` runs the phone's real sync code against a real server, with your actual Carfax import loaded (110 entries on one vehicle). It covers pull, push of phone changes, a change made on the computer, an idle sync and a phone edit, and all of them work. Every server record reaches the phone. Logins also survive a server restart.
+  - **So the failures are about the connection.** The likely causes: the computer's address changed (a new IP after a restart), the desktop app was closed, or the phone was signed in to the *other* server (desktop app and Docker are separate). Before 1.0.15, one photo the server rejected also made every sync fail.
+  - **The phone hid all of this.** Errors showed as small grey text with a raw exception, and a missing login made sync silently do nothing.
+- **Android 1.0.17:**
+  - **Garage:** when a sync fails, a clear card says so, explains why in plain English (`UrlPolicy.explainSync`, which also covers an ended login, 401), shows the last good sync time, and offers **Try again** and **Fix in Settings**.
+  - **Settings → Sync:** shows the last successful sync with time and the last problem. **Sync now**, **Change address** and **Sign in again** buttons.
+  - **Change address:** checks the new address is a Ratchet Wrench server and that the login still works there, without signing out. A plain-HTTP home address needs the same explicit "allow" tick.
+  - **No more silent sync:** sync never silently does nothing; a missing login is reported.
+  - **Switching servers:** signing in to a different server marks everything on the phone for upload, so both sides match. Re-sending to the same server is harmless, because the newest copy wins.
+  - **Test hook:** `SecureStore.tokenForTests` lets tests run without the Android Keystore. The app never sets it.
+- **Web Carfax review:** each item is now one line (tick, icon, type, kind) with the description underneath. The separate title is gone because the type drop-down already names it, and the visit fields sit two per line on a phone.
+- **Docs:** `docs/DESKTOP.md` covers "connected once but won't sync" and explains that the desktop app and Docker are separate servers.

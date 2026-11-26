@@ -67,6 +67,8 @@ Build-sandbox notes: the sandbox blocks dl.google.com, api.osv.dev, semgrep.dev 
 
 - Carfax import rebuilt (Service History page, per-service entries with icons, odometer + reminders) — server/desktop/web, Android 1.0.16 types (D55).
 
+- v1.0.17: sync problems shown clearly with fixes (Change address, Sign in again); live sync test; compact Carfax review (D56).
+
 ## Ideas for later (not started)
 - Code-sign the desktop app (paid Apple/Microsoft certificates) to remove first-launch warnings; add an Intel-Mac build if needed.
 - Run the Android app on a real device/emulator and add phone screenshots to the README (no emulator was available in the build sandbox).

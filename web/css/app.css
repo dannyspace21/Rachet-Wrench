@@ -299,6 +299,21 @@ a.item:hover { border-color: color-mix(in srgb, var(--brand) 40%, var(--border))
 .review-row { display: grid; grid-template-columns: auto 1fr; gap: 14px; align-items: start; padding: 14px 0; border-bottom: 1px solid var(--border); }
 .review-row.rejected { opacity: .5; }
 .review-fields { display: grid; gap: 10px; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); }
+/* Carfax review: one compact line per item — tick, icon, type, kind —
+   with the description right underneath (no separate title). */
+.carfax-visit { gap: 10px; }
+.carfax-visit .review-fields { grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); }
+.carfax-item { display: grid; grid-template-columns: auto auto minmax(0, 1fr) minmax(0, 170px); gap: 6px 10px; align-items: center;
+  padding: 8px 0; border-bottom: 1px solid var(--border); }
+.carfax-item:last-child { border-bottom: 0; }
+.carfax-item.rejected { opacity: .5; }
+.carfax-item .type-badge { width: 40px; height: 40px; }
+.carfax-item .custom, .carfax-item .desc, .carfax-item .note { grid-column: 3 / -1; }
+.carfax-item .note { justify-self: start; }
+@media (max-width: 560px) {
+  .carfax-item { grid-template-columns: auto auto minmax(0, 1fr); }
+  .carfax-item .kind { grid-column: 3; }
+}
 .notice { display: flex; gap: 12px; padding: 14px 16px; border-radius: 14px; background: var(--warn-soft); color: var(--text); border: 1px solid color-mix(in srgb, var(--warn) 30%, transparent); }
 .notice .i { color: var(--warn); margin-top: 2px; }
 .notice.info { background: var(--surface-2); border-color: var(--border); }

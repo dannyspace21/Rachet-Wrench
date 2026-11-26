@@ -2,6 +2,20 @@
   "_comment": "Release notes shown in the app ('What's new' pop-up after an update, and Settings > Release notes) and on the GitHub release page. Newest first. EVERY Android release needs an entry here whose version matches the release (1.0.<workflow run number>); the release workflow refuses to publish otherwise. Keep it high level and in plain English.",
   "releases": [
     {
+      "version": "1.0.17",
+      "date": "2026-11-26",
+      "new": [
+        "Settings → Sync: “Change address” (keeps you signed in — handy when your computer gets a new address after a restart) and “Sign in again”."
+      ],
+      "improved": [
+        "When syncing fails, the Garage now says so clearly, explains why in plain English, and shows when the last good sync was.",
+        "Signing in to a different computer or server sends everything on this phone there, so both end up with the same records."
+      ],
+      "fixed": [
+        "Sync could silently stop working (for example after the login ended) without telling you."
+      ]
+    },
+    {
       "version": "1.0.16",
       "date": "2026-11-26",
       "new": [

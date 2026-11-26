@@ -114,6 +114,13 @@ object UrlPolicy {
         }
     }
 
+    /** Like [explain], for a sync of an account that was already signed in. */
+    fun explainSync(e: Throwable, url: String): String =
+        if (e is ApiException && e.status == 401)
+            "Your sign-in on the computer has ended (it was signed out, the password was changed, or it expired). " +
+                "Tap “Sign in again” in Settings to keep syncing — nothing on this phone is lost."
+        else explain(e, url)
+
     /** Explain why a server address is not allowed, or null if it is fine. */
     fun problem(url: String, allowHttpLocal: Boolean): String? {
         val parsed = url.toHttpUrlOrNull() ?: return "Enter the address of your computer or server, e.g. http://192.168.1.20:8077"

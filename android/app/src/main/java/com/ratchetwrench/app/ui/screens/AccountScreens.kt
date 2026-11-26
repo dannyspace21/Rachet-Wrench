@@ -38,6 +38,7 @@ import androidx.compose.ui.unit.dp
 import androidx.navigation.NavHostController
 import com.ratchetwrench.app.data.Api
 import com.ratchetwrench.app.data.UrlPolicy
+import com.ratchetwrench.app.data.ApiException
 import com.ratchetwrench.app.sync.ReminderWorker
 import com.ratchetwrench.app.sync.SyncEngine
 import com.ratchetwrench.app.sync.SyncWorker
@@ -108,20 +109,24 @@ fun LoginScreen(onSignedIn: () -> Unit, onBack: (() -> Unit)? = null) {
         scope.launch {
             try {
                 val syncProblem = withContext(Dispatchers.IO) {
+                    val previousUrl = repo.store.serverUrl
                     repo.store.serverUrl = url
                     repo.store.allowHttpLocal = allowHttp
                     repo.store.token = null
                     val api = Api(repo.store)
                     // Make sure this really is a Ratchet Wrench server first.
-                    if (!api.isRatchetWrench()) throw com.ratchetwrench.app.data.ApiException(404, "Not a Ratchet Wrench server.")
+                    if (!api.isRatchetWrench()) throw ApiException(404, "Not a Ratchet Wrench server.")
                     repo.store.token = api.login(user.trim(), pass)
                     repo.store.username = user.trim()
                     val me = api.me()
                     repo.store.serverAiVision = me["server"]?.jsonObject?.get("ai_vision_available")?.jsonPrimitive?.content == "true"
                     me["settings"]?.jsonObject?.get("theme")?.jsonPrimitive?.content?.let { repo.store.theme = it }
                     repo.store.lastSince = null
-                    // Coming from phone-only mode: upload everything made on this phone.
-                    if (repo.store.mode == "local") repo.db.markEverythingForUpload()
+                    // Coming from phone-only mode, or signing in to a different
+                    // computer/server: send everything this phone has, so the
+                    // two sides end up with the same data.  (Harmless when it's
+                    // the same server: the server keeps whichever copy is newest.)
+                    if (repo.store.mode == "local" || previousUrl != url) repo.db.markEverythingForUpload()
                     repo.store.mode = "server"
                     // First full upload + download.  Signed in either way: if
                     // this fails, background sync simply tries again later.
@@ -234,12 +239,31 @@ fun SettingsScreen(nav: NavHostController, onSignedOut: () -> Unit) {
             SectionCard {
                 Text("Sync", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
                 if (repo.store.mode == "server") {
-                    Text("Connected to: ${repo.store.serverUrl}", color = MaterialTheme.colorScheme.onSurfaceVariant)
-                    Text("Last successful sync: ${repo.store.lastSyncOk ?: "never"}", color = MaterialTheme.colorScheme.onSurfaceVariant)
-                    SecondaryButton("Sync now", "sync") {
-                        scope.launch {
-                            message = try { withContext(Dispatchers.IO) { SyncEngine(ctx).run() }; "Synced." } catch (e: Exception) { "Sync failed: ${e.message}" }
+                    var serverUrl by remember { mutableStateOf(repo.store.serverUrl) }
+                    var lastOk by remember { mutableStateOf(repo.store.lastSyncOk) }
+                    var lastError by remember { mutableStateOf(repo.store.lastSyncError) }
+                    var syncing by remember { mutableStateOf(false) }
+                    var changing by remember { mutableStateOf(false) }
+                    Text("Connected to: $serverUrl", color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    Text("Last successful sync: ${lastOk?.let { com.ratchetwrench.app.ui.prettyDateTime(it) } ?: "never"}",
+                        color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    lastError?.let { Text("Last sync problem: $it", color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodySmall) }
+                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        SecondaryButton(if (syncing) "Syncing…" else "Sync now", "sync", enabled = !syncing) {
+                            syncing = true
+                            scope.launch {
+                                message = try { withContext(Dispatchers.IO) { SyncEngine(ctx).run() }; "Synced." }
+                                    catch (e: Exception) { "Sync failed: ${repo.store.lastSyncError ?: e.message}" }
+                                lastOk = repo.store.lastSyncOk; lastError = repo.store.lastSyncError; syncing = false
+                            }
                         }
+                        SecondaryButton("Change address", "edit") { changing = true }
+                    }
+                    SecondaryButton("Sign in again", "key") { nav.navigate("login") }
+                    Text("Tip: if your computer restarted, its address may have changed — check the desktop app's window and use “Change address”.",
+                        color = LocalExtra.current.muted, style = MaterialTheme.typography.bodySmall)
+                    if (changing) ChangeAddressDialog(onClose = { changing = false }) { url, note ->
+                        serverUrl = url; message = note; changing = false
                     }
                 } else {
                     Text("This phone only — your data stays on this phone.", color = MaterialTheme.colorScheme.onSurfaceVariant)
@@ -310,4 +334,68 @@ fun AboutCard() {
         SecondaryButton("Report a problem", "warning") { open("https://github.com/dannyspace21/Rachet-Wrench/issues") }
         SecondaryButton("Security and privacy details", "book") { open("https://github.com/dannyspace21/Rachet-Wrench/blob/main/SECURITY.md") }
     }
+}
+
+/**
+ * Change the computer/server address WITHOUT signing out (e.g. the
+ * computer got a new IP address after a restart).  The new address is
+ * checked first: it must be a Ratchet Wrench server, and the login must
+ * still work there.  Plain HTTP at home needs the same explicit "allow" tick
+ * as at sign-in.
+ */
+@Composable
+fun ChangeAddressDialog(onClose: () -> Unit, onSaved: (String, String) -> Unit) {
+    val repo = LocalRepo.current
+    val scope = rememberCoroutineScope()
+    var input by remember { mutableStateOf(repo.store.serverUrl) }
+    var allowHttp by remember { mutableStateOf(repo.store.allowHttpLocal) }
+    var busy by remember { mutableStateOf(false) }
+    var problem by remember { mutableStateOf<String?>(null) }
+    val url = UrlPolicy.complete(input)
+    val needsHttpOk = UrlPolicy.isLocalHttp(url)
+    AlertDialog(onDismissRequest = onClose,
+        title = { Text("Computer or server address") },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                Field("Address", input, { input = it.trim(); problem = null }, hint = "e.g. 192.168.1.20:8077")
+                if (needsHttpOk) Row(verticalAlignment = Alignment.CenterVertically) {
+                    Checkbox(allowHttp, { allowHttp = it })
+                    Text("Allow plain HTTP on my home network (normal for the desktop app and Docker at home; never on public Wi-Fi)",
+                        style = MaterialTheme.typography.bodySmall)
+                }
+                problem?.let { Text(it, color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodySmall) }
+            }
+        },
+        confirmButton = {
+            TextButton({
+                UrlPolicy.problem(url, allowHttp)?.let { problem = it; return@TextButton }
+                busy = true
+                scope.launch {
+                    val oldUrl = repo.store.serverUrl
+                    val oldHttp = repo.store.allowHttpLocal
+                    val result = withContext(Dispatchers.IO) {
+                        repo.store.serverUrl = url
+                        repo.store.allowHttpLocal = allowHttp
+                        try {
+                            val api = Api(repo.store)
+                            if (!api.isRatchetWrench()) throw ApiException(404, "Not a Ratchet Wrench server.")
+                            api.me() // the login must still be valid there
+                            null
+                        } catch (e: Exception) { e }
+                    }
+                    busy = false
+                    when {
+                        result == null -> onSaved(url, "Address saved. Syncing will use $url.")
+                        result is ApiException && result.status == 401 ->
+                            // Right server, but the login isn't valid there: keep the address, sign in again.
+                            onSaved(url, "Address saved, but you need to sign in again (Settings → Sign in again).")
+                        else -> {
+                            repo.store.serverUrl = oldUrl; repo.store.allowHttpLocal = oldHttp
+                            problem = UrlPolicy.explain(result, url)
+                        }
+                    }
+                }
+            }, enabled = !busy && input.isNotBlank() && (!needsHttpOk || allowHttp)) { Text(if (busy) "Checking…" else "Check and save") }
+        },
+        dismissButton = { TextButton(onClose) { Text("Cancel") } })
 }

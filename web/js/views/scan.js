@@ -130,23 +130,20 @@ export function showCarfaxReview(container, v, result, catalog) {
       ["maintenance", "repair"].map((k) => { const o = h("option", { value: k }, k === "repair" ? "Repair" : "Maintenance"); if (k === p.kind) o.selected = true; return o; }));
     const custom = h("input", { class: "input", value: p.custom_type || "", maxlength: 64, "aria-label": "What was done", placeholder: "What was done" });
     const desc = h("input", { class: "input", value: p.description, maxlength: 500, "aria-label": "Description" });
-    // The icon follows whatever type/kind you pick for this row.
+    // The icon follows whatever type/kind you pick for this row.  No
+    // separate title: the type drop-down already says what it is.
     let badge = typeBadge(p.type_key, p.kind);
-    const title = h("strong", {});
     const refresh = () => {
       const fresh = typeBadge(type.value, kind.value); badge.replaceWith(fresh); badge = fresh;
       custom.hidden = type.value !== "custom";
-      title.textContent = type.value === "custom" ? (custom.value || "Custom / other") : (labelOf[type.value] || type.value);
     };
     type.addEventListener("change", refresh);
     kind.addEventListener("change", refresh);
-    custom.addEventListener("input", refresh);
-    const row = h("div", { class: "review-row" + (p.suggested ? "" : " rejected") }, keep,
-      h("div", { class: "stack" },
-        h("div", { class: "row" }, badge, title,
-          p.duplicate ? h("span", { class: "pill" }, "Already in your history") : null,
-          !p.suggested && !p.duplicate ? h("span", { class: "pill" }, "Paperwork — not a service?") : null),
-        h("div", { class: "review-fields" }, type, kind, custom), desc));
+    type.classList.add("type"); kind.classList.add("kind"); custom.classList.add("custom"); desc.classList.add("desc");
+    const notes = p.duplicate ? h("span", { class: "pill note" }, "Already in your history")
+      : (!p.suggested ? h("span", { class: "pill note" }, "Paperwork — not a service?") : null);
+    const row = h("div", { class: "carfax-item" + (p.suggested ? "" : " rejected") },
+      keep, badge, type, kind, custom, desc, notes);
     refresh();
     keep.addEventListener("change", () => row.classList.toggle("rejected", !keep.checked));
     return { p, keep, type, kind, custom, desc, row };
@@ -167,12 +164,12 @@ export function showCarfaxReview(container, v, result, catalog) {
     const syncShop = () => { shop.hidden = by.value !== "shop"; };
     by.addEventListener("change", syncShop); syncShop();
     const rows = items.map(makeRow);
-    const el = h("section", { class: "card stack" },
+    const el = h("section", { class: "card stack carfax-visit" },
       h("div", { class: "row between" },
         h("h3", {}, `${dateText(first.date)} · ${first.mileage != null ? first.mileage.toLocaleString() + " " + (v.mileage_unit || "mi") : "no odometer"} · ${first.performed_by === "diy" ? "DIY" : (first.shop_name || "Shop")}`),
         h("span", { class: "muted small" }, `${rows.length} item${rows.length === 1 ? "" : "s"}`)),
       h("div", { class: "review-fields" }, date, mileage, by, shop),
-      h("div", {}, rows.map((r) => r.row)));
+      h("div", { class: "carfax-items" }, rows.map((r) => r.row)));
     return { date, mileage, by, shop, rows, el, notes: first.notes };
   });
   const allRows = visits.flatMap((vi) => vi.rows);

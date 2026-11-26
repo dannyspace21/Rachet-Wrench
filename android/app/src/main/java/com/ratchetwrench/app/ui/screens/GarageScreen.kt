@@ -87,7 +87,8 @@ fun GarageScreen(nav: NavHostController) {
 
     suspend fun refresh() {
         refreshing = true
-        syncError = try { withContext(Dispatchers.IO) { SyncEngine(ctx).run() }; null } catch (e: Exception) { "Offline — showing saved data. (${e.message})" }
+        syncError = try { withContext(Dispatchers.IO) { SyncEngine(ctx).run() }; null }
+            catch (e: Exception) { repo.store.lastSyncError ?: (e.message ?: "Couldn't sync.") }
         refreshing = false
     }
     // Crash details saved last time (if the app closed unexpectedly).
@@ -142,7 +143,24 @@ fun GarageScreen(nav: NavHostController) {
             LazyColumn(Modifier.fillMaxSize(), contentPadding = androidx.compose.foundation.layout.PaddingValues(16.dp, 8.dp, 16.dp, 96.dp),
                 verticalArrangement = Arrangement.spacedBy(12.dp)) {
                 item { UpdateBanner() }
-                syncError?.let { item { Text(it, color = LocalExtra.current.muted, style = MaterialTheme.typography.bodySmall) } }
+                syncError?.let { msg ->
+                    item {
+                        // Not hidden in small grey text: say clearly that sync failed, why, and where to fix it.
+                        SectionCard {
+                            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                                UiIcon("warning", tint = LocalExtra.current.warn)
+                                Text("Couldn't sync with your computer", fontWeight = FontWeight.Bold)
+                            }
+                            Text(msg, style = MaterialTheme.typography.bodySmall)
+                            Text("Showing what's saved on this phone. Last successful sync: ${repo.store.lastSyncOk?.let { com.ratchetwrench.app.ui.prettyDateTime(it) } ?: "never"}.",
+                                color = LocalExtra.current.muted, style = MaterialTheme.typography.bodySmall)
+                            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                com.ratchetwrench.app.ui.SecondaryButton("Try again", "sync") { scope.launch { refresh() } }
+                                com.ratchetwrench.app.ui.SecondaryButton("Fix in Settings", "settings") { nav.navigate("settings") }
+                            }
+                        }
+                    }
+                }
                 if (vehicles.isEmpty()) item {
                     SectionCard {
                         Column(Modifier.fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(10.dp)) {

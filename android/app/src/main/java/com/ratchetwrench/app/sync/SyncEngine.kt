@@ -65,11 +65,23 @@ class SyncEngine(private val context: Context) {
     /** Run a full sync.  Throws on network/auth errors (the worker retries). */
     fun run() {
         // Phone-only mode: nothing to sync, nothing leaves the phone.
-        if (store.mode != "server" || store.token == null || store.serverUrl.isBlank()) return
-        push()
-        uploadPhotos()
-        pull()
+        if (store.mode != "server" || store.serverUrl.isBlank()) return
+        if (store.token == null) {
+            // Never fail silently: say why nothing is syncing.
+            store.lastSyncError = "This phone isn't signed in to your computer any more. Tap “Sign in again” in Settings."
+            throw com.ratchetwrench.app.data.ApiException(401, store.lastSyncError!!)
+        }
+        try {
+            push()
+            uploadPhotos()
+            pull()
+        } catch (e: Exception) {
+            // Remember WHY (in plain English) so the Garage and Settings can show it.
+            store.lastSyncError = com.ratchetwrench.app.data.UrlPolicy.explainSync(e, store.serverUrl)
+            throw e
+        }
         store.lastSyncOk = nowIso()
+        store.lastSyncError = null
     }
 
     // ---------------------------------------------------------------- PUSH

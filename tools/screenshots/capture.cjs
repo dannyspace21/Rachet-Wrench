@@ -69,8 +69,8 @@ for (const scheme of ["light", "dark"]) {
   await page.goto(BASE + `/#/v/${rc.id}/carfax`);
   await page.setInputFiles("input[type=file]", join(here, "sample-carfax.pdf"));
   await page.click("button:has-text(\"Read report\")");
-  await page.waitForSelector(".review-row", { timeout: 60000 });
-  await page.evaluate(() => document.querySelector(".review-row").scrollIntoView({ block: "start" }));
+  await page.waitForSelector(".carfax-visit", { timeout: 60000 });
+  await page.evaluate(() => document.querySelector(".carfax-visit").scrollIntoView({ block: "start" }));
   await shot(page, "carfax-review", scheme);
   await ctx.close();
 }

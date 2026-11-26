@@ -51,6 +51,8 @@ When the box is unticked (the default), the app only listens to the computer its
 | "Couldn't reach …" / "failed to connect … after 15000 ms" | **Check the address.** The phone and computer must be on the same network: if the phone is `192.168.1.x`, the computer's address must also start with `192.168.1.`. Addresses like `192.168.157.1` or `172.x.x.1` belong to *virtual* network adapters (VMware, VirtualBox, Hyper-V, WSL, Docker) and won't work. The desktop window lists the right address first. To double-check on Windows, run `ipconfig` and use the IPv4 address under your Wi-Fi or Ethernet adapter. **Also check:** "Allow my phone to sync" is ticked, and Windows Firewall allows Ratchet Wrench on **Private networks** (Windows Security → Firewall → Allow an app). |
 | "Incorrect username or password" | The desktop app and the Docker server keep **separate** accounts and data. Use the account you created on the one you're connecting to. |
 | "doesn't look like a Ratchet Wrench server" | Wrong port. Use 8077 for the desktop app and 8000 for Docker. |
+| It connected once, but now it won't sync | Open the phone's **Settings → Sync**; it says exactly what went wrong. **Most often the computer got a new address after restarting:** check the address in the desktop window and tap **Change address** (you stay signed in). **Also check:** the desktop app is open (closing its window stops it), and "Allow my phone to sync" is still ticked. |
+| Changes made on the computer don't show on the phone | **The desktop app and the Docker server are two separate servers that don't share data.** The phone only syncs with the one it's signed in to (shown in Settings → Sync). Use one of them as your "home base". |
 
 ## Where your data is
 
