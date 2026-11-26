@@ -4,8 +4,8 @@ The desktop app runs Ratchet Wrench **on your own computer**. You don't need a s
 
 ## 1. Download
 
-1. Go to the repository's **Releases** page: <https://github.com/dannyspace21/Rachet-Wrench/releases>
-2. Open the newest release named **"Ratchet Wrench Desktop 1.0.N"** and download the file for your computer:
+1. Open the **latest release**: <https://github.com/dannyspace21/Rachet-Wrench/releases/latest>
+2. Every release ("Ratchet Wrench 1.0.N") contains **all** downloads — the Android app and the desktop app for every computer, built from the same version. Download the file for your computer:
 
 | Computer | File |
 |---|---|

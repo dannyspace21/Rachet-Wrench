@@ -23,7 +23,13 @@ You can switch automatic updates off, or check right away, in **Settings → App
 
 ## How releases are made (owner)
 
-Every push to `main` that changes the app builds, signs and publishes a new GitHub Release (`v1.0.N`) automatically: see `.github/workflows/android.yml`. To publish one by hand, go to **Actions → Android release → Run workflow**.
+Every push to `main` that changes the app (Android, server, web or desktop) builds and publishes ONE new GitHub Release (`v1.0.N`) automatically: see `.github/workflows/android.yml`. **Every release contains every download:**
+
+- the signed Android APK;
+- the desktop app for Windows, macOS and Linux;
+- one `SHA256SUMS.txt` covering all of them.
+
+All four builds must pass before anything is published, so a release is never missing a piece. To publish one by hand, go to **Actions → Release (Android + desktop) → Run workflow**.
 
 This needs the permanent signing key stored as four repository secrets (*Settings → Secrets and variables → Actions*):
 
@@ -49,7 +55,7 @@ Every Android release has release notes. You see them in the app:
 
 The same notes appear at the top of the GitHub release page.
 
-**For whoever publishes a release:** add an entry at the **top** of `android/app/src/main/assets/release_notes.json` before pushing Android changes to `main`.
+**For whoever publishes a release:** add an entry at the **top** of `android/app/src/main/assets/release_notes.json` before pushing changes to `main`. This applies to any change that makes a release: Android, server, web or desktop.
 
 - **Version:** the release workflow numbers releases `1.0.<run number>`, so the entry's `version` is the previous release's number + 1.
 - **Contents:** keep it high level and in plain English, under `new`, `improved` and `fixed`.

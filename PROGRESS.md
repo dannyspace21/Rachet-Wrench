@@ -53,7 +53,7 @@ Build-sandbox notes: the sandbox blocks dl.google.com, api.osv.dev, semgrep.dev 
 ## After the four phases
 - Logo redesigned: ratchet and open-end wrench crossed in an X.
 - Android: permanent release signing + automatic GitHub Releases + Obtainium auto-updates (`docs/ANDROID-UPDATES.md`). The owner still has to add the 4 signing secrets.
-- Three ways to use it: phone only (Android phone-only mode), computer only (desktop app in `desktop/`, built for Windows/macOS/Linux by `.github/workflows/desktop.yml`), and phone ⇄ computer sync (phone connects to the desktop app). Home server (Docker) unchanged. See `docs/DESKTOP.md`.
+- Three ways to use it: phone only (Android phone-only mode), computer only (desktop app in `desktop/`, built for Windows/macOS/Linux by the release workflow `.github/workflows/android.yml`), and phone ⇄ computer sync (phone connects to the desktop app). Home server (Docker) unchanged. See `docs/DESKTOP.md`.
 
 - v1.0.11: fixed the icon/shrinker crash (D50), added Settings button + About, added Robolectric screen tests and an APK icon check.
 
@@ -68,6 +68,8 @@ Build-sandbox notes: the sandbox blocks dl.google.com, api.osv.dev, semgrep.dev 
 - Carfax import rebuilt (Service History page, per-service entries with icons, odometer + reminders) — server/desktop/web, Android 1.0.16 types (D55).
 
 - v1.0.17: sync problems shown clearly with fixes (Change address, Sign in again); live sync test; compact Carfax review (D56).
+
+- v1.0.18: ONE release per version with every download (APK + Windows + macOS + Linux + checksums); separate desktop releases retired (D57).
 
 ## Ideas for later (not started)
 - Code-sign the desktop app (paid Apple/Microsoft certificates) to remove first-launch warnings; add an Intel-Mac build if needed.

@@ -457,3 +457,15 @@ The desktop app *is* the existing server plus web app, packaged to run on a PC. 
   - **Test hook:** `SecureStore.tokenForTests` lets tests run without the Android Keystore. The app never sets it.
 - **Web Carfax review:** each item is now one line (tick, icon, type, kind) with the description underneath. The separate title is gone because the type drop-down already names it, and the visit fields sit two per line on a phone.
 - **Docs:** `docs/DESKTOP.md` covers "connected once but won't sync" and explains that the desktop app and Docker are separate servers.
+
+### D57. One release with every download
+- **What you asked for:** every release must contain **all** downloads — the Android APK and the desktop app for Windows, macOS and Linux — even when only one part changed. Separate releases aren't acceptable.
+- **Before:** two workflows published two kinds of release. Android went out as `v1.0.N` (marked Latest), and the desktop app as `desktop-v1.0.N`, deliberately *not* Latest (an Obtainium-era choice, see D44). On the Releases page the desktop builds were buried and looked out of date, and desktop releases only happened when desktop-related files changed.
+- **Now:** one workflow, "Release (Android + desktop)", in `.github/workflows/android.yml`.
+  - **Steps:** check release notes → build and test Android and build and smoke-test the desktop app on all three systems, in parallel → publish one `v1.0.N` release.
+  - **Contents:** `ratchet-wrench-1.0.N.apk`, `RatchetWrench-Windows.zip`, `RatchetWrench-macOS-AppleSilicon.zip`, `RatchetWrench-Linux.tar.gz` and one `SHA256SUMS.txt`, with a downloads table in the notes.
+  - **Trigger:** any change to Android, server, web, desktop, catalog, icons or branding.
+  - **All or nothing:** the publish step runs only if every build passed, and it refuses to publish if any file is missing.
+- **Why the file keeps its name:** GitHub numbers runs per workflow file, and the version (`1.0.<run number>`) must keep rising for Android to accept updates. A new file would restart at 1.
+- **Desktop workflow removed:** `desktop.yml` is deleted.
+- **Phone updater unchanged:** it already picks the APK by name and its own line in `SHA256SUMS.txt`.

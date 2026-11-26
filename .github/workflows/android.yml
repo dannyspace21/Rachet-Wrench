@@ -1,29 +1,43 @@
-# android.yml — builds, signs and PUBLISHES the Android app.
+# android.yml — builds, tests and PUBLISHES a complete Ratchet Wrench release.
 #
-# On every push to main that changes the app (and when run by hand), this:
-#   1. runs the unit tests and Android lint,
-#   2. builds the release APK signed with the PERMANENT signing key, restored
-#      from encrypted repository secrets (never stored in the repository),
-#   3. checks the signature,
-#   4. publishes a GitHub Release "v1.0.<number>" with the APK and its
-#      SHA-256 checksum.
-# The installed app checks these releases when opened and updates itself
-# (see docs/ANDROID-UPDATES.md).  Each release gets a higher version number,
-# which Android requires for an update.
+# EVERY release contains EVERYTHING, even when only one part changed:
+#   * ratchet-wrench-1.0.N.apk             Android app (signed, self-updating)
+#   * RatchetWrench-Windows.zip            desktop app for Windows 10/11
+#   * RatchetWrench-macOS-AppleSilicon.zip desktop app for macOS (Apple silicon)
+#   * RatchetWrench-Linux.tar.gz           desktop app for Linux
+#   * SHA256SUMS.txt                       checksums of all of the above
+# One release, one version number ("v1.0.N"), all downloads in one place.
+# The Docker server is built from the same commit by whoever runs it
+# (docker compose up -d --build).
+#
+# Steps:
+#   1. check  — this version has release notes (android/release_notes.py)
+#   2. android + desktop (in parallel)
+#        android: unit + screen tests, lint, signed release APK, APK checks,
+#                 signature check
+#        desktop: build on Windows, macOS and Linux and START each build on its
+#                 own system to prove it works (/api/health) before publishing
+#   3. publish — only if ALL builds passed: one GitHub Release with every file.
+#      If any build fails, nothing is published (a release is never partial).
+#
+# Why this file is still called android.yml: GitHub numbers runs per workflow
+# FILE, and the version (1.0.<run number>) must keep going up for phones to
+# accept the update.  A new file would restart at 1.
 #
 # Security:
 #   * Runs only for main (never for pull requests, so secrets are never
 #     exposed to proposed changes, including Dependabot's).
-#   * Only this job may write (to create the release); everything else is read-only.
+#   * Only the publish job may write (to create the release); everything else is read-only.
 #   * If the signing secrets are missing it FAILS instead of publishing an
 #     APK signed with a throwaway key (which phones couldn't install as an update).
 #   * Actions are pinned to exact commits.
-name: Android release
+name: Release (Android + desktop)
 
 on:
   push:
     branches: [main]
-    paths: ["android/**", "catalog/**", "icons/**", "brand/**", ".github/workflows/android.yml"]
+    paths: ["android/**", "server/app/**", "server/requirements.txt", "web/**", "desktop/**", "catalog/**", "icons/**",
+            "brand/**", ".github/workflows/android.yml"]
   workflow_dispatch:
 
 permissions:
@@ -31,17 +45,30 @@ permissions:
 
 # Never build two releases at the same time.
 concurrency:
-  group: android-release
+  group: release
   cancel-in-progress: false
 
+env:
+  RW_VERSION_CODE: ${{ github.run_number }}000
+  RW_VERSION_NAME: 1.0.${{ github.run_number }}
+
 jobs:
-  release:
+  check:
     runs-on: ubuntu-latest
-    permissions:
-      contents: write   # needed to create the GitHub Release
-    env:
-      RW_VERSION_CODE: ${{ github.run_number }}000
-      RW_VERSION_NAME: 1.0.${{ github.run_number }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Check this release has release notes
+        # Every release needs an entry in android/app/src/main/assets/release_notes.json
+        # (shown in the app after updating, and on the release page).
+        run: python3 android/release_notes.py check "$RW_VERSION_NAME"
+
+  android:
+    needs: check
+    runs-on: ubuntu-latest
+    outputs:
+      cert: ${{ steps.verify.outputs.cert }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -51,11 +78,6 @@ jobs:
         with:
           distribution: temurin
           java-version: "21"
-
-      - name: Check this release has release notes
-        # Every release needs an entry in android/app/src/main/assets/release_notes.json
-        # (shown in the app after updating, and on the release page).
-        run: python3 android/release_notes.py check "$RW_VERSION_NAME"
 
       - name: Check the signing key is configured
         env:
@@ -96,6 +118,7 @@ jobs:
           python3 android/check_apk.py android/app/build/outputs/apk/release/app-release.apk "$TOOLS"
 
       - name: Verify the APK is signed with the permanent key
+        id: verify
         run: |
           rm -f "$RUNNER_TEMP/release.jks"
           APKSIGNER=$(ls -d "$ANDROID_HOME"/build-tools/*/apksigner | sort -V | tail -1)
@@ -104,15 +127,101 @@ jobs:
           if grep -qi "CN=Android Debug" signing.txt; then
             echo "::error::APK is signed with a debug key; refusing to publish."; exit 1
           fi
+          echo "cert=$(grep -m1 'certificate SHA-256 digest' signing.txt | awk '{print $NF}')" >> "$GITHUB_OUTPUT"
           mkdir -p dist
           cp "$APK" "dist/ratchet-wrench-$RW_VERSION_NAME.apk"
-          (cd dist && sha256sum ./*.apk > SHA256SUMS.txt && cat SHA256SUMS.txt)
 
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: android-apk
+          path: dist/ratchet-wrench-*.apk
+          retention-days: 7
+
+  desktop:
+    needs: check
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: windows-latest
+            artifact: RatchetWrench-Windows.zip
+            exe: desktop/dist/RatchetWrench/RatchetWrench.exe
+          - os: macos-latest
+            artifact: RatchetWrench-macOS-AppleSilicon.zip
+            exe: desktop/dist/RatchetWrench.app/Contents/MacOS/RatchetWrench
+          - os: ubuntu-latest
+            artifact: RatchetWrench-Linux.tar.gz
+            exe: desktop/dist/RatchetWrench/RatchetWrench
+    runs-on: ${{ matrix.os }}
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
+        with:
+          # 3.14, not 3.15: on Windows, argon2-cffi-bindings' Python 3.15 wheel
+          # needs python3t.dll, which standard Windows Python 3.15 doesn't
+          # ship, so the app couldn't start.  3.14 uses the long-established
+          # abi3 wheel.  (The Docker server stays on 3.15.)
+          python-version: "3.14"
+      - name: Install locked, hash-checked dependencies
+        run: |
+          python -m pip install --require-hashes --only-binary=:all: -r server/requirements.txt
+          python -m pip install --require-hashes -r desktop/requirements-desktop.txt
+      - name: Build the app
+        run: python desktop/build.py
+      - name: Smoke test (start it and check it answers)
+        run: |
+          export XDG_DATA_HOME="$RUNNER_TEMP/rwdata" APPDATA="$RUNNER_TEMP/rwdata"
+          "${{ matrix.exe }}" --headless --no-browser --port 8099 &
+          for i in $(seq 1 60); do
+            if curl -sf http://127.0.0.1:8099/api/health; then echo " -> OK"; kill $! 2>/dev/null || true; exit 0; fi
+            sleep 2
+          done
+          echo "::error::The desktop app did not start."
+          cat "$RUNNER_TEMP"/rwdata/*/desktop.log 2>/dev/null || true
+          exit 1
+      - name: Package
+        run: |
+          cd desktop/dist
+          case "${{ matrix.os }}" in
+            windows-latest) powershell -NoProfile -Command "Compress-Archive -Path RatchetWrench -DestinationPath ../../${{ matrix.artifact }}" ;;
+            macos-latest)   ditto -c -k --keepParent RatchetWrench.app ../../${{ matrix.artifact }} ;;
+            *)              tar czf ../../${{ matrix.artifact }} RatchetWrench ;;
+          esac
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: ${{ matrix.artifact }}
+          path: ${{ matrix.artifact }}
+          retention-days: 7
+
+  publish:
+    needs: [android, desktop]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write   # create the GitHub Release
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          path: dist
+          merge-multiple: true
+      - name: Make sure every download is there
+        run: |
+          for f in "ratchet-wrench-$RW_VERSION_NAME.apk" RatchetWrench-Windows.zip RatchetWrench-macOS-AppleSilicon.zip RatchetWrench-Linux.tar.gz; do
+            [ -s "dist/$f" ] || { echo "::error::Missing $f — refusing to publish a partial release."; exit 1; }
+          done
+          (cd dist && sha256sum ./* > SHA256SUMS.txt && cat SHA256SUMS.txt)
       - name: Publish the GitHub Release
         env:
           GH_TOKEN: ${{ github.token }}
+          CERT: ${{ needs.android.outputs.cert }}
         run: |
-          CERT=$(grep -m1 "certificate SHA-256 digest" signing.txt | awk '{print $NF}')
           {
             echo "## What's new in $RW_VERSION_NAME"
             echo
@@ -120,14 +229,21 @@ jobs:
           } > notes.md
           cat >> notes.md <<EOF
           ---
-          Ratchet Wrench for Android, version $RW_VERSION_NAME.
+          ## Downloads (all built from commit ${GITHUB_SHA::7})
 
-          Built automatically from commit ${GITHUB_SHA::7}.
+          | Device | File |
+          |---|---|
+          | Android phone | \`ratchet-wrench-$RW_VERSION_NAME.apk\` — already installed? The app updates itself. |
+          | Windows 10/11 | \`RatchetWrench-Windows.zip\` |
+          | Mac (Apple silicon) | \`RatchetWrench-macOS-AppleSilicon.zip\` |
+          | Linux | \`RatchetWrench-Linux.tar.gz\` |
+          | Home server (Docker) | Update with \`git pull\` and \`docker compose up -d --build\` |
 
-          - **Install / auto-update:** see [docs/ANDROID-UPDATES.md](https://github.com/${GITHUB_REPOSITORY}/blob/main/docs/ANDROID-UPDATES.md). Already installed? The app updates itself.
-          - **Signing certificate SHA-256:** \`$CERT\`
-          - **Checksums:** see \`SHA256SUMS.txt\`.
+          - **Android install / auto-update:** [docs/ANDROID-UPDATES.md](https://github.com/${GITHUB_REPOSITORY}/blob/main/docs/ANDROID-UPDATES.md)
+          - **Desktop app (unzip and open RatchetWrench):** [docs/DESKTOP.md](https://github.com/${GITHUB_REPOSITORY}/blob/main/docs/DESKTOP.md)
+          - **Android signing certificate SHA-256:** \`$CERT\`
+          - **Checksums of every file:** \`SHA256SUMS.txt\`
           EOF
-          gh release create "v$RW_VERSION_NAME" dist/*.apk dist/SHA256SUMS.txt \
+          gh release create "v$RW_VERSION_NAME" dist/* \
             --repo "$GITHUB_REPOSITORY" --target "$GITHUB_SHA" \
             --title "Ratchet Wrench $RW_VERSION_NAME" --notes-file notes.md --latest
