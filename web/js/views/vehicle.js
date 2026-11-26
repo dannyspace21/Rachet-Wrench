@@ -96,8 +96,9 @@ export function entryItem(e, label, photos, v) {
   return h("a", { class: "item", href: `#/e/${e.id}` },
     typeBadge(e.type_key, e.kind),
     h("div", { class: "main" },
-      h("span", { class: "title" }, e.custom_type || label[e.type_key] || "Entry"),
-      e.description ? h("span", {}, e.description) : null,
+      // A "Custom / other" record is titled by what was done, never by the generic label.
+      h("span", { class: "title" }, e.custom_type || (e.type_key === "custom" ? e.description : "") || label[e.type_key] || "Entry"),
+      e.description && e.description !== e.custom_type && !(e.type_key === "custom" && !e.custom_type) ? h("span", {}, e.description) : null,
       h("span", { class: "meta" }, h("span", {}, dateText(e.date)), e.mileage !== null ? h("span", {}, miles(e.mileage, v?.mileage_unit)) : null,
         h("span", {}, e.performed_by === "shop" ? (e.shop_name || "Shop") : "DIY"), e.source === "carfax" ? h("span", {}, "From Carfax") : null),
       photos.length ? h("div", { class: "thumbs" }, photos.slice(0, 5).map((a) => h("img", { src: `/api/attachments/${a.id}/thumb`, alt: a.caption || "Photo", loading: "lazy" }))) : null),

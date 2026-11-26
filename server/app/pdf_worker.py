@@ -6,8 +6,11 @@ memory, CPU and time limits.  If a malicious PDF makes the parser misbehave,
 only this throw-away process is affected — never the main server.
 
 Input : the PDF bytes on standard input.
-Args  : mode ("info" or "text") and the maximum allowed page count.
+Args  : mode ("info", "text" or "layout") and the maximum allowed page count.
 Output: one JSON object on standard output, e.g. {"pages": 3, "text": [...]}.
+        "layout" also returns where each piece of text sits on the page
+        ({"w": page width, "items": [[x, y, text], ...]}), which is needed
+        for reports printed from a web page in two columns.
 
 The parser is pypdf, a widely used, actively maintained pure-Python library.
 It only reads text; it never runs JavaScript or opens embedded files.
@@ -18,6 +21,26 @@ import json
 import sys
 
 MAX_TEXT_CHARS_PER_PAGE = 20_000
+MAX_ITEMS_PER_PAGE = 4_000      # text pieces with positions ("layout" mode)
+MAX_ITEM_CHARS = 300
+
+
+def _page_layout(page) -> dict:
+    """Every piece of text on the page with its (x, y) position.
+    y grows upwards (PDF convention).  Limited in count and length."""
+    items: list = []
+
+    def visit(text, cm, tm, _font, _size):
+        text = (text or "").strip()
+        if not text or len(items) >= MAX_ITEMS_PER_PAGE:
+            return
+        # Position = text matrix combined with the current transformation matrix.
+        x = tm[4] * cm[0] + tm[5] * cm[2] + cm[4]
+        y = tm[4] * cm[1] + tm[5] * cm[3] + cm[5]
+        items.append([round(float(x), 1), round(float(y), 1), text[:MAX_ITEM_CHARS]])
+
+    text = page.extract_text(visitor_text=visit) or ""
+    return {"w": round(float(page.mediabox.width), 1), "items": items, "text": text[:MAX_TEXT_CHARS_PER_PAGE]}
 
 
 def main() -> int:
@@ -52,6 +75,10 @@ def main() -> int:
                 text = page.extract_text() or ""
                 texts.append(text[:MAX_TEXT_CHARS_PER_PAGE])
             result["text"] = texts
+        elif mode == "layout":
+            layouts = [_page_layout(page) for page in reader.pages]
+            result["text"] = [lay.pop("text") for lay in layouts]
+            result["layout"] = layouts
         print(json.dumps(result))
         return 0
     except Exception:

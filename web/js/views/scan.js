@@ -118,50 +118,111 @@ export async function carfaxView(main, { params }) {
 
 export function showCarfaxReview(container, v, result, catalog) {
   const types = catalog.types.filter((t) => t.applies_to === "both" || t.applies_to === v.kind);
-  const rows = result.entries.map((p) => {
+  const labelOf = Object.fromEntries(catalog.types.map((t) => [t.key, t.label]));
+
+  // One row per piece of work; rows are grouped by visit (same date + shop).
+  const makeRow = (p) => {
     const keep = h("input", { type: "checkbox", checked: p.suggested, "aria-label": "Import this record" });
-    const date = h("input", { class: "input", type: "date", value: p.date, "aria-label": "Date" });
-    const mileage = h("input", { class: "input", inputmode: "numeric", value: p.mileage ?? "", "aria-label": "Mileage", placeholder: "Mileage" });
     const type = h("select", { class: "input", "aria-label": "Type" }, types.map((t) => {
       const o = h("option", { value: t.key }, t.label); if (t.key === p.type_key) o.selected = true; return o;
     }));
     const kind = h("select", { class: "input", "aria-label": "Kind" },
       ["maintenance", "repair"].map((k) => { const o = h("option", { value: k }, k === "repair" ? "Repair" : "Maintenance"); if (k === p.kind) o.selected = true; return o; }));
+    const custom = h("input", { class: "input", value: p.custom_type || "", maxlength: 64, "aria-label": "What was done", placeholder: "What was done" });
     const desc = h("input", { class: "input", value: p.description, maxlength: 500, "aria-label": "Description" });
-    const shop = h("input", { class: "input", value: p.shop_name, maxlength: 128, "aria-label": "Shop" });
     // The icon follows whatever type/kind you pick for this row.
     let badge = typeBadge(p.type_key, p.kind);
-    const refreshBadge = () => { const fresh = typeBadge(type.value, kind.value); badge.replaceWith(fresh); badge = fresh; };
-    type.addEventListener("change", refreshBadge);
-    kind.addEventListener("change", refreshBadge);
+    const title = h("strong", {});
+    const refresh = () => {
+      const fresh = typeBadge(type.value, kind.value); badge.replaceWith(fresh); badge = fresh;
+      custom.hidden = type.value !== "custom";
+      title.textContent = type.value === "custom" ? (custom.value || "Custom / other") : (labelOf[type.value] || type.value);
+    };
+    type.addEventListener("change", refresh);
+    kind.addEventListener("change", refresh);
+    custom.addEventListener("input", refresh);
     const row = h("div", { class: "review-row" + (p.suggested ? "" : " rejected") }, keep,
       h("div", { class: "stack" },
-        h("div", { class: "row" }, badge, h("strong", {}, dateText(p.date)), p.suggested ? null : h("span", { class: "pill" }, "Not a service record?")),
-        h("div", { class: "review-fields" }, date, mileage, type, kind), desc, shop,
-        p.notes ? h("p", { class: "muted small" }, p.notes) : null));
+        h("div", { class: "row" }, badge, title,
+          p.duplicate ? h("span", { class: "pill" }, "Already in your history") : null,
+          !p.suggested && !p.duplicate ? h("span", { class: "pill" }, "Paperwork — not a service?") : null),
+        h("div", { class: "review-fields" }, type, kind, custom), desc));
+    refresh();
     keep.addEventListener("change", () => row.classList.toggle("rejected", !keep.checked));
-    return { p, keep, date, mileage, type, kind, desc, shop, row };
+    return { p, keep, type, kind, custom, desc, row };
+  };
+
+  const visitsById = new Map();
+  for (const p of result.entries) {
+    if (!visitsById.has(p.visit)) visitsById.set(p.visit, []);
+    visitsById.get(p.visit).push(p);
+  }
+  const visits = [...visitsById.values()].map((items) => {
+    const first = items[0];
+    const date = h("input", { class: "input", type: "date", value: first.date, "aria-label": "Date" });
+    const mileage = h("input", { class: "input", inputmode: "numeric", value: first.mileage ?? "", "aria-label": "Odometer", placeholder: "Odometer" });
+    const by = h("select", { class: "input", "aria-label": "Done by" },
+      [["shop", "A shop did it"], ["diy", "I did it (DIY)"]].map(([val, txt]) => { const o = h("option", { value: val }, txt); if (val === first.performed_by) o.selected = true; return o; }));
+    const shop = h("input", { class: "input", value: first.shop_name, maxlength: 128, "aria-label": "Shop", placeholder: "Shop name" });
+    const syncShop = () => { shop.hidden = by.value !== "shop"; };
+    by.addEventListener("change", syncShop); syncShop();
+    const rows = items.map(makeRow);
+    const el = h("section", { class: "card stack" },
+      h("div", { class: "row between" },
+        h("h3", {}, `${dateText(first.date)} · ${first.mileage != null ? first.mileage.toLocaleString() + " " + (v.mileage_unit || "mi") : "no odometer"} · ${first.performed_by === "diy" ? "DIY" : (first.shop_name || "Shop")}`),
+        h("span", { class: "muted small" }, `${rows.length} item${rows.length === 1 ? "" : "s"}`)),
+      h("div", { class: "review-fields" }, date, mileage, by, shop),
+      h("div", {}, rows.map((r) => r.row)));
+    return { date, mileage, by, shop, rows, el, notes: first.notes };
   });
+  const allRows = visits.flatMap((vi) => vi.rows);
+
+  // Options applied when saving.
+  const optOdo = h("input", { type: "checkbox", checked: true });
+  const optRem = h("input", { type: "checkbox", checked: true });
+  const optReplace = h("input", { type: "checkbox", checked: result.previous_imports > 0 });
+  const newest = result.newest_mileage != null
+    ? ` The newest record is ${result.newest_mileage.toLocaleString()} ${v.mileage_unit || "mi"} on ${dateText(result.newest_date)}.` : "";
+  const options = h("section", { class: "card stack" },
+    h("h2", {}, "When importing"),
+    h("label", { class: "row option-row" }, optOdo, h("span", {}, "Update the odometer: add a reading for each visit and raise the current mileage." + newest)),
+    h("label", { class: "row option-row" }, optRem, h("span", {}, "Update reminders: set “last done” from the newest oil change, tire rotation, filters, fluids and so on, and create reminders that don't exist yet (with typical intervals you can change).")),
+    result.previous_imports > 0
+      ? h("label", { class: "row option-row" }, optReplace, h("span", {},
+        `Replace the ${result.previous_imports} record${result.previous_imports === 1 ? "" : "s"} from your earlier Carfax import (recommended if it came out wrong). Only records that came from Carfax are removed — anything you added yourself is never touched.`))
+      : null);
+
   const count = h("span", { class: "muted" });
-  const updateCount = () => { count.textContent = `${rows.filter((r) => r.keep.checked).length} of ${rows.length} selected`; };
-  rows.forEach((r) => r.keep.addEventListener("change", updateCount));
+  const updateCount = () => { count.textContent = `${allRows.filter((r) => r.keep.checked).length} of ${allRows.length} selected`; };
+  allRows.forEach((r) => r.keep.addEventListener("change", updateCount));
   updateCount();
   const save = h("button", { class: "btn primary", type: "button", onclick: async () => {
-    const entries = rows.filter((r) => r.keep.checked).map((r) => ({
-      date: r.date.value, mileage: parseIntOrNull(r.mileage.value), type_key: r.type.value, kind: r.kind.value,
-      description: r.desc.value.trim(), shop_name: r.shop.value.trim(), performed_by: "shop", notes: r.p.notes }));
+    const entries = visits.flatMap((vi) => vi.rows.filter((r) => r.keep.checked).map((r) => ({
+      date: vi.date.value, mileage: parseIntOrNull(vi.mileage.value), type_key: r.type.value,
+      custom_type: r.type.value === "custom" ? r.custom.value.trim() : "", kind: r.kind.value,
+      description: r.desc.value.trim(), performed_by: vi.by.value, shop_name: vi.by.value === "shop" ? vi.shop.value.trim() : "",
+      notes: vi.notes })));
     if (!entries.length) { toast("Nothing selected", "error"); return; }
     save.disabled = true;
     try {
-      const res = await api(`/api/vehicles/${v.id}/carfax/apply`, { method: "POST", body: { entries } });
-      toast(`${res.created} record${res.created === 1 ? "" : "s"} imported`);
+      const res = await api(`/api/vehicles/${v.id}/carfax/apply`, { method: "POST", body: {
+        entries, update_odometer: optOdo.checked, update_reminders: optRem.checked, replace_previous: optReplace.checked } });
+      const parts = [`${res.created} record${res.created === 1 ? "" : "s"} imported`];
+      if (res.skipped_duplicates) parts.push(`${res.skipped_duplicates} already there`);
+      if (res.current_mileage != null) parts.push(`odometer ${res.current_mileage.toLocaleString()} ${v.mileage_unit || "mi"}`);
+      const rems = res.reminders_created.length + res.reminders_updated.length;
+      if (rems) parts.push(`${rems} reminder${rems === 1 ? "" : "s"} updated`);
+      toast(parts.join(" · "));
       location.hash = `#/v/${v.id}/history`;
     } catch (e) { showError(e); save.disabled = false; }
   } }, icon("u-check"), "Import selected");
 
-  mount(container, h("section", { class: "card" },
-    h("div", { class: "section-title" }, h("h2", {}, `Review ${rows.length} record${rows.length === 1 ? "" : "s"}`), count),
-    rows.length ? h("div", {}, rows.map((r) => r.row)) : h("div", { class: "notice" }, icon("u-warning"), h("p", {}, "No dated records were found in this PDF.")),
-    rows.length ? h("div", { class: "btn-row review-actions" }, save, h("a", { class: "btn", href: `#/v/${v.id}` }, "Cancel")) : null));
+  mount(container, h("div", { class: "stack-lg" },
+    h("section", { class: "card" },
+      h("div", { class: "section-title" }, h("h2", {}, `Review ${visits.length} visit${visits.length === 1 ? "" : "s"} · ${allRows.length} item${allRows.length === 1 ? "" : "s"}`), count),
+      h("p", { class: "muted small" }, "Each visit is split into what was done, so every item gets its own icon and keeps reminders up to date. Untick anything you don't want; change a type if it's wrong.")),
+    allRows.length ? visits.map((vi) => vi.el) : h("div", { class: "notice" }, icon("u-warning"), h("p", {}, "No service records were found in this PDF.")),
+    allRows.length ? options : null,
+    allRows.length ? h("div", { class: "btn-row review-actions" }, save, h("a", { class: "btn", href: `#/v/${v.id}` }, "Cancel")) : null));
   container.scrollIntoView({ behavior: "smooth" });
 }

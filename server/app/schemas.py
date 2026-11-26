@@ -241,6 +241,7 @@ class CarfaxEntryIn(Strict):
     date: dt.date
     mileage: Mileage | None = None
     type_key: str = "custom"
+    custom_type: Annotated[str, Field(max_length=64)] = ""
     kind: Literal["maintenance", "repair"] = "maintenance"
     description: Annotated[str, Field(max_length=500)] = ""
     shop_name: Short = ""
@@ -256,6 +257,14 @@ class CarfaxEntryIn(Strict):
 
 class CarfaxApplyIn(Strict):
     entries: Annotated[list[CarfaxEntryIn], Field(max_length=1000)]
+    # Add an odometer reading for each dated mileage in the report.
+    update_odometer: bool = True
+    # Move reminders' "last done" forward, and create reminders (with
+    # typical, editable intervals) for routine maintenance that has none.
+    update_reminders: bool = True
+    # Delete entries from EARLIER Carfax imports of this vehicle first
+    # (for redoing an import that went wrong).
+    replace_previous: bool = False
 
 
 class VinDecodeIn(Strict):

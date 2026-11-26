@@ -200,6 +200,9 @@ TYPE_ICONS: dict[str, list[str]] = {
     # Tire replacement: tire with tread marks and a "new" plus
     "tire_replacement": [circle(10, 13, 8), circle(10, 13, 3.5), radial_ticks(10, 13, 5.5, 7, 8, 22.5), plus_badge(19.5, 4.5)],
     # Flat repair: tire with a nail sticking in
+    # Wheel repair: alloy wheel (rim + spokes) with a small sparkle (refinished)
+    "wheel_repair": [circle(11, 13, 8.5), circle(11, 13, 2.2), line(11, 10.8, 11, 6), line(13.1, 13.7, 17.2, 15.2),
+                     line(8.9, 13.7, 4.8, 15.2), "M19 2v4M17 4h4"],
     "tire_repair": [circle(11, 13, 8), circle(11, 13, 3), line(15.5, 8.5, 20.5, 3.5), line(19, 2, 22, 5)],
     # Wheel alignment: two wheels from above with parallel guide arrows
     "wheel_alignment": [rect(3, 3, 4, 9, 1.5), rect(17, 3, 4, 9, 1.5), line(7, 7.5, 17, 7.5), line(5, 15.5, 5, 21.5), line(19, 15.5, 19, 21.5),
@@ -287,6 +290,9 @@ TYPE_ICONS: dict[str, list[str]] = {
     "cables": [circle(4, 5, 1.5), line(5.4, 5.6, 11, 8), "M11 8c4 1.5 1.5 7 5.5 9s4.5-1 5.5-3", line(15.5, 15.8, 18, 18.6)],
     # Levers/controls: grip with brake lever
     "brake_lever": [rect(2, 3.5, 9, 4.5, 2.25), circle(12.5, 6, 1.6), line(13.5, 7.3, 21.5, 13.5), line(11, 8, 12, 12)],
+    # Scheduled service: calendar with a check mark
+    "scheduled_service": [rect(3, 4.5, 18, 17, 2), line(3, 9.5, 21, 9.5), line(8, 2.5, 8, 6.5), line(16, 2.5, 16, 6.5),
+                          "M8.5 15l2.5 2.5 4.5-4.5"],
     # Inspection: clipboard with a check mark
     "inspection": [rect(5, 4, 14, 18, 2), "M9 4V2.5h6V4", "M8.5 13l2.5 2.5 4.5-5"],
     # Emissions: exhaust cloud with a check mark

@@ -142,6 +142,9 @@ main { max-width: 1120px; margin: 0 auto; padding: 28px 20px 96px; outline: none
 .stack-lg { display: grid; gap: 28px; }
 .row { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; }
 .row.between { justify-content: space-between; }
+/* A checkbox with a long explanation next to it: never wrap the box onto its own line. */
+.row.option-row { flex-wrap: nowrap; align-items: flex-start; }
+.row.option-row input { margin-top: 3px; flex: none; }
 .grid { display: grid; gap: 16px; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); }
 .grid-2 { display: grid; gap: 16px; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); }
 .back { display: inline-flex; align-items: center; gap: 6px; color: var(--muted); text-decoration: none; font-weight: 600; min-height: 44px; margin-bottom: 8px; }

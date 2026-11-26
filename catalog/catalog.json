@@ -261,6 +261,13 @@
       "icon": "wheel_bearings.svg"
     },
     {
+      "key": "wheel_repair",
+      "label": "Wheel repair / refinish",
+      "category": "Tires & wheels",
+      "applies_to": "both",
+      "icon": "wheel_repair.svg"
+    },
+    {
       "key": "brake_pads",
       "label": "Brake pads",
       "category": "Brakes",
@@ -490,6 +497,13 @@
       "category": "Motorcycle",
       "applies_to": "motorcycle",
       "icon": "brake_lever.svg"
+    },
+    {
+      "key": "scheduled_service",
+      "label": "Scheduled service (e.g. 30,000-mile)",
+      "category": "Paperwork",
+      "applies_to": "both",
+      "icon": "scheduled_service.svg"
     },
     {
       "key": "inspection",

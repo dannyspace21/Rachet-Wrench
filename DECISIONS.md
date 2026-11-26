@@ -415,3 +415,29 @@ The desktop app *is* the existing server plus web app, packaged to run on a PC. 
 - **Tests:**
   - LogicTest covers address completion and cleanup, offering `http://` only for home addresses, and the error explanations.
   - A screen test checks that a bare home address brings up the plain-HTTP question.
+
+### D55. Carfax import rebuilt: reads the "Service History" page, one entry per piece of work, updates odometer and reminders
+- **What went wrong:** the importer only understood the classic *Vehicle History Report* (rows of Date | Mileage | Source | comments). The carfax.com **Service History** page printed to PDF (Car Care) is laid out in two columns: a summary list on the left and a detailed card per visit on the right. Plain text extraction interleaves the columns, so every left-hand date started a bogus record with stray text. Mileage was hit and miss, services were lost, the type fell back to "Custom / other", the odometer wasn't updated, and DIY work was saved as a shop visit.
+- **How it reads the page now:**
+  - **Text with positions:** the sandboxed PDF helper has a new `layout` mode that returns each piece of text with its position (pypdf's own `visitor_text`; no new library). The importer keeps only the right-hand cards: everything right of the "Services Performed" headings, which only appear in cards.
+  - **Card by card:** it reads each card's shop (the Carfax review link removed), Date, Odometer and every Services Performed line. "Self-Service (DIY)" becomes DIY with no shop name.
+  - **Checked on a real report:** a real 16-page report gives all 46 visits with correct dates and mileage. The visits with no odometer reading in Carfax come through without a mileage rather than with a wrong one.
+- **One entry per kind of work**, so each gets its own icon and can drive reminders. A rules table maps Carfax wording to catalog types (e.g. "Oil and filter changed" → Oil change, "Control arm bushing(s) replaced" → Suspension, repair).
+  - **Merged within a visit:** lines meaning the same thing, e.g. front and rear brake pads.
+  - **Routine checks:** become one Inspection entry per visit.
+  - **"Vehicle serviced":** dropped when the visit lists the real work.
+  - **Mileage services:** "N,000 mile service" and "Recommended maintenance" become **Scheduled service** (new type).
+  - **Unknown lines:** keep Carfax's words as the title, never "Custom / other".
+  - **Paperwork** (title issued, new owner): shown but not pre-selected.
+  - **Same rules for both formats:** the classic report now goes through this grouping too.
+- **New catalog types, with icons:** `scheduled_service` ("Scheduled service (e.g. 30,000-mile)") and `wheel_repair` ("Wheel repair / refinish").
+- **Saving can also (options on the review screen):**
+  - **Update the odometer:** one reading per visit, and the vehicle's mileage rises to the newest record. km vehicles get converted values.
+  - **Update reminders:** for routine maintenance, existing reminders take "last done" from the newest record. Missing reminders are created with typical, editable intervals (oil 5,000 mi/6 mo, tire rotation 5,000/6, filters 15,000/12, brake fluid 24 mo, alignment 12 mo, …), with a note saying so. Repairs never get reminders, and an Inspection reminder is only created from a real safety/state inspection.
+  - **Replace an earlier Carfax import** (pre-ticked when one exists): soft-deletes only `source = carfax` entries, then re-imports. Records you entered yourself are never touched. Re-importing without this skips anything already there, and the review screen marks those items "Already in your history".
+- **Web review screen:** grouped by visit, with editable date, odometer and done-by/shop per visit. Each item shows its icon, type, kind and description. The summary after saving lists records, odometer and reminders.
+- **History titles:** a "Custom / other" record is titled by its description on the web and Android.
+- **Tests:**
+  - A synthetic two-column Car Care PDF covers DIY detection, shop-name cleanup, each mapping above, the left column being ignored, reminders with the newest "last done", odometer, duplicate skipping and replacing.
+  - The classic-format test is updated to the per-service grouping.
+  - All 60 server tests pass.

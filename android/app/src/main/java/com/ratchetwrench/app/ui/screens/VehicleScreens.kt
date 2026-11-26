@@ -197,7 +197,7 @@ private fun HistoryTab(nav: NavHostController, v: Vehicle) {
             ListRow(onClick = { nav.navigate("entry/${e.id}") }) {
                 TypeBadge(e.type_key, e.kind)
                 Column(Modifier.weight(1f)) {
-                    Text(e.custom_type.ifBlank { Catalog.typeLabel(ctx, e.type_key) }, fontWeight = FontWeight.Bold)
+                    Text(e.custom_type.ifBlank { if (e.type_key == "custom" && e.description.isNotBlank()) e.description else Catalog.typeLabel(ctx, e.type_key) }, fontWeight = FontWeight.Bold)
                     if (e.description.isNotBlank()) Text(e.description, maxLines = 2)
                     Text(listOfNotNull(prettyDate(e.date), e.mileage?.let { miles(it, v.mileage_unit) }, if (e.performed_by == "shop") e.shop_name.ifBlank { "Shop" } else "DIY")
                         .joinToString(" · "), color = LocalExtra.current.muted, style = MaterialTheme.typography.bodySmall)

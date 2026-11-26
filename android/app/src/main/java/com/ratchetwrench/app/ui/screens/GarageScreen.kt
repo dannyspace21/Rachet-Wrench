@@ -184,7 +184,7 @@ fun GarageScreen(nav: NavHostController) {
                         ListRow(onClick = { nav.navigate("entry/${e.id}") }) {
                             TypeBadge(e.type_key, e.kind)
                             Column(Modifier.weight(1f)) {
-                                Text(e.custom_type.ifBlank { Catalog.typeLabel(ctx, e.type_key) }, fontWeight = FontWeight.Bold)
+                                Text(e.custom_type.ifBlank { if (e.type_key == "custom" && e.description.isNotBlank()) e.description else Catalog.typeLabel(ctx, e.type_key) }, fontWeight = FontWeight.Bold)
                                 Text("${byId[e.vehicle_id]?.displayName() ?: ""} · ${prettyDate(e.date)}", color = LocalExtra.current.muted, style = MaterialTheme.typography.bodySmall)
                             }
                             Column(horizontalAlignment = Alignment.End) { KindPill(e.kind); Text(money(e.cost_cents, repo.store.currency), style = MaterialTheme.typography.bodySmall) }

@@ -269,23 +269,157 @@ def _carfax_pdf() -> bytes:
 
 
 def test_carfax_parse_review_and_apply(client, admin):
+    """Classic Vehicle History Report: one entry per kind of work."""
     v = make_vehicle(client, admin)
     r = client.post(f"/api/vehicles/{v['id']}/carfax/parse", headers=admin,
                     files={"file": ("carfax.pdf", _carfax_pdf(), "application/pdf")})
     assert r.status_code == 200, r.text
-    rows = r.json()["entries"]
-    assert len(rows) == 4
-    assert rows[0]["date"] == "2019-03-15" and rows[0]["mileage"] == 12345
-    assert rows[0]["type_key"] == "oil_change" and rows[0]["suggested"]
-    assert rows[1]["type_key"] == "brake_pads" and rows[1]["kind"] == "repair"
-    assert rows[2]["suggested"] is False  # title record
-    assert rows[3]["type_key"] == "tire_replacement"
-    approved = [{k: row[k] for k in ("date", "mileage", "type_key", "kind", "description", "shop_name", "notes")}
+    body = r.json()
+    assert body["format"] == "history_report"
+    rows = body["entries"]
+    by = {(row["date"], row["type_key"]): row for row in rows}
+    # "Vehicle serviced" is dropped because the visit lists the real work.
+    assert ("2019-03-15", "oil_change") in by and ("2019-03-15", "tire_rotation") in by
+    assert ("2019-03-15", "scheduled_service") not in by
+    assert by[("2019-03-15", "oil_change")]["mileage"] == 12345
+    assert by[("2020-07-02", "brake_pads")]["kind"] == "maintenance"  # pads are a wear item
+    assert by[("2021-09-09", "registration")]["suggested"] is False   # title record: paperwork
+    assert by[("2022-01-20", "tire_replacement")]["suggested"]
+    assert by[("2022-01-20", "wheel_alignment")]["suggested"]
+    approved = [{k: row[k] for k in ("date", "mileage", "type_key", "custom_type", "kind", "description",
+                                     "shop_name", "performed_by", "notes")}
                 for row in rows if row["suggested"]]
     r = client.post(f"/api/vehicles/{v['id']}/carfax/apply", headers=admin, json={"entries": approved})
-    assert r.json()["created"] == 3
+    assert r.json()["created"] == len(approved)
     entries = client.get(f"/api/entries?vehicle_id={v['id']}", headers=admin).json()
     assert {e["source"] for e in entries} == {"carfax"}
+
+
+def _car_care_pdf() -> bytes:
+    """A two-column "Car Care" service history, laid out like the printed
+    carfax.com page: a summary list on the left, visit cards on the right."""
+    cards = [
+        ("Self-Service (DIY)", "10/17/2026", "175,000 mi", ["Air filter replaced"], "Add Note"),
+        ("Alloy Wheel Solution Inc", "06/08/2026", "175,000 mi", ["Wheel(s) repaired"], "Edit Note"),
+        ("Hogan & Sons Tire & Auto (https://www.carfax.com/Reviews-Hogan-|And-Sons-Tire-And-Auto-Herndon-VA?intp=cc)",
+         "06/01/2026", "175,000 mi", ["Vehicle serviced", "Maintenance inspection completed", "Alignment performed"], "Edit Note"),
+        ("Self-Service (DIY)", "05/25/2026", "172,749 mi",
+         ["Control arm bushing(s) replaced", "Rear shock absorber(s) replaced"], "Add Note"),
+        ("Self-Service (DIY)", "04/04/2026", "172,000 mi",
+         ["Tires rotated", "Cabin air filter replaced/cleaned", "Oil and filter changed"], "Add Note"),
+        ("Virginia Motor Vehicle Dept.", "04/02/2026", "171,865 mi", ["Title issued or updated", "New owner reported"], "Add Note"),
+        ("Lexus of Lehigh Valley", "10/10/2017", None, ["Vehicle serviced", "Oil and filter changed"], "Add Note"),
+    ]
+    pdf = FPDF(unit="pt", format="letter")
+    pdf.set_auto_page_break(False)
+    pdf.add_page()
+    pdf.set_font("Helvetica", size=9)
+    # Left column: the summary list (dates, mileage and shops — must be ignored).
+    y = 60
+    pdf.text(30, y, "Date")
+    pdf.text(200, y, "Odometer")
+    for shop, d, odo, _s, _n in cards:
+        y += 26
+        pdf.text(30, y, d)
+        if odo:
+            pdf.text(200, y, odo.replace(" ", ""))
+        pdf.text(30, y + 11, shop.split(" (")[0])
+    # Right column: the cards.
+    y = 60
+    for shop, d, odo, services, note in cards:
+        if y > 640:
+            pdf.add_page()
+            y = 50
+        for part in shop.split("|"):
+            pdf.text(254, y, part)
+            y += 12
+        y += 10
+        pdf.text(254, y, "Date")
+        if odo:
+            pdf.text(404, y, "Odometer")
+        y += 14
+        pdf.text(254, y, d)
+        if odo:
+            pdf.text(404, y, odo)
+        y += 20
+        pdf.text(254, y, "Services Performed")
+        for i, line in enumerate(services):
+            y += 12
+            pdf.text(254, y, line)
+            if i == len(services) - 1:
+                pdf.text(512, y, "Edit Record")
+        y += 30
+        pdf.text(268, y, "Upload Receipts")
+        y += 20
+        pdf.text(268, y, note)
+        y += 40
+    return bytes(pdf.output())
+
+
+def test_carfax_car_care_service_history(client, admin):
+    """The printed carfax.com "Service History" page (two columns)."""
+    v = make_vehicle(client, admin)
+    r = client.post(f"/api/vehicles/{v['id']}/carfax/parse", headers=admin,
+                    files={"file": ("carfax.pdf", _car_care_pdf(), "application/pdf")})
+    assert r.status_code == 200, r.text
+    body = r.json()
+    assert body["format"] == "car_care"
+    assert body["visits"] == 7                      # the left-hand summary list adds nothing
+    assert body["newest_mileage"] == 175000
+    rows = body["entries"]
+    by = {(row["date"], row["type_key"]): row for row in rows}
+
+    air = by[("2026-10-17", "air_filter")]
+    assert air["performed_by"] == "diy" and air["shop_name"] == "" and air["mileage"] == 175000
+    assert air["description"] == "Air filter replaced" and air["kind"] == "maintenance"
+
+    wheel = by[("2026-06-08", "wheel_repair")]
+    assert wheel["kind"] == "repair" and wheel["shop_name"] == "Alloy Wheel Solution Inc"
+
+    hogan = by[("2026-06-01", "wheel_alignment")]
+    assert hogan["shop_name"] == "Hogan & Sons Tire & Auto"   # the review link is removed
+    assert ("2026-06-01", "inspection") in by
+    assert ("2026-06-01", "scheduled_service") not in by      # "Vehicle serviced" dropped
+
+    assert by[("2026-05-25", "suspension")]["kind"] == "repair"
+    assert by[("2026-05-25", "shocks_struts")]["kind"] == "repair"
+    assert by[("2026-05-25", "shocks_struts")]["performed_by"] == "diy"
+    for key in ("tire_rotation", "cabin_filter", "oil_change"):
+        assert by[("2026-04-04", key)]["mileage"] == 172000
+    assert by[("2026-04-02", "registration")]["suggested"] is False
+    assert by[("2017-10-10", "oil_change")]["mileage"] is None   # Carfax had no odometer for it
+
+    approved = [{k: row[k] for k in ("date", "mileage", "type_key", "custom_type", "kind", "description",
+                                     "shop_name", "performed_by", "notes")}
+                for row in rows if row["suggested"]]
+    r = client.post(f"/api/vehicles/{v['id']}/carfax/apply", headers=admin, json={"entries": approved})
+    assert r.status_code == 200, r.text
+    res = r.json()
+    assert res["created"] == len(approved)
+    assert res["current_mileage"] == 175000                    # odometer brought up to date
+    assert res["odometer_readings_added"] >= 5
+    assert "Oil change" in res["reminders_created"] and "Engine air filter" in res["reminders_created"]
+    assert "Inspection" not in res["reminders_created"]        # routine checks only: no yearly reminder
+    rems = {x["type_key"]: x for x in client.get(f"/api/reminders?vehicle_id={v['id']}", headers=admin).json()}
+    assert rems["oil_change"]["last_done_date"] == "2026-04-04"  # the NEWEST oil change
+    assert rems["oil_change"]["last_done_mileage"] == 172000
+    assert rems["air_filter"]["last_done_date"] == "2026-10-17"
+    assert "suspension" not in rems                            # repairs don't get reminders
+
+    # Importing again: everything is recognised as already there.
+    again = client.post(f"/api/vehicles/{v['id']}/carfax/parse", headers=admin,
+                        files={"file": ("carfax.pdf", _car_care_pdf(), "application/pdf")}).json()
+    assert again["previous_imports"] == len(approved)
+    assert all(row["duplicate"] for row in again["entries"] if row["suggested"])
+    r = client.post(f"/api/vehicles/{v['id']}/carfax/apply", headers=admin, json={"entries": approved})
+    assert r.json()["created"] == 0 and r.json()["skipped_duplicates"] == len(approved)
+    assert r.json()["reminders_created"] == []                 # existing reminders are reused
+
+    # Redoing a bad import: earlier Carfax entries are replaced, not doubled.
+    r = client.post(f"/api/vehicles/{v['id']}/carfax/apply", headers=admin,
+                    json={"entries": approved, "replace_previous": True})
+    assert r.json()["removed_previous"] == len(approved) and r.json()["created"] == len(approved)
+    assert len(client.get(f"/api/entries?vehicle_id={v['id']}", headers=admin).json()) == len(approved)
 
 
 def test_carfax_rejects_non_pdf(client, admin):

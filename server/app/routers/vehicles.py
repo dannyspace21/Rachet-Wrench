@@ -18,16 +18,17 @@ import re
 
 from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile, status
 from fastapi.responses import Response
+from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from .. import schemas
-from ..carfax import parse_carfax_text
-from ..catalog import make_links
+from ..carfax import DEFAULT_REMINDERS, parse_carfax
+from ..catalog import make_links, type_label
 from ..config import get_settings
 from ..database import get_db
-from ..models import Attachment, User, Vehicle, VehicleSpec, utcnow
+from ..models import Attachment, Entry, OdometerReading, Reminder, User, Vehicle, VehicleSpec, utcnow
 from ..ocr import extract_from_image, tesseract_available
-from ..records import get_owned, serialize, upsert
+from ..records import get_owned, serialize, soft_delete, upsert
 from ..report import build_report
 from ..security import current_user
 from ..uploads import accept_upload, file_path, read_limited, run_pdf_worker, sniff_type
@@ -165,13 +166,31 @@ async def carfax_parse(vehicle_id: str, file: UploadFile = File(...), user: User
                        db: Session = Depends(get_db)) -> dict:
     """Read a Carfax PDF and propose entries for the review screen.
     The PDF is also stored on the vehicle for your records."""
-    get_owned(db, Vehicle, vehicle_id, user)
+    vehicle = get_owned(db, Vehicle, vehicle_id, user)
     settings = get_settings()
     data = await read_limited(file, settings.max_pdf_mb * 1024 * 1024)
     if sniff_type(data[:16]) != "application/pdf":
         raise HTTPException(status.HTTP_415_UNSUPPORTED_MEDIA_TYPE, "Please upload the Carfax report as a PDF.")
-    result = await asyncio.to_thread(run_pdf_worker, data, "text", min(settings.max_pdf_pages, 60))
-    proposals = parse_carfax_text(result.get("text", []))
+    result = await asyncio.to_thread(run_pdf_worker, data, "layout", min(settings.max_pdf_pages, 60))
+    report_format, proposals = parse_carfax(result.get("text", []), result.get("layout"))
+
+    # Carfax mileage is in miles; convert for vehicles kept in kilometres.
+    if vehicle.mileage_unit == "km":
+        for p in proposals:
+            if p["mileage"] is not None:
+                p["mileage"] = round(p["mileage"] * 1.609344)
+
+    # Mark records that are already in the history (e.g. a second import).
+    live = db.scalars(select(Entry).where(Entry.owner_id == user.id, Entry.vehicle_id == vehicle_id,
+                                          Entry.deleted_at.is_(None))).all()
+    have = {(e.date.isoformat(), e.type_key, (e.custom_type or "").lower()) for e in live if e.source != "carfax"}
+    have_carfax = {(e.date.isoformat(), e.type_key, (e.custom_type or "").lower()) for e in live if e.source == "carfax"}
+    for p in proposals:
+        key = (p["date"], p["type_key"], (p["custom_type"] or "").lower())
+        p["duplicate"] = key in have or key in have_carfax
+        if key in have:
+            p["suggested"] = False
+
     from ..uploads import store_bytes
 
     stored = await asyncio.to_thread(store_bytes, data, True, False)
@@ -182,19 +201,118 @@ async def carfax_parse(vehicle_id: str, file: UploadFile = File(...), user: User
                      created_at=now, updated_at=now, server_modified_at=now)
     db.add(att)
     db.commit()
-    return {"entries": proposals, "attachment": serialize(att), "pages": result["pages"]}
+    dated = [p for p in proposals if p["mileage"] is not None]
+    newest = max(dated, key=lambda p: (p["date"], p["mileage"]), default=None)
+    return {
+        "format": report_format,
+        "entries": proposals,
+        "visits": len({p["visit"] for p in proposals}),
+        "previous_imports": len(have_carfax),
+        "newest_mileage": newest["mileage"] if newest else None,
+        "newest_date": newest["date"] if newest else None,
+        "attachment": serialize(att),
+        "pages": result["pages"],
+    }
 
 
 @router.post("/vehicles/{vehicle_id}/carfax/apply")
 def carfax_apply(vehicle_id: str, body: schemas.CarfaxApplyIn, user: User = Depends(current_user),
                  db: Session = Depends(get_db)) -> dict:
-    """Create the entries the user approved on the review screen."""
-    get_owned(db, Vehicle, vehicle_id, user)
-    created = []
-    for e in body.entries:
-        obj, _ = upsert(db, user, "entries", schemas.EntryIn(vehicle_id=vehicle_id, source="carfax", **e.model_dump()))
+    """Save the entries the user approved on the review screen, then (if
+    asked) add odometer readings and bring reminders up to date."""
+    vehicle = get_owned(db, Vehicle, vehicle_id, user)
+    now = utcnow()
+
+    removed = 0
+    if body.replace_previous:
+        for old in db.scalars(select(Entry).where(Entry.owner_id == user.id, Entry.vehicle_id == vehicle_id,
+                                                  Entry.source == "carfax", Entry.deleted_at.is_(None))).all():
+            soft_delete(db, old, now)
+            removed += 1
+        db.commit()
+
+    live = db.scalars(select(Entry).where(Entry.owner_id == user.id, Entry.vehicle_id == vehicle_id,
+                                          Entry.deleted_at.is_(None))).all()
+    have = {(e.date, e.type_key, (e.custom_type or "").lower(), (e.description or "").lower()) for e in live}
+    created, skipped = [], 0
+    # Oldest first, so "last done" ends on the newest record.
+    for e in sorted(body.entries, key=lambda x: x.date):
+        key = (e.date, e.type_key, e.custom_type.lower(), e.description.lower())
+        if key in have:
+            skipped += 1
+            continue
+        values = e.model_dump()
+        if values["performed_by"] == "diy":
+            values["shop_name"] = ""
+        obj, _ = upsert(db, user, "entries", schemas.EntryIn(vehicle_id=vehicle_id, source="carfax", **values))
+        have.add(key)
         created.append(serialize(obj))
-    return {"created": len(created), "entries": created}
+
+    # Odometer readings, one per date (highest mileage that day).
+    readings_added = 0
+    if body.update_odometer:
+        per_day: dict = {}
+        for e in body.entries:
+            if e.mileage is not None:
+                per_day[e.date] = max(per_day.get(e.date, 0), e.mileage)
+        existing = {(r.date, r.mileage) for r in db.scalars(select(OdometerReading).where(
+            OdometerReading.owner_id == user.id, OdometerReading.vehicle_id == vehicle_id,
+            OdometerReading.deleted_at.is_(None))).all()}
+        for day, mileage in sorted(per_day.items()):
+            if (day, mileage) in existing:
+                continue
+            upsert(db, user, "odometer", schemas.OdometerIn(vehicle_id=vehicle_id, date=day, mileage=mileage, note="From Carfax"))
+            readings_added += 1
+
+    # Reminders: newest record of each routine-maintenance type.
+    reminders_created, reminders_updated = [], []
+    if body.update_reminders:
+        newest: dict = {}
+        for e in body.entries:
+            if e.kind != "maintenance" or e.type_key not in DEFAULT_REMINDERS:
+                continue
+            # Only a real (state/safety) inspection is a yearly event; routine
+            # "brakes checked" style inspections don't get a reminder.
+            if e.type_key == "inspection" and not re.search(r"safety|state", e.description, re.IGNORECASE):
+                continue
+            cur = newest.get(e.type_key)
+            if cur is None or (e.date, e.mileage or 0) > (cur[0], cur[1] or 0):
+                newest[e.type_key] = (e.date, e.mileage)
+        km = vehicle.mileage_unit == "km"
+        for type_key, (day, mileage) in newest.items():
+            rems = db.scalars(select(Reminder).where(Reminder.owner_id == user.id, Reminder.vehicle_id == vehicle_id,
+                                                     Reminder.type_key == type_key, Reminder.deleted_at.is_(None))).all()
+            if rems:
+                moved = False
+                for rem in rems:
+                    if rem.last_done_date is None or day >= rem.last_done_date:
+                        upsert(db, user, "reminders", schemas.ReminderIn(
+                            last_done_date=day, last_done_mileage=mileage if mileage is not None else rem.last_done_mileage),
+                            record_id=rem.id)
+                        moved = True
+                if moved:
+                    reminders_updated.append(type_label(type_key))
+                continue
+            miles, months = DEFAULT_REMINDERS[type_key]
+            if miles and km:
+                miles = int(round(miles * 1.609344, -3))
+            upsert(db, user, "reminders", schemas.ReminderIn(
+                vehicle_id=vehicle_id, type_key=type_key, interval_miles=miles, interval_months=months,
+                last_done_date=day, last_done_mileage=mileage, enabled=True,
+                notes="Created from a Carfax import. The interval is a typical one — change it to match your owner's manual."))
+            reminders_created.append(type_label(type_key))
+
+    db.refresh(vehicle)
+    return {
+        "created": len(created),
+        "skipped_duplicates": skipped,
+        "removed_previous": removed,
+        "odometer_readings_added": readings_added,
+        "current_mileage": vehicle.current_mileage,
+        "reminders_created": reminders_created,
+        "reminders_updated": reminders_updated,
+        "entries": created,
+    }
 
 
 # ---------------------------------------------------------------------------

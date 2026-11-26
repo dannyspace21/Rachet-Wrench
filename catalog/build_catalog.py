@@ -69,6 +69,7 @@ TYPES = [
     ("wheel_balance", "Wheel balancing", "Tires & wheels", "both"),
     ("tpms_sensor", "TPMS sensor", "Tires & wheels", "both"),
     ("wheel_bearings", "Wheel bearings", "Tires & wheels", "both"),
+    ("wheel_repair", "Wheel repair / refinish", "Tires & wheels", "both"),
     # --- Brakes -----------------------------------------------------------
     ("brake_pads", "Brake pads", "Brakes", "both"),
     ("brake_rotors", "Brake rotors / discs", "Brakes", "both"),
@@ -110,6 +111,7 @@ TYPES = [
     ("cables", "Clutch / throttle cables", "Motorcycle", "motorcycle"),
     ("brake_lever", "Levers / controls", "Motorcycle", "motorcycle"),
     # --- Paperwork / other ------------------------------------------------
+    ("scheduled_service", "Scheduled service (e.g. 30,000-mile)", "Paperwork", "both"),
     ("inspection", "Inspection", "Paperwork", "both"),
     ("emissions", "Emissions test", "Paperwork", "both"),
     ("registration", "Registration", "Paperwork", "both"),
