@@ -315,12 +315,10 @@ fun SettingsScreen(nav: NavHostController, onSignedOut: () -> Unit) {
             com.ratchetwrench.app.ui.ReleaseNotesCard()
             SectionCard {
                 Text("Report a bug", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
-                Text("Opens a bug report on the project's GitHub page with your app version and phone model filled in. " +
-                    "Review it, describe what happened and press Submit (a free GitHub account is needed). Nothing is sent automatically.",
+                Text("Tell us what went wrong. Your report goes straight to the project's bug list — no account needed. " +
+                    "You'll see everything that's sent before you send it.",
                     color = MaterialTheme.colorScheme.onSurfaceVariant, style = MaterialTheme.typography.bodySmall)
-                SecondaryButton("Report a bug", "warning") {
-                    runCatching { ctx.startActivity(android.content.Intent(android.content.Intent.ACTION_VIEW, android.net.Uri.parse(bugReportUrl(ctx)))) }
-                }
+                SecondaryButton("Report a bug", "warning") { nav.navigate("report-bug") }
             }
             AboutCard()
             if (repo.store.mode == "server") SectionCard {
@@ -451,21 +449,26 @@ fun ChangeAddressDialog(onClose: () -> Unit, onSaved: (String, String) -> Unit) 
  * sent from the app: the browser opens the form, the person reviews it (and
  * can delete anything) and presses Submit themselves.
  */
-fun bugReportUrl(context: android.content.Context): String {
-    val store = com.ratchetwrench.app.data.SecureStore(context)
-    val details = buildString {
-        appendLine("Ratchet Wrench ${com.ratchetwrench.app.BuildConfig.VERSION_NAME} (${com.ratchetwrench.app.BuildConfig.VERSION_CODE})")
-        appendLine("Android ${android.os.Build.VERSION.RELEASE} (API ${android.os.Build.VERSION.SDK_INT}), ${android.os.Build.MANUFACTURER} ${android.os.Build.MODEL}")
-        appendLine("Mode: " + when (store.mode) { "server" -> "connected to a computer/server"; "local" -> "this phone only"; else -> "not set up" })
-        store.lastSyncError?.let { appendLine("Last sync problem: $it") }
-        com.ratchetwrench.app.CrashLog.read(context)?.let { appendLine("Last crash (first lines):"); appendLine(it.take(1500)) }
-    }
+fun bugReportUrl(context: android.content.Context, text: String = ""): String {
+    val details = (if (text.isNotBlank()) text.trim() + "\n\n" else "") + bugDetails(context)
     return android.net.Uri.parse("https://github.com/dannyspace21/Rachet-Wrench/issues/new").buildUpon()
         .appendQueryParameter("template", "bug_report.yml")
         .appendQueryParameter("labels", "bug")
         .appendQueryParameter("platform", "Android")
         .appendQueryParameter("details", details.trim())
         .build().toString()
+}
+
+/** App version, phone model, mode, last sync problem and last crash (shown before sending). */
+fun bugDetails(context: android.content.Context): String {
+    val store = com.ratchetwrench.app.data.SecureStore(context)
+    return buildString {
+        appendLine("Ratchet Wrench ${com.ratchetwrench.app.BuildConfig.VERSION_NAME} (${com.ratchetwrench.app.BuildConfig.VERSION_CODE})")
+        appendLine("Android ${android.os.Build.VERSION.RELEASE} (API ${android.os.Build.VERSION.SDK_INT}), ${android.os.Build.MANUFACTURER} ${android.os.Build.MODEL}")
+        appendLine("Mode: " + when (store.mode) { "server" -> "connected to a computer/server"; "local" -> "this phone only"; else -> "not set up" })
+        store.lastSyncError?.let { appendLine("Last sync problem: $it") }
+        com.ratchetwrench.app.CrashLog.read(context)?.let { appendLine("Last crash (first lines):"); appendLine(it.take(1500)) }
+    }.trim()
 }
 
 /** Smart Shopping settings (this phone only): on/off, retailers, preferred retailer. */

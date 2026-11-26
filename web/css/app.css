@@ -340,7 +340,9 @@ a.item:hover { border-color: color-mix(in srgb, var(--brand) 40%, var(--border))
 .modal-back { position: fixed; inset: 0; background: rgba(5, 10, 20, .55); display: grid; place-items: center; padding: 16px; z-index: 40; }
 .modal { background: var(--surface); border-radius: 20px; width: 100%; max-width: 520px; max-height: 90vh; overflow: auto; padding: 24px; box-shadow: var(--shadow); }
 .modal h2 { margin-bottom: 16px; }
-.modal .actions { display: flex; justify-content: flex-end; gap: 10px; margin-top: 22px; flex-wrap: wrap; }
+.modal .actions { display: flex; justify-content: flex-end; gap: 10px; margin-top: 22px; flex-wrap: wrap;
+  /* Long dialogs scroll; the buttons stay visible at the bottom. */
+  position: sticky; bottom: -24px; background: var(--surface); padding: 12px 0 4px; }
 
 /* Toasts */
 .toasts { position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%); display: grid; gap: 8px; z-index: 60; width: min(92vw, 420px); }
@@ -448,3 +450,5 @@ a.item:hover { border-color: color-mix(in srgb, var(--brand) 40%, var(--border))
   .mx-donut { justify-content: center; }
   .mx-hide-sm { display: none; }
 }
+.bug-details { white-space: pre-wrap; word-break: break-word; background: var(--surface-2); padding: 8px 10px; border-radius: 8px; margin: 0; max-height: 120px; overflow: auto; }
+.bug-reminder { border-left: 3px solid var(--brand); padding: 6px 10px; background: var(--brand-soft); color: var(--text); border-radius: 6px; }

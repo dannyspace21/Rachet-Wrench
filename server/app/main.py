@@ -32,7 +32,7 @@ from .catalog import load_catalog
 from .config import asset_path, get_settings
 from .database import get_db, init_db, session_scope
 from .models import User
-from .routers import attachments, auth, items, sync, vehicles
+from .routers import attachments, auth, bugs, items, sync, vehicles
 from .security import current_user, hash_password, user_from_cookie
 
 log = logging.getLogger("ratchetwrench")
@@ -182,7 +182,7 @@ def create_app() -> FastAPI:
     app.add_middleware(BodySizeLimit, max_bytes=max_body)
 
     # --- API routes ------------------------------------------------------
-    for r in (auth.router, attachments.router, vehicles.router, sync.router, items.router):
+    for r in (auth.router, attachments.router, vehicles.router, sync.router, items.router, bugs.router):
         app.include_router(r)
 
     @app.get("/api/health", tags=["meta"])

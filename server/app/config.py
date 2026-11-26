@@ -91,6 +91,14 @@ class Settings:
     ntfy_token: str = field(default_factory=lambda: os.environ.get("RW_NTFY_TOKEN", ""))
     reminder_check_minutes: int = field(default_factory=lambda: _int("RW_REMINDER_CHECK_MINUTES", 60, 1, 24 * 60))
 
+    # In-app bug reports -> GitHub Issues.  The key (a fine-grained GitHub
+    # token that can ONLY create issues on this one repository) comes from
+    # RW_ISSUE_TOKEN, or from the file the release build bundles into the
+    # desktop app.  Empty = the form offers "open on GitHub" instead.
+    # TEMPORARY: move this key to a relay service (see docs/BUG-REPORTS.md).
+    issue_repo: str = field(default_factory=lambda: os.environ.get("RW_ISSUE_REPO", "dannyspace21/Rachet-Wrench").strip())
+    issue_token: str = field(default_factory=lambda: os.environ.get("RW_ISSUE_TOKEN", "").strip() or _bundled_issue_token())
+
     # Optional AI vision for hard-to-read door stickers.  OFF by default
     # because it sends the photo to a third party.
     ai_vision_enabled: bool = field(default_factory=lambda: _bool("RW_AI_VISION_ENABLED", False))
@@ -135,6 +143,15 @@ def asset_roots() -> list[Path]:
         roots.append(Path(os.environ["RW_ASSET_DIR"]))
     roots += [Path(__file__).resolve().parents[2], Path("/app")]
     return roots
+
+
+def _bundled_issue_token() -> str:
+    """The bug-report key a release build of the desktop app carries (if any)."""
+    for root in asset_roots():
+        f = root / "bugreport" / "issue_token.txt"
+        if f.is_file():
+            return f.read_text(encoding="utf-8").strip()
+    return ""
 
 
 def asset_path(*parts: str) -> Path:

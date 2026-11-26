@@ -424,6 +424,17 @@ class ScreensTest {
         click("Miles")
         waitForText("Release notes")
         waitForText("Report a bug")
+        // The in-app form (with the owner's reminder and the details that will be sent).
+        rule.onAllNodes(hasText("Report a bug") and androidx.compose.ui.test.hasClickAction())[0].performScrollTo().performClick()
+        waitForText("What's the problem? (one line)")
+        waitForText("Reminder for the owner", substring = true)
+        waitForText("Include these technical details")
+        waitForText("Ratchet Wrench", substring = true)
+        // This local test build has no key, so it offers GitHub instead of sending.
+        waitForText("Continue on GitHub")
+        click("Continue on GitHub")
+        waitForText("Please describe the problem in a few words.")
+        tapIcon("Back")
         waitForText("Smart Shopping")
         waitForText("About Ratchet Wrench")
         waitForText("Version", substring = true)

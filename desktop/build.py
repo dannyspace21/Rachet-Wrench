@@ -72,6 +72,17 @@ def main() -> None:
         data("server/app/static", "app/static"),
         data("desktop/icon.png", "desktop"),
     ]
+    # In-app bug reports: the release build passes the GitHub key (a token
+    # that can only create issues on this repository) in RW_ISSUE_TOKEN; it
+    # is written to a file inside the bundle, never to the repository.
+    # TEMPORARY until bug reports move to a relay service (docs/BUG-REPORTS.md).
+    token = os.environ.get("RW_ISSUE_TOKEN", "").strip()
+    if token:
+        holder = ROOT / "desktop" / "build" / "bugreport"
+        holder.mkdir(parents=True, exist_ok=True)
+        (holder / "issue_token.txt").write_text(token, encoding="utf-8")
+        args.append(f"--add-data={holder / 'issue_token.txt'}{SEP}bugreport")
+        print("bundling the bug-report key")
     if sys.platform.startswith("win"):
         # Some compiled packages (e.g. argon2's _ffi.pyd for Python 3.15) use
         # Python's "stable ABI" and load python3.dll / python3t.dll, which

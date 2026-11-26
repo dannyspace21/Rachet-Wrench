@@ -22,6 +22,11 @@ android {
         // workflow passes its run number in RW_VERSION_CODE; local builds use 1.
         versionCode = (System.getenv("RW_VERSION_CODE") ?: "1").toInt()
         versionName = System.getenv("RW_VERSION_NAME") ?: "1.0.0-local"
+        // In-app bug reports: GitHub key that can only create issues on this
+        // repository, passed in by the release build (never in the source).
+        // TEMPORARY until reports move to a relay service (docs/BUG-REPORTS.md).
+        buildConfigField("String", "ISSUE_TOKEN", "\"" + (System.getenv("RW_ISSUE_TOKEN") ?: "").replace("\"", "") + "\"")
+        buildConfigField("String", "ISSUE_REPO", "\"dannyspace21/Rachet-Wrench\"")
     }
 
     // PERMANENT RELEASE SIGNING KEY

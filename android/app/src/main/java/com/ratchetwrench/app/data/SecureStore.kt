@@ -138,6 +138,11 @@ class SecureStore(context: Context) {
         set(v) = prefs.edit().putString("shop_preferred", v).apply()
 
     /** The app version whose "What's new" notes were last shown (versionCode). */
+    /** When bug reports were last sent from this phone (ms), for the rate limit. */
+    var bugReportTimes: List<Long>
+        get() = (prefs.getString("bug_reports", "") ?: "").split(',').mapNotNull { it.toLongOrNull() }
+        set(v) = prefs.edit().putString("bug_reports", v.takeLast(20).joinToString(",")).apply()
+
     var notesSeenCode: Int
         get() = prefs.getInt("notes_seen", 0)
         set(v) = prefs.edit().putInt("notes_seen", v).apply()

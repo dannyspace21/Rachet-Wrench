@@ -113,6 +113,8 @@ jobs:
           RW_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
           RW_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
           RW_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+          # In-app bug reports (key can only create issues here). Optional.
+          RW_ISSUE_TOKEN: ${{ secrets.RW_ISSUE_TOKEN }}
         run: ./gradlew --no-daemon testDebugUnitTest lintRelease assembleRelease
 
       - name: Check components created by name survived code shrinking
@@ -175,6 +177,9 @@ jobs:
           python -m pip install --require-hashes --only-binary=:all: -r server/requirements.txt
           python -m pip install --require-hashes -r desktop/requirements-desktop.txt
       - name: Build the app
+        env:
+          # In-app bug reports (key can only create issues here). Optional.
+          RW_ISSUE_TOKEN: ${{ secrets.RW_ISSUE_TOKEN }}
         run: python desktop/build.py
       - name: Smoke test (start it and check it answers)
         run: |

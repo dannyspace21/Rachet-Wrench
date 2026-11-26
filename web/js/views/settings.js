@@ -150,12 +150,46 @@ export function bugReportUrl(platform, details) {
 
 function bugCard(me) {
   const platform = /Windows|Macintosh|Linux/.exec(navigator.userAgent)?.[0] || "Browser";
-  const details = [`Web app (${location.hostname === "127.0.0.1" || location.hostname === "localhost" ? "desktop app" : "server"})`,
-    `Browser: ${navigator.userAgent}`, `Server version: ${me.server?.version || "unknown"}`].join("\n");
+  const where = location.hostname === "127.0.0.1" || location.hostname === "localhost" ? "desktop app" : "server";
+  const details = [`Web app (${where})`, `Platform: ${platform === "Macintosh" ? "macOS" : platform}`, `Browser: ${navigator.userAgent}`].join("\n");
   return h("section", { class: "card stack" }, h("h2", {}, "Report a bug"),
-    h("p", { class: "muted" }, "Opens a bug report on the project's GitHub page with your browser details filled in. Review it, describe what happened, and press Submit (a free GitHub account is needed). Nothing is sent automatically."),
-    h("div", {}, h("a", { class: "btn", href: bugReportUrl(platform === "Macintosh" ? "macOS" : platform, details), target: "_blank", rel: "noopener noreferrer" },
+    h("p", { class: "muted" }, "Tell us what went wrong. Your report goes straight to the project's bug list — no account needed. You'll see everything that's sent before you send it."),
+    h("div", {}, h("button", { class: "btn", type: "button", onclick: () => reportBug(me, platform === "Macintosh" ? "macOS" : platform, details) },
       icon("u-warning"), "Report a bug")));
+}
+
+/** The in-app bug report form; sends through this server to GitHub Issues. */
+async function reportBug(me, platform, details) {
+  let ready = false;
+  try { ready = (await api("/api/bug-report")).enabled; } catch { /* treat as not set up */ }
+  const summary = field("What's the problem? (one line)", { maxlength: 200, required: true, placeholder: "e.g. The Save button does nothing on the Specs tab" });
+  const what = field("What happened?", { tag: "textarea", maxlength: 4000 });
+  const steps = field("What were you doing? (steps)", { tag: "textarea", maxlength: 4000, placeholder: "1. Opened my car\n2. Tapped Specs\n3. …" });
+  const expected = field("What did you expect? (optional)", { tag: "textarea", maxlength: 2000 });
+  const include = h("input", { type: "checkbox", checked: true });
+  const preview = h("pre", { class: "small muted bug-details" }, details);
+  const body = h("div", { class: "form" }, summary, what, steps, expected,
+    h("label", { class: "check" }, include, " Include these technical details"), preview,
+    h("p", { class: "muted small" }, "Reports are public on GitHub. Don't include personal information (names, addresses, VINs, plates)."),
+    me.is_admin ? h("p", { class: "small bug-reminder" },
+      "Reminder for the owner: bug reports currently use a GitHub key built into the app. Move them to the relay service (option 1) — see docs/BUG-REPORTS.md.") : null,
+    ready ? null : h("p", { class: "small" }, "Sending from here isn't set up on this computer yet, so this will open the report on GitHub instead."));
+  for (;;) {
+    const choice = await modal({ title: "Report a bug", body, actions: [{ label: "Cancel", value: null }, { label: ready ? "Send report" : "Continue on GitHub", primary: true, value: "send" }] });
+    if (choice !== "send") return;
+    const text = summary.input.value.trim();
+    if (text.length < 5) { toast("Please describe the problem in a few words.", "error"); continue; }
+    if (!ready) {
+      window.open(bugReportUrl(platform, [text, what.input.value, steps.input.value, include.checked ? details : ""].filter(Boolean).join("\n\n")), "_blank", "noopener");
+      return;
+    }
+    try {
+      const r = await api("/api/bug-report", { method: "POST", body: { summary: text, what_happened: what.input.value, steps: steps.input.value,
+        expected: expected.input.value, details: include.checked ? details : "" } });
+      toast(`Thanks! Reported as #${r.number}.`);
+      return;
+    } catch (e) { showError(e); return; }
+  }
 }
 
 // ---------------------------------------------------------------------------

@@ -98,6 +98,7 @@ fun AppRoot() {
                 composable("entry-edit/{vehicleId}/{entryId}") {
                     EntryEditScreen(nav, it.arguments!!.getString("vehicleId")!!, it.arguments!!.getString("entryId")!!.takeIf { id -> id != "new" })
                 }
+                composable("report-bug") { com.ratchetwrench.app.ui.screens.BugReportScreen(nav) }
                 composable("shopping") { com.ratchetwrench.app.ui.screens.ShoppingListScreen(nav) }
                 composable("shopping-item/new?vehicle={vehicle}") {
                     com.ratchetwrench.app.ui.screens.ShoppingItemScreen(nav, null, it.arguments?.getString("vehicle")?.takeIf { v -> v != "none" })

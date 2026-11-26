@@ -547,3 +547,9 @@ The desktop app *is* the existing server plus web app, packaged to run on a PC. 
 - **Categories:** the catalog's 18 categories are folded into 8 `metric_groups` (a chart can't show more than 8 colours clearly); colours are a fixed, colour-blind-checked palette per group, separate steps for light and dark.
 - **Intervals:** average miles = sum of gaps ÷ number of gaps (only consecutive records that both have a mileage); average months = time from first to last ÷ gaps. A negative gap (mileage typo) is shown with a warning and left out of the miles average.
 - No new libraries, endpoints or data: charts are hand-drawn SVG (web) and Compose Canvas (phone).
+
+### D64. In-app bug reports → GitHub Issues (temporary key in the builds)
+- **What:** Settings → Report a bug opens a form (phone: its own screen; web/desktop: a dialog) — summary, what happened, steps, expected, and the technical details that will be attached (shown, can be switched off). Send creates an issue (labels `bug`, `user-report`). Phone → GitHub API directly; web/desktop → `POST /api/bug-report` on the user's own server → GitHub API.
+- **Owner's choice (option 2, temporary):** the key is a fine-grained token limited to Issues on this repository, injected at build time from the `RW_ISSUE_TOKEN` secret (Android `BuildConfig.ISSUE_TOKEN`; a file inside the desktop bundle; `.env` for Docker). Never in the source. Accepted risk: it can be extracted from the builds and used to post issues (only). The planned replacement is a relay (Cloudflare Worker) holding the key — docs/BUG-REPORTS.md; the form shows the owner a reminder until then (web: admins only).
+- **Limits:** 1 report a minute and 10 a day per phone / per user; field length limits; `@` defused (no GitHub pings); details in a code block. No key → the form falls back to the pre-filled GitHub page.
+- **Outbound connection added:** `api.github.com` (issue creation), only when the person presses Send.
