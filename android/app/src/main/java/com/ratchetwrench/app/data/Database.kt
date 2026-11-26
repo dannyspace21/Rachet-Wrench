@@ -60,6 +60,9 @@ interface SpecDao {
     @Query("SELECT * FROM specs WHERE dirty = 1")
     suspend fun dirty(): List<Spec>
 
+    @Query("SELECT * FROM specs WHERE deleted_at IS NULL")
+    suspend fun allLive(): List<Spec>
+
     @Upsert suspend fun upsert(item: Spec)
 
     @Query("DELETE FROM specs WHERE id = :id")
@@ -193,6 +196,9 @@ interface PartDao {
 
     @Query("SELECT * FROM parts WHERE dirty = 1")
     suspend fun dirty(): List<Part>
+
+    @Query("SELECT * FROM parts WHERE vehicle_id = :vehicleId AND deleted_at IS NULL")
+    suspend fun forVehicle(vehicleId: String): List<Part>
 
     @Upsert suspend fun upsert(item: Part)
 

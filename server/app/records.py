@@ -27,6 +27,7 @@ from sqlalchemy.orm import Session
 from . import schemas
 from .models import Attachment, Entry, OdometerReading, Part, Reminder, ShoppingItem, User, Vehicle, VehicleSpec, utcnow
 from .reminders import mark_done_from_entry
+from .spec_parts import apply_spec
 from .uploads import delete_stored
 
 # kind name -> (table class, input schema)
@@ -114,6 +115,8 @@ def soft_delete(db: Session, obj, when: datetime | None = None) -> None:
     if isinstance(obj, Vehicle):
         for model in (VehicleSpec, Entry, Reminder, OdometerReading, Part, Attachment, ShoppingItem):
             children += db.scalars(select(model).where(model.vehicle_id == obj.id, model.deleted_at.is_(None))).all()
+    elif isinstance(obj, VehicleSpec):
+        apply_spec(db, obj)  # its auto part goes too
     elif isinstance(obj, Entry):
         children += db.scalars(select(Attachment).where(Attachment.entry_id == obj.id, Attachment.deleted_at.is_(None))).all()
     for child in children:
@@ -239,6 +242,8 @@ def upsert(db: Session, user: User, kind: str, data: BaseModel, record_id: str |
             mark_done_from_entry(db, user.id, obj.vehicle_id, obj.type_key, obj.date, obj.mileage)
     elif kind == "odometer":
         _bump_vehicle_mileage(db, obj.vehicle_id, obj.mileage)
+    elif kind == "specs":
+        apply_spec(db, obj)  # e.g. oil filter part number -> Parts tab
     db.commit()
     return obj, True
 

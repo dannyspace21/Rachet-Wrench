@@ -52,6 +52,10 @@ object Reminders {
     const val SOON_MILES = 500
     const val SOON_DAYS = 30L
 
+    /** Overdue first, then due soon, then the rest (original order kept within each). */
+    fun byUrgency(list: List<Reminder>, currentMileage: Int?, today: LocalDate = LocalDate.now()): List<Reminder> =
+        list.sortedBy { when (status(it, currentMileage, today).status) { "overdue" -> 0; "due_soon" -> 1; else -> 2 } }
+
     /** Same rules as the server: due at whichever limit is reached first. */
     fun status(r: Reminder, currentMileage: Int?, today: LocalDate = LocalDate.now()): DueStatus {
         val dueMiles = if (r.interval_miles != null && r.last_done_mileage != null) r.last_done_mileage + r.interval_miles else null
@@ -84,7 +88,11 @@ object Reminders {
     /** Smart Shopping: retailers and "what to buy" per maintenance type. */
     val retailers: List<Retailer> = emptyList(),
     val shopping: Map<String, List<ShopRecipe>> = emptyMap(),
+    /** Specs that are also parts (oil type, oil filter number, tire sizes…). */
+    val spec_parts: List<SpecPart> = emptyList(),
 )
+
+@Serializable data class SpecPart(val spec: String, val type_key: String, val name: String, val format: String = "{v}")
 
 @Serializable data class Affiliate(val param: String = "", val value: String = "")
 @Serializable data class Retailer(val key: String, val name: String, val icon: String = "cart", val color: String = "",

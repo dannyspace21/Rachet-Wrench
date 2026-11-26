@@ -339,6 +339,33 @@ MAKES = {
 }
 
 
+# ---------------------------------------------------------------------------
+# Specs that are also PARTS: filling one of these in Specs automatically adds
+# (or updates) the matching part on the vehicle's Parts tab, e.g. the oil
+# filter part number, the oil type, the tire sizes.  "format" turns the spec
+# into what's shown/searched ("{v}" = the spec as typed).  Each auto part has a
+# fixed ID made from the vehicle and spec key, so the phone and the server
+# always agree on it (no duplicates when both add it).
+# ---------------------------------------------------------------------------
+SPEC_PARTS = [
+    {"spec": "oil_type", "type_key": "oil_change", "name": "Engine oil", "format": "{v}"},
+    {"spec": "oil_filter_part", "type_key": "oil_filter", "name": "Oil filter", "format": "{v}"},
+    {"spec": "spark_plug_part", "type_key": "spark_plugs", "name": "Spark plugs", "format": "{v}"},
+    {"spec": "coolant_type", "type_key": "coolant", "name": "Coolant", "format": "{v}"},
+    {"spec": "transmission_fluid_type", "type_key": "transmission_fluid", "name": "Transmission fluid", "format": "{v}"},
+    {"spec": "brake_fluid_type", "type_key": "brake_fluid", "name": "Brake fluid", "format": "{v}"},
+    {"spec": "differential_fluid_type", "type_key": "differential_fluid", "name": "Differential fluid", "format": "{v}"},
+    {"spec": "power_steering_fluid_type", "type_key": "power_steering_fluid", "name": "Power steering fluid", "format": "{v}"},
+    {"spec": "fork_oil_type", "type_key": "fork_oil", "name": "Fork oil", "format": "{v}"},
+    {"spec": "tire_size_front", "type_key": "tire_replacement", "name": "Front tires", "format": "{v}"},
+    {"spec": "tire_size_rear", "type_key": "tire_replacement", "name": "Rear tires", "format": "{v}"},
+    {"spec": "battery_group", "type_key": "battery", "name": "Battery", "format": "Group {v}"},
+    {"spec": "wiper_size_driver", "type_key": "wipers", "name": "Wiper blade — driver", "format": "{v}"},
+    {"spec": "wiper_size_passenger", "type_key": "wipers", "name": "Wiper blade — passenger", "format": "{v}"},
+    {"spec": "chain_size", "type_key": "chain_replacement", "name": "Drive chain", "format": "{v}"},
+]
+
+
 def main() -> None:
     """Assemble the three lists into one JSON document and write it to disk."""
     keys = [t[0] for t in TYPES]
@@ -346,6 +373,8 @@ def main() -> None:
     assert len(keys) == len(set(keys)), "duplicate maintenance type key"
     spec_keys = [s[0] for s in SPECS]
     assert len(spec_keys) == len(set(spec_keys)), "duplicate spec key"
+    for sp in SPEC_PARTS:
+        assert sp["spec"] in spec_keys and sp["type_key"] in keys and "{v}" in sp["format"], sp
 
     catalog = {
         "version": 1,
@@ -362,6 +391,7 @@ def main() -> None:
         "make_names": MAKE_NAMES,
         "retailers": RETAILERS,
         "shopping": SHOPPING,
+        "spec_parts": SPEC_PARTS,
     }
     out = HERE / "catalog.json"
     out.write_text(json.dumps(catalog, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")

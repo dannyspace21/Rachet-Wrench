@@ -85,7 +85,9 @@ import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
 import java.time.LocalDate
 
-private val TABS = listOf("History", "Specs", "Reminders", "Parts", "Odometer")
+// In the order you use them: what's due, what fits, what was done, the specs.
+// (Mileage is updated with the "Mileage" button; no separate tab.)
+private val TABS = listOf("Reminders", "Parts", "History", "Specs")
 
 /** Opens a web link in the phone's browser. */
 fun openLink(context: Context, url: String) {
@@ -133,7 +135,6 @@ fun VehicleScreen(nav: NavHostController, id: String) {
     val shopCtx = com.ratchetwrench.app.ui.rememberShopContext(v)
     val shopOn = com.ratchetwrench.app.ui.shoppingOn()
     var shopping by remember { mutableStateOf<Pair<String, List<com.ratchetwrench.app.domain.ShopItem>>?>(null) }
-    val partsUrl = v.parts_url.ifBlank { links.parts ?: "" }
     val ownersUrl = v.owners_url.ifBlank { links.owners ?: "" }
 
     Scaffold(
@@ -174,7 +175,7 @@ fun VehicleScreen(nav: NavHostController, id: String) {
                             } catch (e: Exception) { "Could not create the report: ${e.message}" })
                         }
                     }
-                    if (partsUrl.isNotBlank()) ActionChip("Parts site", "external") { openLink(ctx, partsUrl) }
+                    // (The manufacturer's parts site is on the Parts tab.)
                     if (ownersUrl.isNotBlank()) ActionChip("Owner portal", "book") { openLink(ctx, ownersUrl) }
                 }
                 // Coming up: overdue / due-soon maintenance for this vehicle.
@@ -215,11 +216,10 @@ fun VehicleScreen(nav: NavHostController, id: String) {
                 TABS.forEachIndexed { i, t -> Tab(selected = tab == i, onClick = { tab = i }, text = { Text(t, fontWeight = FontWeight.SemiBold) }) }
             }
             when (tab) {
-                0 -> HistoryTab(nav, v)
-                1 -> SpecsTab(v)
-                2 -> RemindersTab(nav, v)
-                3 -> PartsTab(v)
-                else -> OdometerTab(v)
+                0 -> RemindersTab(nav, v)
+                1 -> PartsTab(v)
+                2 -> HistoryTab(nav, v)
+                else -> SpecsTab(v)
             }
         }
     }
@@ -341,7 +341,8 @@ private fun RemindersTab(nav: NavHostController, v: Vehicle) {
     LazyColumn(contentPadding = androidx.compose.foundation.layout.PaddingValues(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
         item { PrimaryButton("Add reminder", "plus") { creating = true } }
         if (rems.isEmpty()) item { Text("Example: oil change every 5,000 ${v.mileage_unit} or 6 months, whichever comes first.", color = LocalExtra.current.muted) }
-        items(rems, key = { it.id }) { r ->
+        // Overdue first, then due soon, then everything in good standing.
+        items(Reminders.byUrgency(rems, v.current_mileage), key = { it.id }) { r ->
             val st = Reminders.status(r, v.current_mileage)
             // Tap: the reminder's page (Mark as done, Edit schedule, Find supplies).
             ListRow(onClick = { nav.navigate("reminder/${r.id}") }) {
@@ -497,26 +498,6 @@ private fun PartsTab(v: Vehicle) {
                     TextButton({ editing = null }) { Text("Cancel") }
                 }
             })
-    }
-}
-
-@Composable
-private fun OdometerTab(v: Vehicle) {
-    val repo = LocalRepo.current
-    val scope = rememberCoroutineScope()
-    val readings by repo.db.odometer().observeFor(v.id).collectAsState(initial = emptyList())
-    LazyColumn(contentPadding = androidx.compose.foundation.layout.PaddingValues(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-        if (readings.isEmpty()) item { Text("No readings yet. Use “Mileage” above.", color = LocalExtra.current.muted) }
-        items(readings, key = { it.id }) { r ->
-            ListRow {
-                UiIcon("gauge")
-                Column(Modifier.weight(1f)) {
-                    Text(miles(r.mileage, v.mileage_unit), fontWeight = FontWeight.Bold)
-                    Text(prettyDate(r.date), color = LocalExtra.current.muted)
-                }
-                IconButton({ scope.launch { repo.deleteOdometer(r.id) } }) { UiIcon("trash", description = "Delete reading") }
-            }
-        }
     }
 }
 

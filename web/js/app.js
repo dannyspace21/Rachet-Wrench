@@ -2,7 +2,7 @@
 //
 // The address bar holds the current screen after the "#", e.g.
 //   #/                     garage dashboard
-//   #/v/<id>/history       a vehicle (tabs: history, specs, reminders, parts, odometer, docs)
+//   #/v/<id>/history       a vehicle (tabs: reminders, parts, history, specs, docs)
 //   #/v/new                add a vehicle
 //   #/v/<id>/edit          edit a vehicle
 //   #/v/<id>/entry/new     add a maintenance/repair entry

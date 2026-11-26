@@ -112,6 +112,9 @@ fun GarageScreen(nav: NavHostController) {
 
     LaunchedEffect(Unit) {
         Updater.autoCheck(ctx) // app updates (at most every 6 hours)
+        // Specs saved before "specs are also parts" get their parts (the
+        // computer does this itself when the phone syncs with one).
+        if (repo.store.mode != "server") repo.backfillSpecParts()
         refresh()
     }
 

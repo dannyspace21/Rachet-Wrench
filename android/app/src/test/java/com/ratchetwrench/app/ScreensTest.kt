@@ -111,6 +111,7 @@ class ScreensTest {
         type("Shop name", "Corner Garage")
         click("Save entry")
         waitGone("Save entry")
+        click("History")
         waitForText("Oil and filter")
 
         // View it, then edit it.
@@ -148,8 +149,9 @@ class ScreensTest {
             repo.savePart(com.ratchetwrench.app.data.Part(vehicle_id = v.id, type_key = "oil_filter", part_number = "04152-YZZA1"))
         }
 
-        click("Odometer")
-        waitForText("43,500 mi")
+        // Tabs in the order they're used; no Odometer tab (mileage is the header button).
+        org.junit.Assert.assertTrue("no Odometer tab", rule.onAllNodesWithText("Odometer").fetchSemanticsNodes().isEmpty())
+        waitForText("43,500", substring = true)
         click("Specs")
         waitForText("Test value")
         click("Reminders")
@@ -293,6 +295,45 @@ class ScreensTest {
         tapIcon("Remove Shop towels")
         waitGone("Shop towels")
         waitForText("Oil filter")
+    }
+
+    /** Overdue on top, then due soon, then OK; specs that are parts show up on the Parts tab. */
+    @Test
+    fun remindersByUrgencyAndSpecsBecomeParts() {
+        startPhoneOnlyWithVehicle()   // at 42,000 mi
+        val ctx = ApplicationProvider.getApplicationContext<Context>()
+        val repo = com.ratchetwrench.app.data.Repository(ctx)
+        kotlinx.coroutines.runBlocking {
+            val v = repo.db.vehicles().observeAll().first().first()
+            repo.saveReminder(com.ratchetwrench.app.data.Reminder(vehicle_id = v.id, type_key = "wipers", interval_miles = 50000, last_done_mileage = 40000))      // OK
+            repo.saveReminder(com.ratchetwrench.app.data.Reminder(vehicle_id = v.id, type_key = "brake_fluid", interval_miles = 2300, last_done_mileage = 40000))  // due soon
+            repo.saveReminder(com.ratchetwrench.app.data.Reminder(vehicle_id = v.id, type_key = "tire_rotation", interval_miles = 5000, last_done_mileage = 30000)) // overdue
+            repo.saveSpec(v.id, "oil_filter_part", "04152-YZZA1", "user")
+            repo.saveSpec(v.id, "tire_size_rear", "255/35R19", "user")
+            repo.saveSpec(v.id, "paint_code", "223", "user")
+        }
+        // The vehicle opens on Reminders, most urgent first.
+        waitForText("Tire rotation")
+        val top = { t: String -> rule.onAllNodesWithText(t)[0].fetchSemanticsNode().boundsInRoot.top }
+        org.junit.Assert.assertTrue("overdue above due soon", top("Tire rotation") < top("Brake fluid"))
+        org.junit.Assert.assertTrue("due soon above OK", top("Brake fluid") < top("Wiper blades"))
+
+        click("Parts")
+        waitForText("04152-YZZA1")
+        waitForText("Rear tires")
+        waitForText("255/35R19")
+        // The parts site button is only on the Parts tab, not in the header too.
+        org.junit.Assert.assertTrue(rule.onAllNodesWithText("Parts site").fetchSemanticsNodes().isEmpty())
+        kotlinx.coroutines.runBlocking {
+            val v = repo.db.vehicles().observeAll().first().first()
+            org.junit.Assert.assertEquals("bbdf75ad-064d-3dd7-9a2b-7ded63f937fd",
+                repo.specPartId("11111111-2222-4333-8444-555555555555", "oil_filter_part"))  // same as the server
+            // Changing the spec updates the same part; clearing it removes the part.
+            repo.saveSpec(v.id, "oil_filter_part", "90915-YZZD1", "user")
+            repo.deleteSpec(repo.db.specs().find(v.id, "tire_size_rear")!!.id)
+        }
+        waitForText("90915-YZZD1")
+        waitGone("Rear tires")
     }
 
     @Test

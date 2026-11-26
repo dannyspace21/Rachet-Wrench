@@ -533,3 +533,9 @@ The desktop app *is* the existing server plus web app, packaged to run on a PC. 
 - **Phone database version 2:** Room auto-migration (new table only; nothing existing changes), verified by a test that opens a real version-1 database with data.
 - **Older computers:** the phone sends shopping lines in a separate sync request; a computer still on an older version refuses it (422) and the lines just wait on the phone while everything else keeps syncing.
 - **Shared rules:** `catalog/shopping_tests.json` gained `list_items` and `list_queries` cases checked by both the web (node) and Android tests.
+
+### D62. Vehicle page order; specs that are parts
+- **Sections** in the order they're used: Reminders, Parts, History, Specs (+ Documents on the web); a vehicle opens on Reminders. The Odometer section was removed — "Update mileage" / "Mileage" records a reading, and readings still sync and update the vehicle.
+- **Reminders** are listed overdue → due soon → everything else (stable within each group), on web and phone.
+- **One parts-site button**: the header chip on the phone was removed; the Parts tab keeps it.
+- **Specs that are parts** (`spec_parts` in the catalog: oil type, oil filter / spark plug numbers, fluids, tire sizes, battery group, wiper sizes, chain): saving one adds or updates a part ("Added from Specs"); clearing/deleting it removes the part. The part's ID is a name-based UUID of the vehicle + spec key (MD5, identical to Java's `UUID.nameUUIDFromBytes`, checked against real Java), so the phone and the server create the SAME record and sync never duplicates it. A part already saved by hand with the same type and number isn't added again; one the user deleted stays deleted unless the spec changes. Existing specs are back-filled once at server start (and on the phone in phone-only mode).

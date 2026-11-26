@@ -80,6 +80,11 @@ def bootstrap() -> None:
             from .seed import seed_sample_data
 
             seed_sample_data(db)
+        # Specs saved before "specs are also parts" existed get their parts once.
+        from .spec_parts import backfill
+
+        if added := backfill(db):
+            log.info("Added %d parts from existing specs.", added)
 
 
 @asynccontextmanager

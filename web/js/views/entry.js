@@ -104,7 +104,7 @@ export async function entryDetailView(main, { params }) {
   const facts = [["Date", dateText(e.date)], ["Mileage", e.mileage !== null ? miles(e.mileage, v.mileage_unit) : "—"], ["Cost", money(e.cost_cents)],
     ["Done by", e.performed_by === "shop" ? (e.shop_name || "Shop") : "DIY"], ["Source", e.source === "carfax" ? "Imported from Carfax" : "Entered by me"]];
 
-  mount(main, h("a", { class: "back", href: `#/v/${v.id}` }, icon("u-chevron_left"), vehicleName(v)),
+  mount(main, h("a", { class: "back", href: `#/v/${v.id}/history` }, icon("u-chevron_left"), vehicleName(v)),
     h("div", { class: "page-head" },
       h("div", { class: "row" }, typeBadge(e.type_key, e.kind),
         h("div", {}, h("h1", {}, e.custom_type || label[e.type_key] || "Entry"),
@@ -112,7 +112,7 @@ export async function entryDetailView(main, { params }) {
       h("div", { class: "btn-row" }, h("a", { class: "btn", href: `#/e/${e.id}/edit` }, icon("u-edit"), "Edit"),
         h("button", { class: "btn danger", type: "button", onclick: async () => {
           if (await confirmBox("Delete entry?", "The entry and its photos will be deleted.")) {
-            try { await api(`/api/entries/${e.id}`, { method: "DELETE" }); toast("Entry deleted"); location.hash = `#/v/${v.id}`; } catch (err) { showError(err); }
+            try { await api(`/api/entries/${e.id}`, { method: "DELETE" }); toast("Entry deleted"); location.hash = `#/v/${v.id}/history`; } catch (err) { showError(err); }
           }
         } }, icon("u-trash"), "Delete"))),
     h("div", { class: "stack-lg" },

@@ -3,15 +3,17 @@
 import { api, getCatalog, getMe } from "../api.js";
 import {
   h, mount, icon, typeBadge, money, miles, dateText, today, vehicleName, vehicleFull, emptyState, field,
-  segmented, modal, confirmBox, toast, showError, lineChart, parseIntOrNull, filePicker,
+  segmented, modal, confirmBox, toast, showError, parseIntOrNull, filePicker,
 } from "../ui.js";
 import { reminderItem } from "./dashboard.js";
 import { partShopButton, reminderShopButton, shoppingContext } from "./shopping-ui.js";
 import { addPartToList, addReminderToList } from "./shopping-list.js";
 
+// In the order you use them: what's due, what fits, what was done, the specs.
+// (Mileage is updated with the "Update mileage" button; no separate tab.)
 const TABS = [
-  ["history", "History", "u-list"], ["specs", "Specs", "u-spec"], ["reminders", "Reminders", "u-bell"],
-  ["parts", "Parts", "u-part"], ["odometer", "Odometer", "u-gauge"], ["docs", "Documents", "u-book"],
+  ["reminders", "Reminders", "u-bell"], ["parts", "Parts", "u-part"], ["history", "History", "u-list"],
+  ["specs", "Specs", "u-spec"], ["docs", "Documents", "u-book"],
 ];
 const SOURCE_CLASS = { vin: "src-vin", provider: "src-vin", sticker: "src-sticker", user: "src-user", unverified: "src-unverified", carfax: "src-vin" };
 
@@ -19,7 +21,8 @@ const SOURCE_CLASS = { vin: "src-vin", provider: "src-vin", sticker: "src-sticke
 // Vehicle page
 // ===========================================================================
 export async function vehicleView(main, { params }) {
-  const [id, tab = "history"] = params;
+  const [id, tabParam] = params;
+  const tab = TABS.some(([k]) => k === tabParam) ? tabParam : "reminders";
   const [v, catalog] = await Promise.all([api(`/api/vehicles/${id}`), getCatalog()]);
   const label = Object.fromEntries(catalog.types.map((t) => [t.key, t.label]));
 
@@ -49,10 +52,10 @@ export async function vehicleView(main, { params }) {
   const body = h("div", {});
   mount(main, h("a", { class: "back", href: "#/" }, icon("u-chevron_left"), "Garage"), head, h("div", { style: null }), tabs, body);
   main.children[2].style.height = "22px";
-  // Fixed allow-list of tab screens (anything else shows History).
+  // Fixed allow-list of tab screens (anything else shows Reminders).
   const renderers = new Map([["history", historyTab], ["specs", specsTab], ["reminders", remindersTab],
-    ["parts", partsTab], ["odometer", odometerTab], ["docs", docsTab]]);
-  const renderTab = renderers.get(tab) || historyTab;
+    ["parts", partsTab], ["docs", docsTab]]);
+  const renderTab = renderers.get(tab) || remindersTab;
   await renderTab(body, v, { catalog, label });
 }
 
@@ -182,12 +185,18 @@ async function decodeIntoSpecs(v) {
 // ---------------------------------------------------------------------------
 // Reminders tab
 // ---------------------------------------------------------------------------
+/** Overdue first, then due soon, then everything in good standing (original order kept within each). */
+export function byUrgency(rems) {
+  const rank = { overdue: 0, due_soon: 1 };
+  return rems.map((r, i) => [r, i]).sort(([a, i], [b, j]) => ((rank[a.due?.status] ?? 2) - (rank[b.due?.status] ?? 2)) || i - j).map(([r]) => r);
+}
+
 async function remindersTab(body, v, { catalog, label }) {
   const [rems, shopCtx] = await Promise.all([api(`/api/reminders?vehicle_id=${v.id}`), shoppingContext(v)]);
   const add = h("button", { class: "btn primary", type: "button", onclick: () => editReminder(v, null, catalog) }, icon("u-plus"), "Add reminder");
   mount(body, h("div", { class: "stack" },
     h("div", { class: "row between" }, h("p", { class: "muted" }, "Get reminded by mileage, by date, or whichever comes first."), add),
-    rems.length ? h("div", { class: "list" }, rems.map((r) => {
+    rems.length ? h("div", { class: "list" }, byUrgency(rems).map((r) => {
       const item = reminderItem(r, null, label);
       item.removeAttribute("href");
       item.setAttribute("role", "button");
@@ -326,27 +335,6 @@ async function editPart(v, p, catalog) {
     toast("Part saved");
     window.dispatchEvent(new HashChangeEvent("hashchange"));
   } catch (e) { showError(e); }
-}
-
-// ---------------------------------------------------------------------------
-// Odometer tab
-// ---------------------------------------------------------------------------
-async function odometerTab(body, v) {
-  const readings = await api(`/api/odometer?vehicle_id=${v.id}`);
-  const sorted = readings.slice().sort((a, b) => a.date.localeCompare(b.date));
-  mount(body, h("div", { class: "stack" },
-    h("div", { class: "row between" }, h("p", { class: "muted" }, "Mileage over time."),
-      h("button", { class: "btn primary", type: "button", onclick: () => logMileage(v) }, icon("u-plus"), "Add reading")),
-    sorted.length > 1 ? h("div", { class: "card" }, lineChart(sorted)) : null,
-    readings.length ? h("div", { class: "list" }, readings.map((r) => h("div", { class: "item" },
-      h("span", { class: "type-badge neutral" }, icon("u-gauge", "lg")),
-      h("div", { class: "main" }, h("span", { class: "title" }, miles(r.mileage, v.mileage_unit)), h("span", { class: "meta" }, dateText(r.date), r.note || null)),
-      h("button", { class: "btn small ghost", type: "button", "aria-label": "Delete reading", onclick: async () => {
-        if (await confirmBox("Delete reading?", `${miles(r.mileage, v.mileage_unit)} on ${dateText(r.date)}`)) {
-          await api(`/api/odometer/${r.id}`, { method: "DELETE" }); window.dispatchEvent(new HashChangeEvent("hashchange"));
-        }
-      } }, icon("u-trash")))))
-      : emptyState("u-gauge", "No readings yet", "Each entry's mileage also updates the vehicle.")));
 }
 
 // ---------------------------------------------------------------------------
