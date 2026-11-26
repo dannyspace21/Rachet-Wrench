@@ -245,6 +245,6 @@ object LocalReport {
         BitmapFactory.decodeFile(file.path, bounds)
         var sample = 1
         while (maxOf(bounds.outWidth, bounds.outHeight) / sample > maxSide) sample *= 2
-        BitmapFactory.decodeFile(file.path, BitmapFactory.Options().apply { inSampleSize = sample })
+        com.ratchetwrench.app.camera.Photos.decodeUpright(file, sample) // right way up
     } catch (e: Exception) { null }
 }

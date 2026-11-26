@@ -9,6 +9,8 @@ package com.ratchetwrench.app.camera
 
 import android.Manifest
 import android.content.pm.PackageManager
+import android.view.OrientationEventListener
+import android.view.Surface
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.camera.core.CameraSelector
@@ -20,6 +22,8 @@ import androidx.camera.lifecycle.ProcessCameraProvider
 import androidx.camera.view.PreviewView
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -39,6 +43,10 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.saveable.listSaver
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.toMutableStateList
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -53,12 +61,17 @@ import com.google.mlkit.vision.barcode.BarcodeScannerOptions
 import com.google.mlkit.vision.barcode.BarcodeScanning
 import com.google.mlkit.vision.barcode.common.Barcode
 import com.google.mlkit.vision.common.InputImage
+import com.ratchetwrench.app.data.Attachment
 import com.ratchetwrench.app.domain.Vin
+import com.ratchetwrench.app.ui.PhotoThumb
 import com.ratchetwrench.app.ui.PrimaryButton
 import com.ratchetwrench.app.ui.SecondaryButton
 import java.io.File
 import java.util.UUID
 import java.util.concurrent.Executors
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 /** Shows [content] once camera permission is granted; asks for it first. */
 @Composable
@@ -152,14 +165,43 @@ fun VinScanScreen(onResult: (String) -> Unit, onCancel: () -> Unit) {
 fun CaptureScreen(onDone: (List<String>) -> Unit, onCancel: () -> Unit) {
     CameraPermissionGate(onCancel) {
         val ctx = LocalContext.current
-        val shots = remember { mutableStateListOf<String>() }
+        val scope = rememberCoroutineScope()
+        // rememberSaveable: the photos taken so far survive the screen being
+        // rebuilt (e.g. turning the phone), instead of disappearing.
+        val shots = rememberSaveable(saver = listSaver(save = { it.toList() }, restore = { it.toMutableStateList() })) {
+            mutableStateListOf<String>()
+        }
         var busy by remember { mutableStateOf(false) }
         val capture = remember { ImageCapture.Builder().setCaptureMode(ImageCapture.CAPTURE_MODE_MAXIMIZE_QUALITY).build() }
+
+        // Tell the camera how the phone is physically held (works even with
+        // auto-rotate off), so sideways shots are saved sideways and upright
+        // shots upright.
+        DisposableEffect(Unit) {
+            val listener = object : OrientationEventListener(ctx) {
+                override fun onOrientationChanged(degrees: Int) {
+                    if (degrees == ORIENTATION_UNKNOWN) return
+                    capture.targetRotation = when (degrees) {
+                        in 45 until 135 -> Surface.ROTATION_270
+                        in 135 until 225 -> Surface.ROTATION_180
+                        in 225 until 315 -> Surface.ROTATION_90
+                        else -> Surface.ROTATION_0
+                    }
+                }
+            }
+            if (listener.canDetectOrientation()) listener.enable()
+            onDispose { listener.disable() }
+        }
+
         Box(Modifier.fillMaxSize().background(Color.Black)) {
             CameraPreview(Modifier.fillMaxSize(), capture = capture)
             Column(Modifier.align(Alignment.BottomCenter).safeDrawingPadding().padding(16.dp).background(Color(0xCC000000), RoundedCornerShape(16.dp)).padding(16.dp),
                 verticalArrangement = Arrangement.spacedBy(10.dp)) {
                 Text(if (shots.isEmpty()) "Take one or more photos" else "${shots.size} photo(s) taken", color = Color.White, fontWeight = FontWeight.Bold)
+                // Small previews of the photos taken so far (newest first).
+                if (shots.isNotEmpty()) Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    shots.reversed().forEach { PhotoThumb(Attachment(id = it, localPath = it), 64.dp) }
+                }
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     PrimaryButton(if (busy) "Saving…" else "Take photo", "camera", enabled = !busy) {
                         val dir = File(ctx.filesDir, "photos").apply { mkdirs() }
@@ -167,7 +209,13 @@ fun CaptureScreen(onDone: (List<String>) -> Unit, onCancel: () -> Unit) {
                         busy = true
                         capture.takePicture(ImageCapture.OutputFileOptions.Builder(file).build(), ContextCompat.getMainExecutor(ctx),
                             object : ImageCapture.OnImageSavedCallback {
-                                override fun onImageSaved(output: ImageCapture.OutputFileResults) { shots.add(file.absolutePath); busy = false }
+                                override fun onImageSaved(output: ImageCapture.OutputFileResults) {
+                                    scope.launch {
+                                        // Turn the pixels upright (cameras save them sideways + an EXIF note).
+                                        withContext(Dispatchers.IO) { Photos.uprightJpeg(file) }
+                                        shots.add(file.absolutePath); busy = false
+                                    }
+                                }
                                 override fun onError(exception: ImageCaptureException) { busy = false }
                             })
                     }

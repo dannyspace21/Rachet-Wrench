@@ -187,7 +187,7 @@ fun PhotoThumb(att: Attachment, size: Dp = 72.dp, modifier: Modifier = Modifier)
                     else -> null
                 } ?: return@withContext null
                 val opts = BitmapFactory.Options().apply { inSampleSize = if (bytes.size > 600_000) 4 else 1 }
-                BitmapFactory.decodeByteArray(bytes, 0, bytes.size, opts)?.also { thumbCache.put(att.id, it) }
+                com.ratchetwrench.app.camera.Photos.decodeUpright(bytes, opts.inSampleSize)?.also { thumbCache.put(att.id, it) }
             } catch (e: Exception) { null }
         }
     }

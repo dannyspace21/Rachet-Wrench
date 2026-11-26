@@ -43,6 +43,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.toMutableStateList
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -85,6 +86,7 @@ fun copyIntoApp(context: Context, uri: Uri): String? = try {
     val dir = File(context.filesDir, "photos").apply { mkdirs() }
     val out = File(dir, "${UUID.randomUUID()}.$ext")
     context.contentResolver.openInputStream(uri)!!.use { input -> out.outputStream().use { input.copyTo(it) } }
+    com.ratchetwrench.app.camera.Photos.uprightJpeg(out) // turn sideways photos upright
     out.absolutePath
 } catch (e: Exception) { null }
 
@@ -111,7 +113,8 @@ fun EntryEditScreen(nav: NavHostController, vehicleId: String, entryId: String?)
     var shop by rememberSaveable { mutableStateOf("") }
     var notes by rememberSaveable { mutableStateOf("") }
     var search by remember { mutableStateOf("") }
-    val photos = remember { mutableStateListOf<String>() }
+    // Saveable: attached photos survive turning the phone.
+    val photos = rememberSaveable(saver = androidx.compose.runtime.saveable.listSaver(save = { it.toList() }, restore = { it.toMutableStateList() })) { mutableStateListOf<String>() }
     var error by remember { mutableStateOf<String?>(null) }
 
     LaunchedEffect(entryId) {

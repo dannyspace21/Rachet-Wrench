@@ -38,7 +38,9 @@ import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.toMutableStateList
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
@@ -93,7 +95,8 @@ fun StickerScreen(nav: NavHostController, vehicleId: String) {
     val ctx = LocalContext.current
     val scope = rememberCoroutineScope()
     val vehicle by repo.db.vehicles().observe(vehicleId).collectAsState(initial = null)
-    val photos = remember { mutableStateListOf<String>() }
+    // Saveable: attached photos survive turning the phone.
+    val photos = rememberSaveable(saver = androidx.compose.runtime.saveable.listSaver(save = { it.toList() }, restore = { it.toMutableStateList() })) { mutableStateListOf<String>() }
     val proposals = remember { mutableStateListOf<Proposal>() }
     var status by remember { mutableStateOf<String?>(null) }
     var busy by remember { mutableStateOf(false) }

@@ -74,11 +74,15 @@
         <receiver android:name=".update.InstallResultReceiver" android:exported="false" />
 
         <!-- Reviewed: the launcher activity must be exported so Android can
-             open the app from its icon.  It accepts no data from other apps. -->
+             open the app from its icon.  It accepts no data from other apps.
+             configChanges: turning the phone does NOT rebuild the screen
+             (Compose re-lays it out), so the camera stays connected and
+             photos being taken or attached are never lost. -->
         <!-- nosemgrep: java.android.security.exported_activity.exported_activity -->
         <activity
             android:name=".MainActivity"
             android:exported="true"
+            android:configChanges="orientation|screenSize|screenLayout|smallestScreenSize|keyboardHidden"
             android:windowSoftInputMode="adjustResize">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />

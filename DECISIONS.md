@@ -353,3 +353,19 @@ The desktop app *is* the existing server plus web app, packaged to run on a PC. 
   - Going back or opening a screen after a save or delete now always runs on the main thread (`onMain`). The navigation library throws when used off it, and the tests caught a save resuming on another thread.
   - The **Add vehicle** button now has an explicit screen-reader label: Material 3 1.5 doesn't pass its text on.
 - **Settings & About:** the Garage top bar now shows a labelled **Settings** button (not just a gear). Settings ends with an **About** card: version, what the app is, exactly what it connects to, and links to the project page, issue tracker and security notes. The links open in the browser; the app fetches nothing itself.
+
+### D51. Photos: keep them when the phone turns, and always the right way up
+- **Bug 1 — photo disappeared on rotation:** turning the phone made Android rebuild the screen, and the list of photos just taken (also on the entry form and the door-sticker screen) lived only in short-lived memory.
+  - **Fix:** `MainActivity` now handles orientation and screen-size changes itself (`configChanges`). Compose simply re-lays the screen out, so the camera stays connected and a photo being saved at that moment isn't lost.
+  - As a second safety net, the photo lists use `rememberSaveable`, so they also survive other rebuilds (dark mode switch, language change, Android reclaiming memory).
+- **Bug 2 — photos came out sideways or mirrored:** cameras save the pixels sideways plus an EXIF "rotate when showing" note. Android's basic decoder ignores the note, so thumbnails and the phone-made PDF were sideways. The server already handled it (`ImageOps.exif_transpose`).
+  - **Upright at save time:** `camera/Photos.kt` turns new photos upright right after they are taken (and gallery picks when imported) and re-saves them without EXIF. Everything downstream then sees an upright image, and hidden details such as GPS location are dropped from the phone's copy.
+  - **Upright at display time:** thumbnails and the PDF also honour the EXIF note, so photos taken with older versions show correctly too.
+  - **No new dependency:** this uses Android's built-in `android.media.ExifInterface`.
+- **Holding the phone with auto-rotate off:** an `OrientationEventListener` tells the camera how the phone is physically held, so landscape shots are saved landscape.
+- **Camera screen:** now shows small previews of the photos taken so far.
+- **Tests:** `PhotosTest` builds a two-colour JPEG stored sideways (and one mirrored) with an EXIF note, then checks:
+  - the pixels end up upright, with the colours in the right places;
+  - the note is removed;
+  - upright photos are left untouched;
+  - older photos display upright.
