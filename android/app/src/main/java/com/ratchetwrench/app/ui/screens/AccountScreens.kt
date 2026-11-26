@@ -25,6 +25,7 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -90,7 +91,7 @@ fun WelcomeScreen(onPhoneOnly: () -> Unit, onConnect: () -> Unit) {
 }
 
 @Composable
-fun LoginScreen(onSignedIn: () -> Unit, onBack: (() -> Unit)? = null) {
+fun LoginScreen(onSignedIn: () -> Unit, onBack: (() -> Unit)? = null, onScanQr: (() -> Unit)? = null, pairPayload: String? = null) {
     val repo = LocalRepo.current
     val appContext = LocalContext.current.applicationContext
     val scope = rememberCoroutineScope()
@@ -102,6 +103,8 @@ fun LoginScreen(onSignedIn: () -> Unit, onBack: (() -> Unit)? = null) {
     var error by remember { mutableStateOf<String?>(null) }
     // A home-network address that answers in plain HTTP: ask before using it.
     var askHttp by remember { mutableStateOf<String?>(null) }
+    // One-time code from a scanned "connect your phone" QR code (instead of a password).
+    var pairCode by remember { mutableStateOf<String?>(null) }
 
     /** Sign in to [url] (already checked against the connection rules). */
     fun attempt(url: String) {
@@ -116,8 +119,17 @@ fun LoginScreen(onSignedIn: () -> Unit, onBack: (() -> Unit)? = null) {
                     val api = Api(repo.store)
                     // Make sure this really is a Ratchet Wrench server first.
                     if (!api.isRatchetWrench()) throw ApiException(404, "Not a Ratchet Wrench server.")
-                    repo.store.token = api.login(user.trim(), pass)
-                    repo.store.username = user.trim()
+                    val code = pairCode
+                    if (code != null) {
+                        // QR code: a one-time code instead of username + password.
+                        val (token, name) = api.claimPairing(code)
+                        repo.store.token = token
+                        repo.store.username = name
+                        pairCode = null
+                    } else {
+                        repo.store.token = api.login(user.trim(), pass)
+                        repo.store.username = user.trim()
+                    }
                     val me = api.me()
                     repo.store.serverAiVision = me["server"]?.jsonObject?.get("ai_vision_available")?.jsonPrimitive?.content == "true"
                     me["settings"]?.jsonObject?.get("theme")?.jsonPrimitive?.content?.let { repo.store.theme = it }
@@ -146,6 +158,21 @@ fun LoginScreen(onSignedIn: () -> Unit, onBack: (() -> Unit)? = null) {
         }
     }
 
+    /** Use a scanned QR code: it carries the server address and a one-time code. */
+    fun usePairing(payload: String) {
+        val uri = android.net.Uri.parse(payload)
+        val srv = uri.getQueryParameter("server").orEmpty()
+        val code = uri.getQueryParameter("code").orEmpty()
+        if (srv.isBlank() || code.isBlank()) { error = "That QR code isn't complete. Show a new one on your computer."; return }
+        val url = UrlPolicy.complete(srv)
+        server = url
+        pairCode = code
+        if (UrlPolicy.isLocalHttp(url) && !allowHttp) { askHttp = url; return }   // ask first, as always
+        UrlPolicy.problem(url, allowHttp)?.let { error = it; pairCode = null; return }
+        attempt(url)
+    }
+    LaunchedEffect(pairPayload) { pairPayload?.let { usePairing(it) } }
+
     Scaffold(topBar = { if (onBack != null) TopBar("Connect", onBack = onBack) }) { pad ->
         Column(Modifier.fillMaxSize().padding(pad).imePadding().verticalScroll(rememberScrollState()).padding(24.dp),
             horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(14.dp)) {
@@ -157,6 +184,12 @@ fun LoginScreen(onSignedIn: () -> Unit, onBack: (() -> Unit)? = null) {
                 "like 192.168.1.20:8077.  Docker server: the computer's address with port 8000, like 192.168.1.20:8000.",
                 style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
             Column(Modifier.widthIn(max = 480.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                if (onScanQr != null) {
+                    // Easiest: scan the QR code on the computer — nothing to type.
+                    PrimaryButton("Scan QR code", "scan", Modifier.fillMaxWidth(), enabled = !busy) { error = null; onScanQr() }
+                    Text("Desktop app: click “Connect a phone (QR code)”.  Web app: Settings → Connect a phone.  Or type the details below.",
+                        style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                }
                 Field("Computer or server address", server, { server = it.trim() }, hint = "e.g. 192.168.1.20:8077 or https://garage.your-tailnet.ts.net")
                 Field("Username", user, { user = it })
                 Field("Password", pass, { pass = it }, password = true)
@@ -167,6 +200,7 @@ fun LoginScreen(onSignedIn: () -> Unit, onBack: (() -> Unit)? = null) {
                 }
                 error?.let { Text(it, color = MaterialTheme.colorScheme.error) }
                 PrimaryButton(if (busy) "Signing in…" else "Sign in", enabled = !busy, modifier = Modifier.fillMaxWidth()) {
+                    pairCode = null
                     val url = UrlPolicy.complete(server)
                     server = url
                     // Plain HTTP at home but not allowed yet: ask, don't just fail.
@@ -179,7 +213,7 @@ fun LoginScreen(onSignedIn: () -> Unit, onBack: (() -> Unit)? = null) {
         }
     }
     askHttp?.let { url ->
-        AlertDialog(onDismissRequest = { askHttp = null },
+        AlertDialog(onDismissRequest = { askHttp = null; pairCode = null },
             title = { Text("Connect with plain HTTP?") },
             text = {
                 Text("$url uses plain HTTP (not encrypted). That's normal for the Ratchet Wrench desktop app and Docker server " +
@@ -188,7 +222,7 @@ fun LoginScreen(onSignedIn: () -> Unit, onBack: (() -> Unit)? = null) {
             confirmButton = {
                 TextButton({ askHttp = null; allowHttp = true; server = url; attempt(url) }) { Text("Yes, connect") }
             },
-            dismissButton = { TextButton({ askHttp = null }) { Text("Cancel") } })
+            dismissButton = { TextButton({ askHttp = null; pairCode = null }) { Text("Cancel") } })
     }
 }
 
@@ -259,7 +293,10 @@ fun SettingsScreen(nav: NavHostController, onSignedOut: () -> Unit) {
                         }
                         SecondaryButton("Change address", "edit") { changing = true }
                     }
-                    SecondaryButton("Sign in again", "key") { nav.navigate("login") }
+                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        SecondaryButton("Reconnect with QR code", "scan") { nav.navigate("login") }
+                        SecondaryButton("Sign in again", "key") { nav.navigate("login") }
+                    }
                     Text("Tip: if your computer restarted, its address may have changed — check the desktop app's window and use “Change address”.",
                         color = LocalExtra.current.muted, style = MaterialTheme.typography.bodySmall)
                     if (changing) ChangeAddressDialog(onClose = { changing = false }) { url, note ->
@@ -275,6 +312,15 @@ fun SettingsScreen(nav: NavHostController, onSignedOut: () -> Unit) {
             UpdateSettingsCard()
             message?.let { Text(it, color = LocalExtra.current.muted) }
             com.ratchetwrench.app.ui.ReleaseNotesCard()
+            SectionCard {
+                Text("Report a bug", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                Text("Opens a bug report on the project's GitHub page with your app version and phone model filled in. " +
+                    "Review it, describe what happened and press Submit (a free GitHub account is needed). Nothing is sent automatically.",
+                    color = MaterialTheme.colorScheme.onSurfaceVariant, style = MaterialTheme.typography.bodySmall)
+                SecondaryButton("Report a bug", "warning") {
+                    runCatching { ctx.startActivity(android.content.Intent(android.content.Intent.ACTION_VIEW, android.net.Uri.parse(bugReportUrl(ctx)))) }
+                }
+            }
             AboutCard()
             if (repo.store.mode == "server") SectionCard {
                 Text("Account", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
@@ -331,7 +377,6 @@ fun AboutCard() {
             "app updates). Crash details are kept on this phone only.",
             color = MaterialTheme.colorScheme.onSurfaceVariant, style = MaterialTheme.typography.bodySmall)
         SecondaryButton("Project page and help", "external") { open("https://github.com/dannyspace21/Rachet-Wrench") }
-        SecondaryButton("Report a problem", "warning") { open("https://github.com/dannyspace21/Rachet-Wrench/issues") }
         SecondaryButton("Security and privacy details", "book") { open("https://github.com/dannyspace21/Rachet-Wrench/blob/main/SECURITY.md") }
     }
 }
@@ -398,4 +443,26 @@ fun ChangeAddressDialog(onClose: () -> Unit, onSaved: (String, String) -> Unit) 
             }, enabled = !busy && input.isNotBlank() && (!needsHttpOk || allowHttp)) { Text(if (busy) "Checking…" else "Check and save") }
         },
         dismissButton = { TextButton(onClose) { Text("Cancel") } })
+}
+
+/**
+ * A pre-filled bug report on the project's GitHub Issues page.  Nothing is
+ * sent from the app: the browser opens the form, the person reviews it (and
+ * can delete anything) and presses Submit themselves.
+ */
+fun bugReportUrl(context: android.content.Context): String {
+    val store = com.ratchetwrench.app.data.SecureStore(context)
+    val details = buildString {
+        appendLine("Ratchet Wrench ${com.ratchetwrench.app.BuildConfig.VERSION_NAME} (${com.ratchetwrench.app.BuildConfig.VERSION_CODE})")
+        appendLine("Android ${android.os.Build.VERSION.RELEASE} (API ${android.os.Build.VERSION.SDK_INT}), ${android.os.Build.MANUFACTURER} ${android.os.Build.MODEL}")
+        appendLine("Mode: " + when (store.mode) { "server" -> "connected to a computer/server"; "local" -> "this phone only"; else -> "not set up" })
+        store.lastSyncError?.let { appendLine("Last sync problem: $it") }
+        com.ratchetwrench.app.CrashLog.read(context)?.let { appendLine("Last crash (first lines):"); appendLine(it.take(1500)) }
+    }
+    return android.net.Uri.parse("https://github.com/dannyspace21/Rachet-Wrench/issues/new").buildUpon()
+        .appendQueryParameter("template", "bug_report.yml")
+        .appendQueryParameter("labels", "bug")
+        .appendQueryParameter("platform", "Android")
+        .appendQueryParameter("details", details.trim())
+        .build().toString()
 }

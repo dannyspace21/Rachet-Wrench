@@ -316,8 +316,21 @@ TYPE_ICONS: dict[str, list[str]] = {
 # ---------------------------------------------------------------------------
 UI_ICONS: dict[str, list[str]] = {
     "home": ["M3 10.5L12 3l9 7.5", "M5 9v12h14V9", "M10 21v-6h4v6"],
-    "car": [car_side(-1)],
-    "motorcycle": [circle(5.5, 16, 3.5), circle(18.5, 16, 3.5), "M5.5 16l4-6h5l4 6", "M9.5 10l-1-2.5H6", "M14.5 10l1.5-3h2.5", "M10 13h4"],
+    # Car: sedan side view — hood, sloped windshield, roof, rear window,
+    # trunk, two side windows, wheels set into the body.
+    "car": ["M2.5 15.5V13c0-.6.4-1.1 1-1.3L7 10.8l2.6-3.1c.4-.5 1-.7 1.6-.7h4.3c.6 0 1.1.2 1.5.7l2.4 3 2.1.6c.6.2 1 .7 1 1.3v2.2c0 .5-.4.9-.9.9H20",
+            "M4 15.5H2.5", "M9.8 15.5h4.4",
+            "M8.2 10.8h11.1", "M13 7.3v3.5",
+            circle(7, 15.8, 2.2), circle(17, 15.8, 2.2)],
+    # Motorcycle: sport bike side view — raised tail, low seat, tank hump,
+    # windscreen and front fairing sweeping down, belly pan, swingarm, fork.
+    "motorcycle": [circle(5.5, 17.5, 3), circle(18.5, 17.5, 3),
+                   # one outline: raised tail -> seat -> tank hump -> windscreen
+                   # -> fairing nose -> chin -> belly pan under the engine
+                   "M2.5 10.5L7 12H10C10.8 10.3 12 9.5 14 9.5L16.2 8L17 7L20.8 11.6L19.6 13H14.5L12.8 14.8H9",
+                   "M5.5 17.5L9 14.8",      # swingarm
+                   "M2.5 10.5L6 13.6",      # tail subframe
+                   "M18 13L18.5 17.5"],     # front fork
     "plus": [line(12, 5, 12, 19), line(5, 12, 19, 12)],
     "camera": ["M4 7h3l2-2.5h6L17 7h3a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V9a2 2 0 0 1 2-2z", circle(12, 13, 3.5)],
     "upload": ["M12 15V3", "M7 8l5-5 5 5", "M4 15v4a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-4"],

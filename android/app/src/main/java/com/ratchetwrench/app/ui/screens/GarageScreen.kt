@@ -80,10 +80,8 @@ fun GarageScreen(nav: NavHostController) {
     val scope = rememberCoroutineScope()
     val vehicles by repo.db.vehicles().observeAll().collectAsState(initial = emptyList())
     val reminders by repo.db.reminders().observeAll().collectAsState(initial = emptyList())
-    val recent by repo.db.entries().observeRecent(8).collectAsState(initial = emptyList())
     var refreshing by remember { mutableStateOf(false) }
     var syncError by remember { mutableStateOf<String?>(null) }
-    val byId = vehicles.associateBy { it.id }
 
     suspend fun refresh() {
         refreshing = true
@@ -117,10 +115,10 @@ fun GarageScreen(nav: NavHostController) {
         refresh()
     }
 
-    val due = reminders.mapNotNull { r -> byId[r.vehicle_id]?.let { v -> Triple(r, v, Reminders.status(r, v.current_mileage)) } }
-        .filter { it.third.status == "overdue" || it.third.status == "due_soon" }
-        .sortedBy { if (it.third.status == "overdue") 0 else 1 }
+    val photos by repo.db.attachments().observeVehiclePhotos().collectAsState(initial = emptyList())
 
+    // The phone's Garage is kept simple: your vehicles and "Add vehicle".
+    // What's due, and the work done, are on each vehicle's own screen.
     Scaffold(
         topBar = {
             TopBarImpl("Garage", null) {
@@ -135,13 +133,14 @@ fun GarageScreen(nav: NavHostController) {
         floatingActionButton = {
             ExtendedFloatingActionButton(onClick = { nav.navigate("vehicle-edit/new") },
                 // Material 3 doesn't pass the button's text on to screen readers; say it explicitly.
-                modifier = Modifier.semantics { contentDescription = "Add vehicle" }, icon = { UiIcon("plus", tint = MaterialTheme.colorScheme.onPrimaryContainer) },
+                modifier = Modifier.semantics { contentDescription = "Add vehicle" },
+                icon = { UiIcon("plus", tint = MaterialTheme.colorScheme.onPrimaryContainer) },
                 text = { Text("Add vehicle") })
         },
     ) { pad ->
         PullToRefreshBox(isRefreshing = refreshing, onRefresh = { scope.launch { refresh() } }, modifier = Modifier.padding(pad)) {
             LazyColumn(Modifier.fillMaxSize(), contentPadding = androidx.compose.foundation.layout.PaddingValues(16.dp, 8.dp, 16.dp, 96.dp),
-                verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                verticalArrangement = Arrangement.spacedBy(10.dp)) {
                 item { UpdateBanner() }
                 syncError?.let { msg ->
                     item {
@@ -170,42 +169,20 @@ fun GarageScreen(nav: NavHostController) {
                         }
                     }
                 }
-                if (due.isNotEmpty()) {
-                    item { SectionTitle("Coming up") }
-                    items(due.take(6), key = { "due-" + it.first.id }) { (r, v, st) ->
-                        ListRow(onClick = { nav.navigate("vehicle/${v.id}") }) {
-                            TypeBadge(r.type_key, "neutral")
-                            Column(Modifier.weight(1f)) {
-                                Text(r.title.ifBlank { Catalog.typeLabel(ctx, r.type_key) }, fontWeight = FontWeight.Bold)
-                                Text("${v.displayName()} · ${st.describe(v.mileage_unit)}", color = LocalExtra.current.muted, style = MaterialTheme.typography.bodySmall)
-                            }
-                            StatusPill(st.status)
-                        }
-                    }
-                }
-                if (vehicles.isNotEmpty()) item { SectionTitle("Your vehicles") }
                 items(vehicles, key = { it.id }) { v ->
-                    val dueCount = reminders.count { it.vehicle_id == v.id && Reminders.status(it, v.current_mileage).status in setOf("overdue", "due_soon") }
+                    val statuses = reminders.filter { it.vehicle_id == v.id }.map { Reminders.status(it, v.current_mileage).status }
                     ListRow(onClick = { nav.navigate("vehicle/${v.id}") }) {
-                        TypeBadge(if (v.kind == "motorcycle") "chain_lube" else "detailing", "neutral", 56.dp)
+                        com.ratchetwrench.app.ui.VehicleAvatar(v, photos, 56.dp)
                         Column(Modifier.weight(1f)) {
                             Text(v.displayName(), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
-                            Text(v.fullName().ifBlank { if (v.kind == "motorcycle") "Motorcycle" else "Car" }, color = LocalExtra.current.muted)
-                            Text(miles(v.current_mileage, v.mileage_unit), fontWeight = FontWeight.SemiBold)
+                            val sub = v.fullName().takeIf { it.isNotBlank() && it != v.displayName() }
+                            if (sub != null) Text(sub, color = LocalExtra.current.muted, style = MaterialTheme.typography.bodySmall)
+                            Text(miles(v.current_mileage, v.mileage_unit), style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.SemiBold)
                         }
-                        if (dueCount > 0) StatusPill("due_soon") else StatusPill("ok")
-                    }
-                }
-                if (recent.isNotEmpty()) {
-                    item { SectionTitle("Recent work") }
-                    items(recent, key = { "e-" + it.id }) { e ->
-                        ListRow(onClick = { nav.navigate("entry/${e.id}") }) {
-                            TypeBadge(e.type_key, e.kind)
-                            Column(Modifier.weight(1f)) {
-                                Text(e.custom_type.ifBlank { if (e.type_key == "custom" && e.description.isNotBlank()) e.description else Catalog.typeLabel(ctx, e.type_key) }, fontWeight = FontWeight.Bold)
-                                Text("${byId[e.vehicle_id]?.displayName() ?: ""} · ${prettyDate(e.date)}", color = LocalExtra.current.muted, style = MaterialTheme.typography.bodySmall)
-                            }
-                            Column(horizontalAlignment = Alignment.End) { KindPill(e.kind); Text(money(e.cost_cents, repo.store.currency), style = MaterialTheme.typography.bodySmall) }
+                        when {
+                            "overdue" in statuses -> StatusPill("overdue")
+                            "due_soon" in statuses -> StatusPill("due_soon")
+                            else -> {}
                         }
                     }
                 }

@@ -81,7 +81,8 @@ export function setPrefs(settings) {
   if (settings?.distance_unit) unit = settings.distance_unit;
 }
 export function money(cents) {
-  if (cents === null || cents === undefined || cents === "") return "—";
+  // No cost entered shows as $0.00 (not a dash), as asked.
+  if (cents === null || cents === undefined || cents === "") cents = 0;
   return new Intl.NumberFormat(undefined, { style: "currency", currency }).format(cents / 100);
 }
 export function miles(n, u) {

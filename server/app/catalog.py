@@ -62,12 +62,19 @@ def spec_label(key: str) -> str:
 SPEC_SOURCES = {"vin", "sticker", "user", "unverified", "provider", "carfax"}
 
 
-def make_links(make: str) -> dict:
+def make_links(make: str, kind: str = "car") -> dict:
     """Official parts site and owner portal for a make (case-insensitive).
+    Makes that build cars AND motorcycles (Honda, BMW...) may have separate
+    motorcycle links ("moto_parts" / "moto_owners").
 
     Returns {"parts": url|None, "owners": url|None}.  Never a dealer site."""
     makes = load_catalog()["makes"]
     for name, links in makes.items():
         if name.lower() == (make or "").strip().lower():
-            return {"parts": links.get("parts") or links.get("owners"), "owners": links.get("owners")}
+            owners = links.get("owners")
+            parts = links.get("parts")
+            if kind == "motorcycle" and (links.get("moto_parts") or links.get("moto_owners")):
+                owners = links.get("moto_owners") or owners
+                parts = links.get("moto_parts")
+            return {"parts": parts or owners, "owners": owners}
     return {"parts": None, "owners": None}

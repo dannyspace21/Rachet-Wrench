@@ -123,6 +123,26 @@ TYPES = [
 ]
 
 # ---------------------------------------------------------------------------
+# Make names offered in the "Add vehicle" form (you can still type any make).
+# Models come live from NHTSA's vPIC database for the chosen make and year.
+# ---------------------------------------------------------------------------
+MAKE_NAMES = {
+    "car": [
+        "Acura", "Alfa Romeo", "Aston Martin", "Audi", "Bentley", "BMW", "Buick", "Cadillac", "Chevrolet", "Chrysler",
+        "Dodge", "Ferrari", "Fiat", "Fisker", "Ford", "Genesis", "GMC", "Honda", "Hummer", "Hyundai", "Infiniti",
+        "Isuzu", "Jaguar", "Jeep", "Kia", "Lamborghini", "Land Rover", "Lexus", "Lincoln", "Lotus", "Lucid",
+        "Maserati", "Maybach", "Mazda", "McLaren", "Mercedes-Benz", "Mercury", "Mini", "Mitsubishi", "Nissan",
+        "Oldsmobile", "Polestar", "Pontiac", "Porsche", "Ram", "Rivian", "Rolls-Royce", "Saab", "Saturn", "Scion",
+        "Smart", "Subaru", "Suzuki", "Tesla", "Toyota", "Volkswagen", "Volvo",
+    ],
+    "motorcycle": [
+        "Aprilia", "Benelli", "Beta", "BMW", "Buell", "Can-Am", "CFMoto", "Ducati", "GasGas", "Harley-Davidson",
+        "Honda", "Husqvarna", "Indian", "Kawasaki", "KTM", "Kymco", "LiveWire", "Moto Guzzi", "MV Agusta", "Piaggio",
+        "Royal Enfield", "Suzuki", "Triumph", "Ural", "Vespa", "Victory", "Yamaha", "Zero",
+    ],
+}
+
+# ---------------------------------------------------------------------------
 # Vehicle spec fields.  (key, label, group, unit hint)
 # These are the ONLY fields the app stores as "specs".  Values are never
 # guessed: they come from the VIN decoder, the door sticker, or the user.
@@ -204,14 +224,17 @@ MAKES = {
     "Audi": {"parts": "https://parts.audiusa.com/", "owners": "https://www.audiusa.com/us/web/en/myaudi.html"},
     "BMW": {"parts": "https://www.bmwusa.com/parts-and-accessories.html", "owners": "https://www.bmwusa.com/owners.html"},
     "Chevrolet": {"parts": "https://www.gmparts.com/", "owners": "https://www.chevrolet.com/support"},
-    "Ducati": {"parts": "https://www.ducati.com/us/en/service-maintenance/spare-parts", "owners": "https://www.ducati.com/us/en/service-maintenance/owner-manuals"},
+    "Ducati": {"parts": "https://www.ducati.com/us/en/service-maintenance/genuine-parts", "owners": "https://www.ducati.com/us/en/service-maintenance/maintenance"},
     "Ford": {"parts": "https://parts.ford.com/", "owners": "https://www.ford.com/support/"},
     "GMC": {"parts": "https://www.gmparts.com/", "owners": "https://www.gmc.com/support"},
-    "Harley-Davidson": {"parts": "https://www.harley-davidson.com/us/en/shop/c/motorcycle-parts", "owners": "https://www.harley-davidson.com/us/en/owners/index.html"},
-    "Honda": {"parts": None, "owners": "https://owners.honda.com/"},
+    "Harley-Davidson": {"parts": "https://www.harley-davidson.com/us/en/shop/c/motorcycle-parts", "owners": "https://serviceinfo.harley-davidson.com/"},
+    # Honda and BMW make cars AND motorcycles: motorcycles use the moto_* links.
+    "Honda": {"parts": None, "owners": "https://owners.honda.com/",
+              "moto_parts": "https://powersports.honda.com/", "moto_owners": "https://powersports.honda.com/"},
     "Hyundai": {"parts": None, "owners": "https://owners.hyundaiusa.com/"},
     "Infiniti": {"parts": "https://parts.infinitiusa.com/", "owners": "https://owners.infinitiusa.com/"},
-    "Kawasaki": {"parts": "https://www.kawasaki.com/en-us/parts", "owners": "https://www.kawasaki.com/en-us/owner-center"},
+    "Kawasaki": {"parts": "https://www.kawasaki.com/en-us/owner-center/parts", "owners": "https://www.kawasaki.com/en-us/owner-center/service-manuals"},
+    "KTM": {"parts": "https://www.ktm.com/en-us/service/spare-parts-finder.html", "owners": "https://www.ktm.com/en-us/service/manuals.html"},
     "Kia": {"parts": None, "owners": "https://owners.kia.com/"},
     "Lexus": {"parts": "https://parts.lexus.com/", "owners": "https://www.lexus.com/owners"},
     "Mazda": {"parts": "https://www.mazdausa.com/owners/parts-and-accessories", "owners": "https://www.mazdausa.com/owners"},
@@ -219,12 +242,12 @@ MAKES = {
     "Nissan": {"parts": "https://parts.nissanusa.com/", "owners": "https://owners.nissanusa.com/"},
     "Porsche": {"parts": "https://www.porsche.com/usa/accessoriesandservice/", "owners": "https://www.porsche.com/usa/accessoriesandservice/"},
     "Subaru": {"parts": "https://parts.subaru.com/", "owners": "https://www.subaru.com/owners.html"},
-    "Suzuki": {"parts": "https://suzukicycles.com/parts", "owners": "https://suzukicycles.com/owners"},
+    "Suzuki": {"parts": None, "owners": "https://suzukicycles.com/owners"},
     "Tesla": {"parts": "https://www.tesla.com/shop", "owners": "https://www.tesla.com/support"},
     "Toyota": {"parts": "https://parts.toyota.com/", "owners": "https://www.toyota.com/owners/"},
     "Triumph": {"parts": "https://www.triumphmotorcycles.com/accessories", "owners": "https://www.triumphmotorcycles.com/owners"},
     "Volkswagen": {"parts": "https://parts.vw.com/", "owners": "https://www.vw.com/en/owners-and-services.html"},
-    "Yamaha": {"parts": "https://www.yamahamotorsports.com/parts", "owners": "https://www.yamahamotorsports.com/owner-center"},
+    "Yamaha": {"parts": "https://yamaha-motor.com/parts", "owners": "https://www.yamahapubs.com/"},
 }
 
 
@@ -248,6 +271,7 @@ def main() -> None:
         ],
         "spec_sources": SPEC_SOURCES,
         "makes": MAKES,
+        "make_names": MAKE_NAMES,
     }
     out = HERE / "catalog.json"
     out.write_text(json.dumps(catalog, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")

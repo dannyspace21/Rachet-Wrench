@@ -154,6 +154,53 @@ def decode_with_nhtsa(vin: str, timeout: float = 10.0) -> dict:
     return parse_nhtsa_result(results[0])
 
 
+# NHTSA vPIC model list (for the "Add vehicle" model drop-down)
+# ---------------------------------------------------------------------------
+_MODEL_CACHE: dict[tuple[str, int | None, str], list[str]] = {}
+_MAKE_RE = re.compile(r"^[A-Za-z0-9 .&'-]{1,40}$")
+
+
+def nhtsa_models(make: str, year: int | None, kind: str, timeout: float = 10.0) -> list[str]:
+    """Model names NHTSA knows for a make (and model year), for cars or
+    motorcycles.  Only the make name and year are sent.  Cached in memory.
+    Raises RuntimeError with a friendly message on failure."""
+    settings = get_settings()
+    if not settings.nhtsa_enabled:
+        raise RuntimeError("Looking up models is turned off on this server.")
+    make = (make or "").strip()
+    if not _MAKE_RE.match(make):
+        raise RuntimeError("Enter a make first.")
+    key = (make.lower(), year, kind)
+    if key in _MODEL_CACHE:
+        return _MODEL_CACHE[key]
+    # Cars: passenger cars, SUVs/minivans (MPV) and pickups.  Motorcycles: motorcycles.
+    types = ["motorcycle"] if kind == "motorcycle" else ["car", "mpv", "truck"]
+    names: set[str] = set()
+    for vtype in types:
+        path = f"/GetModelsForMakeYear/make/{urllib.parse.quote(make)}"
+        if year:
+            path += f"/modelyear/{int(year)}"
+        path += f"/vehicletype/{vtype}?format=json"
+        req = urllib.request.Request(settings.nhtsa_base_url + path,
+                                     headers={"User-Agent": "RatchetWrench/1.0", "Accept": "application/json"})
+        try:
+            # Reviewed: fixed https:// base + URL-quoted make (validated above) + int year.
+            with urllib.request.urlopen(req, timeout=timeout) as resp:  # noqa: S310  # nosemgrep
+                body = resp.read(1024 * 1024)
+            results = json.loads(body.decode("utf-8")).get("Results") or []
+        except (urllib.error.URLError, TimeoutError, OSError, UnicodeDecodeError, json.JSONDecodeError, AttributeError):
+            raise RuntimeError("Could not reach the NHTSA vehicle database. Type the model instead.") from None
+        for r in results:
+            name = str(r.get("Model_Name") or "").strip()
+            if name:
+                names.add(name)
+    models = sorted(names, key=str.lower)[:500]
+    if len(_MODEL_CACHE) > 500:
+        _MODEL_CACHE.clear()
+    _MODEL_CACHE[key] = models
+    return models
+
+
 # ---------------------------------------------------------------------------
 # Optional paid spec provider plug-in point
 # ---------------------------------------------------------------------------

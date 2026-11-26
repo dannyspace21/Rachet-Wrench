@@ -72,12 +72,15 @@ object Reminders {
 
 @Serializable data class TypeDef(val key: String, val label: String, val category: String, val applies_to: String, val icon: String)
 @Serializable data class SpecDef(val key: String, val label: String, val group: String, val hint: String = "")
-@Serializable data class MakeLinks(val parts: String? = null, val owners: String? = null)
+@Serializable data class MakeLinks(val parts: String? = null, val owners: String? = null,
+                                   val moto_parts: String? = null, val moto_owners: String? = null)
 @Serializable data class CatalogData(
     val types: List<TypeDef>,
     val specs: List<SpecDef>,
     val spec_sources: Map<String, String>,
     val makes: Map<String, MakeLinks>,
+    /** Make names for the Add vehicle form: {"car": [...], "motorcycle": [...]}. */
+    val make_names: Map<String, List<String>> = emptyMap(),
 )
 
 private val catalogJson = Json { ignoreUnknownKeys = true }
@@ -99,11 +102,19 @@ object Catalog {
     /** Types that apply to a car or a motorcycle. */
     fun typesFor(context: Context, kind: String) = get(context).types.filter { it.applies_to == "both" || it.applies_to == kind }
 
-    /** Official links for a make (never a dealer site); parts falls back to owners. */
-    fun links(context: Context, make: String): MakeLinks {
+    /** Official links for a make (never a dealer site); parts falls back to owners.
+     *  Makes that build cars AND motorcycles (Honda...) have separate motorcycle links. */
+    fun links(context: Context, make: String, kind: String = "car"): MakeLinks {
         val m = get(context).makes.entries.firstOrNull { it.key.equals(make.trim(), ignoreCase = true) }?.value ?: return MakeLinks()
+        if (kind == "motorcycle" && (m.moto_parts != null || m.moto_owners != null)) {
+            val owners = m.moto_owners ?: m.owners
+            return MakeLinks(parts = m.moto_parts ?: owners, owners = owners)
+        }
         return MakeLinks(parts = m.parts ?: m.owners, owners = m.owners)
     }
+
+    /** Make names offered when adding a car or a motorcycle. */
+    fun makeNames(context: Context, kind: String): List<String> = get(context).make_names[kind].orEmpty()
 
     /** Drawable for a type icon (generated from the same SVGs).  Uses the
      *  generated direct-reference table — never a by-name lookup, which the

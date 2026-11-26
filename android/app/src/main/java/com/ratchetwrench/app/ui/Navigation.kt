@@ -85,7 +85,12 @@ fun AppRoot() {
                     LoginScreen(
                         onSignedIn = { theme = repo.store.theme; nav.navigate("garage") { popUpTo(0) } },
                         onBack = if (nav.previousBackStackEntry != null) ({ nav.popBackStack() }) else null,
+                        onScanQr = { nav.navigate("scan-pair") },
+                        pairPayload = nav.takeResult<String>("pair"),
                     )
+                }
+                composable("scan-pair") {
+                    com.ratchetwrench.app.camera.PairScanScreen(onResult = { nav.returnResult("pair", it) }, onCancel = { nav.popBackStack() })
                 }
                 composable("garage") { GarageScreen(nav) }
                 composable("vehicle/{id}") { VehicleScreen(nav, it.arguments!!.getString("id")!!) }

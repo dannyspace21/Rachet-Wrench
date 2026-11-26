@@ -144,7 +144,7 @@ class ScreensTest {
             repo.addOdometer(v.id, "2026-11-01", 43500)
             repo.saveSpec(v.id, com.ratchetwrench.app.domain.Catalog.get(ctx).specs.first().key, "Test value", "user")
             repo.saveReminder(com.ratchetwrench.app.data.Reminder(vehicle_id = v.id, type_key = "oil_change",
-                interval_miles = 5000, last_done_mileage = 40000, last_done_date = "2026-06-01"))
+                interval_miles = 5000, last_done_mileage = 37000, last_done_date = "2026-06-01"))
             repo.savePart(com.ratchetwrench.app.data.Part(vehicle_id = v.id, type_key = "oil_filter", part_number = "04152-YZZA1"))
         }
 
@@ -167,6 +167,12 @@ class ScreensTest {
         waitForText("Scan door sticker")
         tapIcon("Back")
 
+        // The vehicle screen shows what's coming up for this vehicle (the
+        // reminder above was last done at 37,000 mi; due at 42,000, the car is at 43,500 -> overdue).
+        click("History")
+        waitForText("Coming up")
+        waitForText("Overdue")
+
         // Edit vehicle screen.
         tapIcon("Edit vehicle")
         waitForText("Delete vehicle")
@@ -175,9 +181,12 @@ class ScreensTest {
         waitGone("Save vehicle")
         waitForText("Daily")
 
-        // Back on the garage: the reminder now shows under "Coming up".
+        // Back on the garage: just the vehicles — no maintenance list or recent work.
         tapIcon("Back")
-        waitForText("Your vehicles")
+        waitForText("Daily")
+        rule.waitForIdle()
+        org.junit.Assert.assertTrue("garage keeps it simple",
+            rule.onAllNodesWithText("Coming up").fetchSemanticsNodes().isEmpty() && rule.onAllNodesWithText("Recent work").fetchSemanticsNodes().isEmpty())
     }
 
     @Test
@@ -192,10 +201,11 @@ class ScreensTest {
         click("Kilometers")
         click("Miles")
         waitForText("Release notes")
+        waitForText("Report a bug")
         waitForText("About Ratchet Wrench")
         waitForText("Version", substring = true)
         tapIcon("Back")
-        waitForText("Your vehicles")
+        waitForText("Lexus RC 350")
     }
 
     @Test
@@ -211,9 +221,33 @@ class ScreensTest {
         // Close the app completely and open it again (like swiping it away).
         rule.activityRule.scenario.close()
         androidx.test.core.app.ActivityScenario.launch(MainActivity::class.java).use {
-            rule.waitUntil(5_000) { rule.onAllNodesWithText("Your vehicles").fetchSemanticsNodes().isNotEmpty() }
-            rule.onAllNodesWithText("Recent work").fetchSemanticsNodes()
+            rule.waitUntil(5_000) { rule.onAllNodesWithText("Lexus RC 350").fetchSemanticsNodes().isNotEmpty() }
         }
+    }
+
+    @Test
+    fun addVehicleFormKeepsWhatYouTyped() {
+        // Going to the camera / barcode scanner and back rebuilds the screen;
+        // nothing typed (or decoded from the VIN) may be lost.
+        click("Start on this phone")
+        click("Add vehicle")
+        waitForText("Save vehicle")
+        type("Make", "Acura")
+        type("Model", "TL")
+        type("Current mileage", "123456")
+        waitForText("Vehicle photo")
+        rule.activityRule.scenario.recreate()
+        waitForText("Save vehicle")
+        waitForText("Acura")
+        waitForText("TL")
+        waitForText("123456")
+    }
+
+    @Test
+    fun connectScreenOffersQrCode() {
+        click("Connect")
+        waitForText("Scan QR code")
+        waitForText("Sign in")
     }
 
     @Test

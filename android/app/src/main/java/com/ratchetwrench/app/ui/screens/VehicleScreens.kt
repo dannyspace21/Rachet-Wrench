@@ -7,6 +7,8 @@ import android.content.Intent
 import android.net.Uri
 import android.provider.MediaStore
 import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.FlowRow
@@ -123,8 +125,10 @@ fun VehicleScreen(nav: NavHostController, id: String) {
     val vehicle by repo.db.vehicles().observe(id).collectAsState(initial = null)
     var tab by rememberSaveable { mutableStateOf(0) }
     var showMileage by remember { mutableStateOf(false) }
+    val photos by repo.db.attachments().observeVehiclePhotos().collectAsState(initial = emptyList())
+    val rems by repo.db.reminders().observeFor(id).collectAsState(initial = emptyList())
     val v = vehicle ?: return
-    val links = Catalog.links(ctx, v.make)
+    val links = Catalog.links(ctx, v.make, v.kind)
     val partsUrl = v.parts_url.ifBlank { links.parts ?: "" }
     val ownersUrl = v.owners_url.ifBlank { links.owners ?: "" }
 
@@ -133,14 +137,30 @@ fun VehicleScreen(nav: NavHostController, id: String) {
         snackbarHost = { SnackbarHost(snack) },
     ) { pad ->
         Column(Modifier.fillMaxSize().padding(pad)) {
-            Column(Modifier.padding(horizontal = 16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                Text(listOfNotNull(v.fullName().ifBlank { null }, v.vin.ifBlank { null }?.let { "VIN $it" }).joinToString(" · "), color = LocalExtra.current.muted)
-                Text(miles(v.current_mileage, v.mileage_unit), style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
-                FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    PrimaryButton("Add entry", "plus") { nav.navigate("entry-edit/$id/new") }
-                    SecondaryButton("Mileage", "gauge") { showMileage = true }
-                    SecondaryButton("Door sticker", "sticker") { nav.navigate("sticker/$id") }
-                    SecondaryButton("Report PDF", "download") {
+            // Compact header: photo, mileage and name on one line, small
+            // action chips underneath, then what's coming up for THIS vehicle.
+            Column(Modifier.padding(horizontal = 16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                    com.ratchetwrench.app.ui.VehicleAvatar(v, photos, 48.dp)
+                    Column(Modifier.weight(1f)) {
+                        Text(miles(v.current_mileage, v.mileage_unit), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                        // The name is already in the top bar: only show what adds something.
+                        val sub = listOfNotNull(v.fullName().takeIf { it.isNotBlank() && it != v.displayName() },
+                            v.vin.ifBlank { null }?.let { "VIN $it" }).joinToString(" · ")
+                        if (sub.isNotBlank()) Text(sub, color = LocalExtra.current.muted, style = MaterialTheme.typography.bodySmall, maxLines = 1,
+                            overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis)
+                    }
+                    androidx.compose.material3.Button({ nav.navigate("entry-edit/$id/new") },
+                        contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 14.dp, vertical = 6.dp)) {
+                        UiIcon("plus", androidx.compose.ui.Modifier.size(18.dp), MaterialTheme.colorScheme.onPrimary)
+                        androidx.compose.foundation.layout.Spacer(Modifier.size(4.dp))
+                        Text("Add entry", style = MaterialTheme.typography.labelLarge)
+                    }
+                }
+                Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                    ActionChip("Mileage", "gauge") { showMileage = true }
+                    ActionChip("Door sticker", "sticker") { nav.navigate("sticker/$id") }
+                    ActionChip("Report PDF", "download") {
                         scope.launch {
                             snack.showSnackbar(try {
                                 // Connected: the computer/server builds it (with all photos).
@@ -150,8 +170,36 @@ fun VehicleScreen(nav: NavHostController, id: String) {
                             } catch (e: Exception) { "Could not create the report: ${e.message}" })
                         }
                     }
-                    if (partsUrl.isNotBlank()) SecondaryButton("Parts site", "external") { openLink(ctx, partsUrl) }
-                    if (ownersUrl.isNotBlank()) SecondaryButton("Owner portal", "book") { openLink(ctx, ownersUrl) }
+                    if (partsUrl.isNotBlank()) ActionChip("Parts site", "external") { openLink(ctx, partsUrl) }
+                    if (ownersUrl.isNotBlank()) ActionChip("Owner portal", "book") { openLink(ctx, ownersUrl) }
+                }
+                // Coming up: overdue / due-soon maintenance for this vehicle.
+                val due = rems.map { it to Reminders.status(it, v.current_mileage) }
+                    .filter { it.second.status == "overdue" || it.second.status == "due_soon" }
+                    .sortedBy { if (it.second.status == "overdue") 0 else 1 }
+                if (due.isNotEmpty()) {
+                    androidx.compose.material3.Card(shape = androidx.compose.foundation.shape.RoundedCornerShape(14.dp),
+                        colors = androidx.compose.material3.CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+                        border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outline)) {
+                        Column(Modifier.padding(horizontal = 12.dp, vertical = 8.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Text("Coming up", fontWeight = FontWeight.Bold, modifier = Modifier.weight(1f))
+                                if (due.size > 3) TextButton({ tab = 2 }) { Text("See all ${due.size}") }
+                            }
+                            due.take(3).forEach { (r, st) ->
+                                Row(Modifier.fillMaxWidth().clickable { tab = 2 }, verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                                    TypeBadge(r.type_key, "neutral", 32.dp)
+                                    Column(Modifier.weight(1f)) {
+                                        Text(r.title.ifBlank { Catalog.typeLabel(ctx, r.type_key) }, fontWeight = FontWeight.SemiBold,
+                                            style = MaterialTheme.typography.bodyMedium)
+                                        Text(st.describe(v.mileage_unit), color = LocalExtra.current.muted, style = MaterialTheme.typography.bodySmall)
+                                    }
+                                    StatusPill(st.status)
+                                }
+                            }
+                        }
+                    }
                 }
             }
             PrimaryScrollableTabRow(selectedTabIndex = tab, edgePadding = 16.dp, containerColor = MaterialTheme.colorScheme.background) {
@@ -330,6 +378,13 @@ private fun RemindersTab(v: Vehicle) {
     }
 }
 
+/** A small, low-profile action button (used in the vehicle header). */
+@Composable
+private fun ActionChip(text: String, icon: String, onClick: () -> Unit) {
+    androidx.compose.material3.AssistChip(onClick = onClick, label = { Text(text) },
+        leadingIcon = { UiIcon(icon, Modifier.size(18.dp)) })
+}
+
 /** A simple type chooser (dropdown) used in dialogs. */
 @Composable
 fun TypeDropdown(kind: String, selected: String, onSelect: (String) -> Unit) {
@@ -353,7 +408,7 @@ private fun PartsTab(v: Vehicle) {
     val scope = rememberCoroutineScope()
     val parts by repo.db.parts().observeFor(v.id).collectAsState(initial = emptyList())
     var editing by remember { mutableStateOf<Part?>(null) }
-    val partsUrl = v.parts_url.ifBlank { Catalog.links(ctx, v.make).parts ?: "" }
+    val partsUrl = v.parts_url.ifBlank { Catalog.links(ctx, v.make, v.kind).parts ?: "" }
     LazyColumn(contentPadding = androidx.compose.foundation.layout.PaddingValues(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
         item {
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -427,7 +482,9 @@ fun VehicleEditScreen(nav: NavHostController, id: String?) {
     val repo = LocalRepo.current
     val scope = rememberCoroutineScope()
     val snack = remember { SnackbarHostState() }
-    var loaded by remember { mutableStateOf(id == null) }
+    // Saveable: going to the barcode scanner or camera and back must NEVER
+    // reload the saved vehicle over what you typed, or drop VIN-decoded specs.
+    var loaded by rememberSaveable { mutableStateOf(id == null) }
     var base by remember { mutableStateOf(Vehicle(mileage_unit = repo.store.distanceUnit)) }
     var kind by rememberSaveable { mutableStateOf("car") }
     var vin by rememberSaveable { mutableStateOf("") }
@@ -438,7 +495,16 @@ fun VehicleEditScreen(nav: NavHostController, id: String?) {
     var nick by rememberSaveable { mutableStateOf("") }
     var mileage by rememberSaveable { mutableStateOf("") }
     var unit by rememberSaveable { mutableStateOf(repo.store.distanceUnit) }
-    var decodedSpecs by remember { mutableStateOf<List<Pair<String, String>>>(emptyList()) }
+    var decodedRaw by rememberSaveable { mutableStateOf(ArrayList<String>()) }  // "key\u0001value"
+    val decodedSpecs: List<Pair<String, String>> = decodedRaw.map { it.substringBefore('\u0001') to it.substringAfter('\u0001') }
+    fun setDecoded(list: List<Pair<String, String>>) { decodedRaw = ArrayList(list.map { "${it.first}\u0001${it.second}" }) }
+    var photoPath by rememberSaveable { mutableStateOf<String?>(null) }
+    val ctx = androidx.compose.ui.platform.LocalContext.current
+    val pickPhoto = androidx.activity.compose.rememberLauncherForActivityResult(
+        androidx.activity.result.contract.ActivityResultContracts.PickVisualMedia()) { uri ->
+        if (uri != null) scope.launch { withContext(Dispatchers.IO) { copyIntoApp(ctx, uri) }?.let { photoPath = it } }
+    }
+    var models by remember { mutableStateOf<List<String>>(emptyList()) }
     var confirmDelete by remember { mutableStateOf(false) }
 
     LaunchedEffect(id) {
@@ -450,8 +516,16 @@ fun VehicleEditScreen(nav: NavHostController, id: String?) {
             loaded = true
         }
     }
-    // A VIN coming back from the barcode scanner.
+    // A VIN coming back from the barcode scanner, or a photo from the camera.
     nav.takeResult<String>("vin")?.let { vin = it }
+    nav.takeResult<ArrayList<String>>("photos")?.firstOrNull()?.let { photoPath = it }
+    // Model suggestions for the chosen make (and year), straight from NHTSA.
+    LaunchedEffect(make, year, kind) {
+        kotlinx.coroutines.delay(500)
+        models = if (make.isBlank()) emptyList() else withContext(Dispatchers.IO) {
+            runCatching { Nhtsa.models(make, year.toIntOrNull()?.takeIf { it in 1900..2100 }, kind) }.getOrDefault(emptyList())
+        }
+    }
 
     Scaffold(topBar = { TopBar(if (id == null) "Add vehicle" else "Edit vehicle", onBack = { nav.popBackStack() }) }, snackbarHost = { SnackbarHost(snack) }) { pad ->
         Column(Modifier.fillMaxSize().padding(pad).imePadding().verticalScroll(rememberScrollState()).padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
@@ -473,7 +547,7 @@ fun VehicleEditScreen(nav: NavHostController, id: String?) {
                                 veh["model"]?.jsonPrimitive?.content?.let { model = it }
                                 veh["trim"]?.jsonPrimitive?.content?.let { trim = it }
                                 veh["kind"]?.jsonPrimitive?.content?.let { kind = it }
-                                decodedSpecs = res["specs"]!!.jsonArray.map { it.jsonObject["key"]!!.jsonPrimitive.content to it.jsonObject["value"]!!.jsonPrimitive.content }
+                                setDecoded(res["specs"]!!.jsonArray.map { it.jsonObject["key"]!!.jsonPrimitive.content to it.jsonObject["value"]!!.jsonPrimitive.content })
                             } else {
                                 // Phone only: ask NHTSA directly (only the VIN is sent).
                                 val r = withContext(Dispatchers.IO) { Nhtsa.decode(vin) }
@@ -482,7 +556,7 @@ fun VehicleEditScreen(nav: NavHostController, id: String?) {
                                 r.model?.let { model = it }
                                 r.trim?.let { trim = it }
                                 r.kind?.let { kind = it }
-                                decodedSpecs = r.specs.toList()
+                                setDecoded(r.specs.toList())
                                 r.warning?.let { snack.showSnackbar(it) }
                             }
                             snack.showSnackbar("Filled from VIN. ${decodedSpecs.size} spec(s) will be saved as “From VIN”. Check them before saving.")
@@ -491,18 +565,31 @@ fun VehicleEditScreen(nav: NavHostController, id: String?) {
                 }
             }
             Field("Year", year, { year = it.filter { c -> c.isDigit() }.take(4) }, numeric = true)
-            Field("Make", make, { make = it })
-            Field("Model", model, { model = it })
+            com.ratchetwrench.app.ui.SuggestField("Make", make, { make = it }, Catalog.makeNames(ctx, kind))
+            com.ratchetwrench.app.ui.SuggestField("Model", model, { model = it }, models,
+                hint = if (make.isNotBlank() && models.isEmpty()) "Type the model (suggestions need the internet)" else null)
             Field("Trim", trim, { trim = it })
             Field("Nickname (optional)", nick, { nick = it })
             Field("Current mileage", mileage, { mileage = it.filter { c -> c.isDigit() } }, numeric = true)
             Segmented(listOf("mi" to "Miles", "km" to "Kilometers"), unit) { unit = it }
+            // Vehicle photo: taking or choosing one never clears anything you typed.
+            Text("Vehicle photo", fontWeight = FontWeight.Bold)
+            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                photoPath?.let { com.ratchetwrench.app.ui.PhotoThumb(com.ratchetwrench.app.data.Attachment(id = it, localPath = it), 64.dp) }
+                SecondaryButton("Camera", "camera") { nav.navigate("capture") }
+                SecondaryButton("Gallery", "image") {
+                    pickPhoto.launch(androidx.activity.result.PickVisualMediaRequest(androidx.activity.result.contract.ActivityResultContracts.PickVisualMedia.ImageOnly))
+                }
+            }
             PrimaryButton("Save vehicle", "check", Modifier.fillMaxWidth(), enabled = make.isNotBlank() || nick.isNotBlank()) {
                 scope.launch {
-                    val v = base.copy(kind = kind, vin = Vin.normalize(vin).take(17), year = year.toIntOrNull(), make = make.trim(), model = model.trim(),
+                    // Editing: start from the saved vehicle (never a blank one).
+                    val start = if (id != null) repo.db.vehicles().get(id) ?: base else base
+                    val v = start.copy(kind = kind, vin = Vin.normalize(vin).take(17), year = year.toIntOrNull(), make = make.trim(), model = model.trim(),
                         trim = trim.trim(), nickname = nick.trim(), current_mileage = mileage.toIntOrNull(), mileage_unit = unit)
                     repo.saveVehicle(v)
                     for ((k, value) in decodedSpecs) repo.saveSpec(v.id, k, value, "vin")
+                    photoPath?.let { repo.addPhoto(v.id, null, "vehicle_photo", it, mimeFor(it), "Vehicle photo") }
                     com.ratchetwrench.app.ui.onMain {
                         nav.popBackStack()
                         if (id == null) nav.navigate("vehicle/${v.id}")

@@ -180,6 +180,48 @@ def create_token(db: Session, user: User, client: str) -> tuple[str, AuthToken]:
     return token, row
 
 
+# ---------------------------------------------------------------------------
+# Phone pairing (QR code): a one-time code that becomes an Android login.
+# ---------------------------------------------------------------------------
+PAIRING_TTL = timedelta(minutes=10)
+
+
+def create_pairing_code(db: Session, user: User) -> tuple[str, "PairingCode"]:
+    """A new one-time pairing code for this user (older unused ones are removed)."""
+    from .models import PairingCode
+
+    now = utcnow()
+    for old in db.scalars(select(PairingCode).where(PairingCode.user_id == user.id)).all():
+        db.delete(old)
+    code = secrets.token_urlsafe(24)
+    row = PairingCode(user_id=user.id, code_hash=hash_token(code), expires_at=now + PAIRING_TTL)
+    db.add(row)
+    db.commit()
+    return code, row
+
+
+def claim_pairing_code(db: Session, code: str) -> User | None:
+    """Use a pairing code (once).  Returns its user, or None if the code is
+    wrong, already used or expired."""
+    from .models import PairingCode
+
+    row = db.scalar(select(PairingCode).where(PairingCode.code_hash == hash_token(code or "")))
+    now = utcnow()
+    if row is None or row.used_at is not None or row.expires_at <= now:
+        return None
+    row.used_at = now
+    db.commit()
+    user = db.get(User, row.user_id)
+    return user
+
+
+def pairing_payload(server_url: str, code: str) -> str:
+    """What the QR code contains: the server address and the one-time code."""
+    from urllib.parse import quote
+
+    return f"ratchetwrench://pair?server={quote(server_url, safe=':/')}&code={quote(code, safe='')}"
+
+
 def _find_token(db: Session, token: str) -> AuthToken | None:
     """Look up a token row that is still valid (not revoked, not expired)."""
     if not token or len(token) > 200:

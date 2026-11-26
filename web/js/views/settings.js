@@ -71,6 +71,8 @@ export async function settingsView(main) {
       pushCard,
       h("section", { class: "card stack" }, h("h2", {}, "Password"), pwForm),
       usersCard,
+      pairCard(),
+      bugCard(me),
       h("section", { class: "card stack" }, h("h2", {}, "More"),
         h("div", { class: "btn-row" },
           h("a", { class: "btn", href: "#/icons" }, icon("u-part"), "Icon set"),
@@ -106,4 +108,50 @@ export async function iconsView(main) {
   Object.entries(groups).map(([cat, list]) => h("section", { class: "icon-cat" }, h("h3", {}, cat),
     h("div", { class: "icon-grid" }, list.map((t) => h("div", { class: "icon-tile" },
       h("span", { class: "type-badge" + (t.category === "Repairs" ? " repair" : "") }, icon("t-" + t.key, "lg")), t.label))))));
+}
+
+// ---------------------------------------------------------------------------
+// Connect a phone with a QR code (no typing the address, username or password)
+// ---------------------------------------------------------------------------
+function pairCard() {
+  const local = ["localhost", "127.0.0.1", "[::1]"].includes(location.hostname);
+  const address = field("Address your phone uses to reach this computer", {
+    value: local ? "" : location.origin, placeholder: "Leave blank to detect it, or e.g. http://192.168.1.20:8077",
+  }, "Desktop app: the address shown in its window. Docker: this computer's address and port 8000.");
+  const out = h("div", { class: "stack" });
+  const show = h("button", { class: "btn primary", type: "button", onclick: async () => {
+    show.disabled = true;
+    try {
+      const r = await api("/api/auth/pair", { method: "POST", body: { address: address.input.value.trim() || null } });
+      const until = new Date(r.expires_at).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" });
+      out.replaceChildren(
+        h("img", { src: r.qr_svg, alt: "QR code to connect your phone", class: "pair-qr", width: 240, height: 240 }),
+        h("p", {}, "On your phone: open Ratchet Wrench → ", h("strong", {}, "Scan QR code"), " (on the Connect screen or in Settings → Sync)."),
+        h("p", { class: "muted small" }, `Connects to ${r.address}. Works once, until ${until}. Phone and computer must be on the same Wi-Fi.`));
+    } catch (e) { showError(e); } finally { show.disabled = false; }
+  } }, icon("u-scan"), "Show QR code");
+  return h("section", { class: "card stack" }, h("h2", {}, "Connect a phone"),
+    h("p", { class: "muted" }, "Show a one-time QR code and scan it with the Android app — no address, username or password to type."),
+    address, h("div", {}, show), out);
+}
+
+// ---------------------------------------------------------------------------
+// Report a bug: opens a pre-filled issue on the project's GitHub page.
+// Nothing is sent from here — you review the report and press Submit there.
+// ---------------------------------------------------------------------------
+export const ISSUE_URL = "https://github.com/dannyspace21/Rachet-Wrench/issues/new";
+
+export function bugReportUrl(platform, details) {
+  const q = new URLSearchParams({ template: "bug_report.yml", labels: "bug", platform, details });
+  return `${ISSUE_URL}?${q.toString()}`;
+}
+
+function bugCard(me) {
+  const platform = /Windows|Macintosh|Linux/.exec(navigator.userAgent)?.[0] || "Browser";
+  const details = [`Web app (${location.hostname === "127.0.0.1" || location.hostname === "localhost" ? "desktop app" : "server"})`,
+    `Browser: ${navigator.userAgent}`, `Server version: ${me.server?.version || "unknown"}`].join("\n");
+  return h("section", { class: "card stack" }, h("h2", {}, "Report a bug"),
+    h("p", { class: "muted" }, "Opens a bug report on the project's GitHub page with your browser details filled in. Review it, describe what happened, and press Submit (a free GitHub account is needed). Nothing is sent automatically."),
+    h("div", {}, h("a", { class: "btn", href: bugReportUrl(platform === "Macintosh" ? "macOS" : platform, details), target: "_blank", rel: "noopener noreferrer" },
+      icon("u-warning"), "Report a bug")));
 }

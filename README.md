@@ -27,6 +27,9 @@ You can start with the phone alone and connect it to a computer or server later:
 - **Door-jamb sticker scan:** photograph the stickers inside the driver's door. The phone reads the text itself (offline) and finds the VIN, tire sizes, tire pressures, paint and trim codes, build date and weight ratings. You **confirm, edit or reject every value** before it is saved as "From door sticker". On the web, the server reads the photo instead.
 - **Specs:** oil type and capacity, tire sizes and pressures, paint code, fluids and more. Every value shows where it came from: **From VIN**, **From door sticker**, **Entered by me** or **Unverified**. Nothing is ever guessed; unknown stays blank.
 - **Maintenance and repair records**, kept clearly separate. Each has the date, mileage, type (with its own icon), description, parts, cost, shop or DIY, notes, and **any number of photos and receipts**.
+- **Connect your phone by QR code:** the desktop app (or Settings → Connect a phone on the web) shows a one-time QR code; scan it in the Android app — no address, username or password to type.
+- **Add vehicle with make/model lists:** pick the make, then the models for that make and year (from NHTSA's vehicle database); add a photo of the vehicle.
+- **Report a bug:** Settings opens a pre-filled GitHub issue you review before sending.
 - **Carfax import:** upload a Carfax PDF — the classic history report, or the carfax.com "Service History" page printed to PDF. Every visit is split into what was done (each with its own icon), DIY vs shop is kept, and you review everything before saving. Importing also brings the odometer and your reminders up to date.
 - **Reminders** by mileage, by date, or **whichever comes first** (e.g. oil every 5,000 miles or 6 months).
 - **Alerts:** phone notifications that work offline, plus optional push alerts through your own ntfy server. Never email.

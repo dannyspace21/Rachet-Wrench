@@ -1,0 +1,38 @@
+# The "Report a bug" button in the app (Settings) opens this form with the
+# platform and details already filled in.  Nothing is sent automatically:
+# the person reviews everything here and presses Submit.
+name: Bug report
+description: Something in Ratchet Wrench doesn't work as it should.
+title: "[Bug] "
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for reporting a problem. Please don't include passwords, your VIN or other private details.
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: What happened?
+      description: What did you do, what did you expect, and what happened instead?
+      placeholder: "I tapped Add entry, then the app closed."
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to make it happen again (if you know them)
+      placeholder: |
+        1. Open a vehicle
+        2. Tap ...
+  - type: input
+    id: platform
+    attributes:
+      label: Where
+      description: Android phone, Windows, macOS, Linux, or Docker server.
+  - type: textarea
+    id: details
+    attributes:
+      label: App details
+      description: Filled in by the app (version, device). Error details, if any, are included here only if you chose to.
+      render: text

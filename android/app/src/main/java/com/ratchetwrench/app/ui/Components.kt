@@ -37,6 +37,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.layout.ContentScale
@@ -144,6 +145,36 @@ fun Field(label: String, value: String, onChange: (String) -> Unit, modifier: Mo
         shape = RoundedCornerShape(14.dp))
 }
 
+/**
+ * A text field with a drop-down of suggestions that narrows as you type.
+ * You can always type something that isn't in the list.
+ */
+@Composable
+fun SuggestField(label: String, value: String, onChange: (String) -> Unit, options: List<String>, hint: String? = null) {
+    var open by remember { mutableStateOf(false) }
+    val shown = remember(value, options) {
+        val q = value.trim()
+        (if (q.isEmpty()) options else options.filter { it.contains(q, ignoreCase = true) && !it.equals(q, ignoreCase = true) }).take(40)
+    }
+    Box {
+        OutlinedTextField(value, { onChange(it); open = true },
+            modifier = Modifier.fillMaxWidth().onFocusChanged { if (it.isFocused) open = true },
+            label = { Text(label) }, singleLine = true, supportingText = hint?.let { { Text(it) } },
+            trailingIcon = if (options.isNotEmpty()) ({
+                androidx.compose.material3.IconButton({ open = !open }) { UiIcon("chevron_down", description = "Show $label choices") }
+            }) else null,
+            shape = RoundedCornerShape(14.dp))
+        // Not focusable: the keyboard stays up and you can keep typing.
+        androidx.compose.material3.DropdownMenu(expanded = open && shown.isNotEmpty(), onDismissRequest = { open = false },
+            properties = androidx.compose.ui.window.PopupProperties(focusable = false),
+            modifier = Modifier.heightIn(max = 320.dp)) {
+            shown.forEach { option ->
+                androidx.compose.material3.DropdownMenuItem(text = { Text(option) }, onClick = { onChange(option); open = false })
+            }
+        }
+    }
+}
+
 /** Two-to-four option toggle (Maintenance / Repair, Light / Dark / System …). */
 @Composable
 fun Segmented(options: List<Pair<String, String>>, selected: String, onSelect: (String) -> Unit) {
@@ -207,10 +238,10 @@ fun PhotoThumb(att: Attachment, size: Dp = 72.dp, modifier: Modifier = Modifier)
 // Formatting
 // ---------------------------------------------------------------------------
 fun money(cents: Int?, currency: String): String {
-    if (cents == null) return "—"
+    // No cost entered shows as $0.00 (not a dash).
     val f = NumberFormat.getCurrencyInstance()
     runCatching { f.currency = Currency.getInstance(currency) }
-    return f.format(cents / 100.0)
+    return f.format((cents ?: 0) / 100.0)
 }
 
 fun miles(value: Int?, unit: String) = if (value == null) "—" else "%,d %s".format(value, unit)
@@ -226,6 +257,20 @@ fun prettyDateTime(iso: String?): String = try {
 } catch (e: Exception) { prettyDate(iso) }
 
 fun parseMoney(text: String): Int? = text.filter { it.isDigit() || it == '.' }.toBigDecimalOrNull()?.movePointRight(2)?.toInt()
+
+/**
+ * The vehicle's photo (the one the server marks as its photo, else the
+ * newest one taken on this phone), or a car / motorcycle badge if none.
+ */
+@Composable
+fun VehicleAvatar(v: com.ratchetwrench.app.data.Vehicle, photos: List<Attachment>, size: Dp = 56.dp) {
+    val photo = photos.firstOrNull { it.id == v.photo_attachment_id } ?: photos.firstOrNull { it.vehicle_id == v.id }
+    if (photo != null) PhotoThumb(photo, size)
+    else Box(Modifier.size(size).clip(RoundedCornerShape(14.dp)).background(MaterialTheme.colorScheme.surfaceVariant),
+        contentAlignment = Alignment.Center) {
+        UiIcon(if (v.kind == "motorcycle") "motorcycle" else "car", Modifier.size(size * 0.55f))
+    }
+}
 
 @Composable
 fun AppLogo(size: Dp = 72.dp) {

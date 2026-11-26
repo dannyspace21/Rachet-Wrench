@@ -236,6 +236,53 @@ fun VinScanScreen(onResult: (String) -> Unit, onCancel: () -> Unit) {
     }
 }
 
+/**
+ * Scans a "connect your phone" QR code (shown by the desktop app or in the
+ * web app's Settings).  Only codes that start with ratchetwrench://pair are
+ * accepted; the phone reads it ON THE PHONE (ML Kit, offline).
+ */
+@androidx.annotation.OptIn(androidx.camera.core.ExperimentalGetImage::class)
+@Composable
+fun PairScanScreen(onResult: (String) -> Unit, onCancel: () -> Unit) {
+    CameraPermissionGate(onCancel) {
+        val ctx = LocalContext.current
+        var seenOther by remember { mutableStateOf(false) }
+        val done = remember { java.util.concurrent.atomic.AtomicBoolean(false) }
+        val executor = remember { Executors.newSingleThreadExecutor() }
+        val scanner = remember { BarcodeScanning.getClient(BarcodeScannerOptions.Builder().setBarcodeFormats(Barcode.FORMAT_QR_CODE).build()) }
+        val analysis = remember {
+            ImageAnalysis.Builder().setBackpressureStrategy(ImageAnalysis.STRATEGY_KEEP_ONLY_LATEST).build().also { a ->
+                a.setAnalyzer(executor) { proxy ->
+                    val media = proxy.image
+                    if (media == null || done.get()) { proxy.close(); return@setAnalyzer }
+                    scanner.process(InputImage.fromMediaImage(media, proxy.imageInfo.rotationDegrees))
+                        .addOnSuccessListener { codes ->
+                            for (c in codes) {
+                                val raw = c.rawValue ?: continue
+                                if (raw.startsWith("ratchetwrench://pair?") && done.compareAndSet(false, true)) {
+                                    ContextCompat.getMainExecutor(ctx).execute { onResult(raw) }
+                                } else seenOther = true
+                            }
+                        }
+                        .addOnCompleteListener { proxy.close() }
+                }
+            }
+        }
+        DisposableEffect(Unit) { onDispose { scanner.close(); executor.shutdown() } }
+        Box(Modifier.fillMaxSize().background(Color.Black)) {
+            CameraPreview(Modifier.fillMaxSize(), analysis = analysis)
+            Column(Modifier.align(Alignment.BottomCenter).safeDrawingPadding().padding(16.dp).background(Color(0xCC000000), RoundedCornerShape(16.dp)).padding(16.dp),
+                verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                Text("Scan the QR code on your computer", color = Color.White, fontWeight = FontWeight.Bold)
+                Text(if (seenOther) "That QR code isn't a Ratchet Wrench connect code." else
+                    "Desktop app: “Connect a phone (QR code)”.  Web app: Settings → Connect a phone.",
+                    color = Color.White, style = MaterialTheme.typography.bodySmall)
+                SecondaryButton("Cancel") { onCancel() }
+            }
+        }
+    }
+}
+
 @Composable
 fun CaptureScreen(onDone: (List<String>) -> Unit, onCancel: () -> Unit) {
     CameraPermissionGate(onCancel) {

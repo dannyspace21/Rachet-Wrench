@@ -192,3 +192,50 @@ def test_setup_disabled_without_code(client):
     assert client.get("/api/auth/setup-status").json() == {"needs_setup": False}
     r = client.post("/api/auth/setup", json={"token": "x" * 32, "username": "eve", "password": "a-long-password"})
     assert r.status_code in (403, 409)
+
+
+# ---------------------------------------------------------------------------
+# Phone pairing by QR code
+# ---------------------------------------------------------------------------
+def test_pairing_code_connects_a_phone_once(client, admin):
+    from urllib.parse import parse_qs, urlparse
+
+    r = client.post("/api/auth/pair", headers=admin, json={"address": "http://192.168.1.20:8077"})
+    assert r.status_code == 200, r.text
+    body = r.json()
+    assert body["qr_svg"].startswith("data:image/svg+xml")
+    q = parse_qs(urlparse(body["payload"]).query)
+    assert body["payload"].startswith("ratchetwrench://pair?")
+    assert q["server"] == ["http://192.168.1.20:8077"]
+    code = q["code"][0]
+
+    claimed = client.post("/api/auth/pair/claim", json={"code": code})
+    assert claimed.status_code == 200, claimed.text
+    token = claimed.json()["token"]
+    assert client.get("/api/auth/me", headers={"Authorization": f"Bearer {token}"}).status_code == 200
+
+    # One use only.
+    assert client.post("/api/auth/pair/claim", json={"code": code}).status_code == 401
+    # Wrong code.
+    assert client.post("/api/auth/pair/claim", json={"code": "x" * 32}).status_code == 401
+
+
+def test_pairing_needs_a_signed_in_user_and_expires(client, admin):
+    from datetime import timedelta
+
+    assert client.post("/api/auth/pair", json={}).status_code == 401
+    assert client.post("/api/auth/pair", headers=admin, json={"address": "javascript:alert(1)"}).status_code == 400
+    from urllib.parse import parse_qs, urlparse
+
+    payload = client.post("/api/auth/pair", headers=admin, json={}).json()["payload"]
+    code = parse_qs(urlparse(payload).query)["code"][0]
+    # Make it expire.
+    from app.database import get_engine
+    from app.models import PairingCode, utcnow
+    from sqlalchemy.orm import Session
+
+    with Session(get_engine()) as db:
+        for row in db.query(PairingCode).all():
+            row.expires_at = utcnow() - timedelta(seconds=1)
+        db.commit()
+    assert client.post("/api/auth/pair/claim", json={"code": code}).status_code == 401

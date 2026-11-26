@@ -2,6 +2,7 @@
 routers/vehicles.py — features that act on one whole vehicle:
 
   POST /api/vin/decode                         VIN -> suggested details/specs
+  GET  /api/vehicle-models?make=&year=&kind=   model names (NHTSA) for the Add vehicle form
   POST /api/vehicles/{id}/apply-vin            save VIN-decoded specs
   GET  /api/vehicles/{id}/links                official parts + owner portal
   POST /api/vehicles/{id}/sticker/scan         sticker photos -> proposed fields
@@ -32,7 +33,7 @@ from ..records import get_owned, serialize, soft_delete, upsert
 from ..report import build_report
 from ..security import current_user
 from ..uploads import accept_upload, file_path, read_limited, run_pdf_worker, sniff_type
-from ..vin import decode_with_nhtsa, extra_specs, is_valid_vin, normalize_vin
+from ..vin import decode_with_nhtsa, extra_specs, is_valid_vin, nhtsa_models, normalize_vin
 from .auth import get_or_create_settings
 
 router = APIRouter(prefix="/api", tags=["vehicle tools"])
@@ -59,6 +60,20 @@ async def vin_decode(body: schemas.VinDecodeIn, user: User = Depends(current_use
     specs = [{"key": k, "value": v, "source": "vin"} for k, v in result["specs"].items()]
     specs += [{"key": k, "value": v, "source": "provider"} for k, v in provider_specs.items() if k not in result["specs"]]
     return {"vin": vin, "vehicle": result["vehicle"], "specs": specs, "warnings": warnings + result["warnings"]}
+
+
+@router.get("/vehicle-models")
+async def vehicle_models(make: str, kind: str = "car", year: int | None = None, user: User = Depends(current_user)) -> dict:
+    """Model names for a make (and year) from NHTSA, for the Add vehicle form."""
+    if kind not in ("car", "motorcycle"):
+        kind = "car"
+    if year is not None and not 1900 <= year <= 2100:
+        year = None
+    try:
+        models = await asyncio.to_thread(nhtsa_models, make, year, kind)
+    except RuntimeError as exc:
+        raise HTTPException(status.HTTP_502_BAD_GATEWAY, str(exc)) from None
+    return {"make": make, "year": year, "kind": kind, "models": models}
 
 
 @router.post("/vehicles/{vehicle_id}/apply-specs")
@@ -93,7 +108,7 @@ def _save_fields(db: Session, user: User, vehicle_id: str, body: schemas.Sticker
 def vehicle_links(vehicle_id: str, user: User = Depends(current_user), db: Session = Depends(get_db)) -> dict:
     """Official manufacturer links.  Your per-vehicle overrides win."""
     v = get_owned(db, Vehicle, vehicle_id, user)
-    links = make_links(v.make)
+    links = make_links(v.make, v.kind)
     return {
         "parts": v.parts_url or links["parts"],
         "owners": v.owners_url or links["owners"],

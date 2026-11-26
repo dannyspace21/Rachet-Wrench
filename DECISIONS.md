@@ -469,3 +469,30 @@ The desktop app *is* the existing server plus web app, packaged to run on a PC. 
 - **Why the file keeps its name:** GitHub numbers runs per workflow file, and the version (`1.0.<run number>`) must keep rising for Android to accept updates. A new file would restart at 1.
 - **Desktop workflow removed:** `desktop.yml` is deleted.
 - **Phone updater unchanged:** it already picks the APK by name and its own line in `SHA256SUMS.txt`.
+
+### D58. QR pairing, make/model lists, simpler phone Garage, Report a bug, motorcycle fixes
+- **Connect a phone by QR code:**
+  - **Server:** `POST /api/auth/pair` (signed-in users only) creates a one-time code. The code is random (192 bits), only its SHA-256 hash is stored in the new `pairing_codes` table, it expires in 10 minutes and works once. The QR code holds `ratchetwrench://pair?server=…&code=…`. `POST /api/auth/pair/claim` exchanges the code for an Android login, rate-limited like password logins.
+  - **Where the QR code appears:** the web app's Settings (with an editable address, needed for Docker) and the desktop window. The desktop window acts in-process as the computer's account and turns on phone sync if it's off.
+  - **Phone:** a QR-only scanner on the Connect screen and in Settings → Sync. Plain HTTP at home still asks first.
+  - **New dependency: segno 1.6.6**, a pure-Python QR library with no dependencies. It's the latest release, OSV.dev lists no vulnerabilities, and it's hash-locked in `requirements.txt` (only that line changed).
+- **Make / model lists:**
+  - **Makes:** `catalog.make_names` lists 57 car makes and 28 motorcycle makes.
+  - **Models:** they come from **NHTSA vPIC** (`GetModelsForMakeYear`) for the chosen make, model year and kind. Cars cover passenger car, MPV and truck types; motorcycles their own type. Results are cached.
+  - **Who calls NHTSA:** the web form asks the server (`GET /api/vehicle-models`); the phone calls NHTSA directly. Only the make and year are sent. NHTSA was already a documented outbound connection (#1); its description was widened.
+  - **Typing:** any make or model can still be typed. Checked live: a 2005 Acura gives MDX, NSX, RL, RSX, TL, TSX.
+- **Vehicle photo on Android, and a real bug fixed:**
+  - **Photo:** camera or gallery on the Add/Edit vehicle screen. It uploads as `vehicle_photo`, and the server links it to the vehicle.
+  - **Bug fixed:** the edit screen kept "loaded" and the VIN-decoded specs in non-saveable state. Going to the barcode scanner (or camera) and back made the screen reload the saved vehicle *over what you'd typed*, and dropped the decoded specs. Both are now saveable, and saving starts from the stored vehicle.
+  - **Web form:** keeps a draft in `sessionStorage` (this tab only, cleared on save), so a phone browser reloading after the camera loses nothing.
+  - **Tests:** a screen test rebuilds the form and checks the typed values survive.
+- **Simpler phone Garage:** only vehicles (photo or car/motorcycle badge, mileage, an Overdue / Due soon marker) and Add vehicle. The vehicle screen has a compact header (photo, mileage, Add entry on one line; small scrollable action chips) and a **Coming up** card with up to 3 overdue or due-soon items. The web and desktop dashboard are unchanged.
+- **$0.00 instead of "—"** for entries without a cost (web, phone, both PDF reports).
+- **Report a bug:**
+  - **What it does:** a Settings section on the phone and the web opens a pre-filled GitHub issue (`.github/ISSUE_TEMPLATE/bug_report.yml`) in the browser. On the phone it includes the app version, Android version, device, mode, last sync problem and, if the app crashed, the first lines of the error.
+  - **Privacy:** nothing is sent by the app. The person reviews and submits, so no GitHub credentials are ever built into the app.
+- **Motorcycle links:** checked each manufacturer page directly.
+  - **Fixed:** Ducati parts (was 404) and manuals, Kawasaki parts, Yamaha parts and manuals (yamaha-motor.com / yamahapubs.com), Harley-Davidson owners (serviceinfo.harley-davidson.com), and KTM added (parts finder and manuals). Suzuki parts falls back to the owners page.
+  - **Separate motorcycle links:** makes that build cars and motorcycles get `moto_parts` / `moto_owners` (Honda → powersports.honda.com).
+  - **Not verified:** powersports.honda.com blocks automated checks; BMW Motorrad's site didn't answer from the build environment, so it keeps the existing BMW link.
+- **Motorcycle icon:** redrawn as a motorbike (engine block, seat and tank, raked fork). The old one looked like a bicycle.

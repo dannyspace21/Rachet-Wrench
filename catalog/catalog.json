@@ -866,8 +866,8 @@
       "owners": "https://www.chevrolet.com/support"
     },
     "Ducati": {
-      "parts": "https://www.ducati.com/us/en/service-maintenance/spare-parts",
-      "owners": "https://www.ducati.com/us/en/service-maintenance/owner-manuals"
+      "parts": "https://www.ducati.com/us/en/service-maintenance/genuine-parts",
+      "owners": "https://www.ducati.com/us/en/service-maintenance/maintenance"
     },
     "Ford": {
       "parts": "https://parts.ford.com/",
@@ -879,11 +879,13 @@
     },
     "Harley-Davidson": {
       "parts": "https://www.harley-davidson.com/us/en/shop/c/motorcycle-parts",
-      "owners": "https://www.harley-davidson.com/us/en/owners/index.html"
+      "owners": "https://serviceinfo.harley-davidson.com/"
     },
     "Honda": {
       "parts": null,
-      "owners": "https://owners.honda.com/"
+      "owners": "https://owners.honda.com/",
+      "moto_parts": "https://powersports.honda.com/",
+      "moto_owners": "https://powersports.honda.com/"
     },
     "Hyundai": {
       "parts": null,
@@ -894,8 +896,12 @@
       "owners": "https://owners.infinitiusa.com/"
     },
     "Kawasaki": {
-      "parts": "https://www.kawasaki.com/en-us/parts",
-      "owners": "https://www.kawasaki.com/en-us/owner-center"
+      "parts": "https://www.kawasaki.com/en-us/owner-center/parts",
+      "owners": "https://www.kawasaki.com/en-us/owner-center/service-manuals"
+    },
+    "KTM": {
+      "parts": "https://www.ktm.com/en-us/service/spare-parts-finder.html",
+      "owners": "https://www.ktm.com/en-us/service/manuals.html"
     },
     "Kia": {
       "parts": null,
@@ -926,7 +932,7 @@
       "owners": "https://www.subaru.com/owners.html"
     },
     "Suzuki": {
-      "parts": "https://suzukicycles.com/parts",
+      "parts": null,
       "owners": "https://suzukicycles.com/owners"
     },
     "Tesla": {
@@ -946,8 +952,99 @@
       "owners": "https://www.vw.com/en/owners-and-services.html"
     },
     "Yamaha": {
-      "parts": "https://www.yamahamotorsports.com/parts",
-      "owners": "https://www.yamahamotorsports.com/owner-center"
+      "parts": "https://yamaha-motor.com/parts",
+      "owners": "https://www.yamahapubs.com/"
     }
+  },
+  "make_names": {
+    "car": [
+      "Acura",
+      "Alfa Romeo",
+      "Aston Martin",
+      "Audi",
+      "Bentley",
+      "BMW",
+      "Buick",
+      "Cadillac",
+      "Chevrolet",
+      "Chrysler",
+      "Dodge",
+      "Ferrari",
+      "Fiat",
+      "Fisker",
+      "Ford",
+      "Genesis",
+      "GMC",
+      "Honda",
+      "Hummer",
+      "Hyundai",
+      "Infiniti",
+      "Isuzu",
+      "Jaguar",
+      "Jeep",
+      "Kia",
+      "Lamborghini",
+      "Land Rover",
+      "Lexus",
+      "Lincoln",
+      "Lotus",
+      "Lucid",
+      "Maserati",
+      "Maybach",
+      "Mazda",
+      "McLaren",
+      "Mercedes-Benz",
+      "Mercury",
+      "Mini",
+      "Mitsubishi",
+      "Nissan",
+      "Oldsmobile",
+      "Polestar",
+      "Pontiac",
+      "Porsche",
+      "Ram",
+      "Rivian",
+      "Rolls-Royce",
+      "Saab",
+      "Saturn",
+      "Scion",
+      "Smart",
+      "Subaru",
+      "Suzuki",
+      "Tesla",
+      "Toyota",
+      "Volkswagen",
+      "Volvo"
+    ],
+    "motorcycle": [
+      "Aprilia",
+      "Benelli",
+      "Beta",
+      "BMW",
+      "Buell",
+      "Can-Am",
+      "CFMoto",
+      "Ducati",
+      "GasGas",
+      "Harley-Davidson",
+      "Honda",
+      "Husqvarna",
+      "Indian",
+      "Kawasaki",
+      "KTM",
+      "Kymco",
+      "LiveWire",
+      "Moto Guzzi",
+      "MV Agusta",
+      "Piaggio",
+      "Royal Enfield",
+      "Suzuki",
+      "Triumph",
+      "Ural",
+      "Vespa",
+      "Victory",
+      "Yamaha",
+      "Zero"
+    ]
   }
 }

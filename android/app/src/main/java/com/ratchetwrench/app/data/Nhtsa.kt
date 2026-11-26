@@ -48,6 +48,37 @@ object Nhtsa {
         "Trim" to "trim", "PlantCity" to "plant", "Seats" to "seating_capacity",
     )
 
+    private val modelCache = java.util.concurrent.ConcurrentHashMap<String, List<String>>()
+    private val makeOk = Regex("^[A-Za-z0-9 .&'-]{1,40}$")
+
+    /**
+     * Model names NHTSA knows for a make (and model year), for cars (cars,
+     * SUVs/minivans, pickups) or motorcycles.  Only the make name and year
+     * are sent.  Cached for the app session.  Call from a background thread.
+     */
+    fun models(make: String, year: Int?, kind: String): List<String> {
+        val m = make.trim()
+        if (!makeOk.matches(m)) return emptyList()
+        val key = "$kind|${m.lowercase()}|${year ?: ""}"
+        modelCache[key]?.let { return it }
+        val types = if (kind == "motorcycle") listOf("motorcycle") else listOf("car", "mpv", "truck")
+        val names = sortedSetOf(String.CASE_INSENSITIVE_ORDER)
+        for (t in types) {
+            val url = okhttp3.HttpUrl.Builder().scheme("https").host("vpic.nhtsa.dot.gov")
+                .addPathSegments("api/vehicles/GetModelsForMakeYear/make").addPathSegment(m)
+                .apply { if (year != null) addPathSegment("modelyear").addPathSegment(year.toString()) }
+                .addPathSegment("vehicletype").addPathSegment(t).addQueryParameter("format", "json").build()
+            val body = client.newCall(Request.Builder().url(url).header("Accept", "application/json").build()).execute().use { res ->
+                if (!res.isSuccessful) throw IOException("The NHTSA vehicle database answered with an error (${res.code}).")
+                res.body.string().take(1024 * 1024)
+            }
+            JsonFormat.parseToJsonElement(body).jsonObject["Results"]?.jsonArray?.forEach { r ->
+                r.jsonObject["Model_Name"]?.jsonPrimitive?.content?.trim()?.takeIf { it.isNotEmpty() }?.let { names.add(it) }
+            }
+        }
+        return names.toList().take(500).also { modelCache[key] = it }
+    }
+
     /** Decode a VIN.  Throws IOException with a friendly message on failure.
      *  Call from a background thread. */
     fun decode(rawVin: String): VinResult {

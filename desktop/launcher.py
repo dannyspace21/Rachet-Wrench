@@ -136,6 +136,29 @@ def lan_addresses() -> tuple[list[str], list[str]]:
     return likely, other
 
 
+def make_pairing(port: int) -> tuple[str, str]:
+    """A one-time "connect your phone" code for this computer's account.
+    Returns (QR code text, username).  Raises LookupError if there is no
+    account yet.  Runs inside this app (same database as the server)."""
+    from sqlalchemy import select
+    from sqlalchemy.orm import Session
+
+    from app.database import get_engine
+    from app.models import User
+    from app.security import create_pairing_code, pairing_payload
+
+    with Session(get_engine()) as db:
+        users = db.scalars(select(User).order_by(User.is_admin.desc(), User.created_at)).all()
+        if not users:
+            raise LookupError("Create your account first: click “Open Ratchet Wrench”.")
+        user = users[0]
+        code, _row = create_pairing_code(db, user)
+        username = user.username
+    likely, _other = lan_addresses()
+    address = f"http://{likely[0]}:{port}" if likely else f"http://127.0.0.1:{port}"
+    return pairing_payload(address, code), username
+
+
 def already_running(port: int) -> bool:
     try:
         # Reviewed: fixed http://127.0.0.1 URL; port is always an int.
@@ -261,7 +284,39 @@ def run_window(runner: ServerRunner, prefs: dict) -> None:
         runner.start(phone_var.get())
         describe()
 
+    def show_qr() -> None:
+        """Connect a phone by QR code: no address, username or password to type."""
+        from tkinter import messagebox
+
+        if not phone_var.get():  # a phone can only reach us with phone sync on
+            phone_var.set(True)
+            toggle()
+        try:
+            payload, who = make_pairing(runner.port)
+        except LookupError as exc:
+            messagebox.showinfo(APP_NAME, str(exc))
+            return
+        import base64
+        import io
+
+        import segno
+
+        buf = io.BytesIO()
+        segno.make(payload, error="m").save(buf, kind="png", scale=6, border=2)
+        win = tk.Toplevel(root)
+        win.title("Connect a phone")
+        img = tk.PhotoImage(data=base64.b64encode(buf.getvalue()))
+        label = ttk.Label(win, image=img)
+        label.image = img  # keep a reference so Tk doesn't drop the picture
+        label.grid(padx=20, pady=(20, 8))
+        ttk.Label(win, justify="center", wraplength=320, text=(
+            "On your phone: open Ratchet Wrench and tap “Scan QR code”\n"
+            f"(Connect screen, or Settings → Sync). Signs in as “{who}”.\n"
+            "Works once, for 10 minutes. Same Wi-Fi as this computer.")).grid(padx=20)
+        ttk.Button(win, text="Close", command=win.destroy).grid(pady=(10, 16))
+
     ttk.Checkbutton(frame, text="Allow my phone to sync with this computer", variable=phone_var, command=toggle).grid(sticky="w", pady=(16, 4))
+    ttk.Button(frame, text="Connect a phone (QR code)", command=show_qr).grid(sticky="ew", pady=(4, 8))
     phone_info.grid(sticky="w")
     ttk.Label(frame, text=f"Your data: {data_dir()}", foreground="#5b6577", wraplength=380).grid(sticky="w", pady=(14, 0))
 

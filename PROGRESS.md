@@ -71,6 +71,8 @@ Build-sandbox notes: the sandbox blocks dl.google.com, api.osv.dev, semgrep.dev 
 
 - v1.0.18: ONE release per version with every download (APK + Windows + macOS + Linux + checksums); separate desktop releases retired (D57).
 
+- v1.0.19: QR pairing, make/model lists (NHTSA), vehicle photo + edit-screen state bug, simpler phone Garage + compact vehicle header with Coming up, $0.00 costs, Report a bug, motorcycle links + icon (D58).
+
 ## Ideas for later (not started)
 - Code-sign the desktop app (paid Apple/Microsoft certificates) to remove first-launch warnings; add an Intel-Mac build if needed.
 - Run the Android app on a real device/emulator and add phone screenshots to the README (no emulator was available in the build sandbox).

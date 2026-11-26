@@ -215,6 +215,16 @@ class Api(private val store: SecureStore) {
         return res["token"]?.jsonPrimitive?.content ?: throw ApiException(0, "The server did not return a login token.")
     }
 
+    /** Sign in with a one-time code from a "connect your phone" QR code.
+     *  Returns (token, username). */
+    fun claimPairing(code: String): Pair<String, String> {
+        val body = JsonObject(mapOf("code" to kotlinx.serialization.json.JsonPrimitive(code)))
+        val res = json.parseToJsonElement(send("POST", "/api/auth/pair/claim", body)).jsonObject
+        val token = res["token"]?.jsonPrimitive?.content ?: throw ApiException(0, "The server did not return a login token.")
+        val user = res["user"]?.jsonObject?.get("username")?.jsonPrimitive?.content ?: ""
+        return token to user
+    }
+
     fun logout() { runCatching { send("POST", "/api/auth/logout", JsonObject(emptyMap())) } }
 
     fun me(): JsonObject = json.parseToJsonElement(get("/api/auth/me")).jsonObject

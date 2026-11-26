@@ -329,13 +329,26 @@ async function docsTab(body, v) {
 // ===========================================================================
 export async function vehicleFormView(main, { params }) {
   const [id] = params;
-  const v = id ? await api(`/api/vehicles/${id}`) : { kind: "car", mileage_unit: (await getMe()).settings.distance_unit };
+  const [loaded, catalog] = await Promise.all([
+    id ? api(`/api/vehicles/${id}`) : getMe().then((me) => ({ kind: "car", mileage_unit: me.settings.distance_unit })), getCatalog()]);
+  // Draft: if this page is reloaded (e.g. a phone browser reopening after the
+  // camera), what you typed — and VIN-decoded specs — come back.  Kept only in
+  // this browser tab (sessionStorage) and cleared when you save.
+  const draftKey = `rw-vehicle-draft-${id || "new"}`;
+  let draft = null;
+  try { draft = JSON.parse(sessionStorage.getItem(draftKey) || "null"); } catch { draft = null; }
+  const v = { ...loaded, ...(draft?.data || {}) };
   let kind = v.kind || "car";
-  const kindSeg = segmented([{ value: "car", label: "Car", icon: "u-car" }, { value: "motorcycle", label: "Motorcycle", icon: "u-motorcycle" }], kind, (val) => { kind = val; }, "Vehicle type");
+  const makeNames = catalog.make_names || { car: [], motorcycle: [] };
+  const makeList = h("datalist", { id: "rw-make-list" });
+  const modelList = h("datalist", { id: "rw-model-list" });
+  const fillMakes = () => makeList.replaceChildren(...(makeNames[kind] || []).map((m) => h("option", { value: m })));
+  const kindSeg = segmented([{ value: "car", label: "Car", icon: "u-car" }, { value: "motorcycle", label: "Motorcycle", icon: "u-motorcycle" }], kind,
+    (val) => { kind = val; fillMakes(); loadModels(); saveDraft(); }, "Vehicle type");
   const vin = field("VIN", { value: v.vin || "", maxlength: 17, autocapitalize: "characters", spellcheck: "false" }, "17 characters. Find it on the dashboard, the door jamb or your registration.");
   const year = field("Year", { inputmode: "numeric", value: v.year ?? "", maxlength: 4 });
-  const make = field("Make", { value: v.make || "", maxlength: 64, placeholder: "e.g. Lexus" });
-  const model = field("Model", { value: v.model || "", maxlength: 64, placeholder: "e.g. RC 350" });
+  const make = field("Make", { value: v.make || "", maxlength: 64, placeholder: "Pick or type, e.g. Lexus", list: "rw-make-list", autocomplete: "off" });
+  const model = field("Model", { value: v.model || "", maxlength: 64, placeholder: "Pick or type, e.g. RC 350", list: "rw-model-list", autocomplete: "off" });
   const trim = field("Trim", { value: v.trim || "", maxlength: 64 });
   const nick = field("Nickname", { value: v.nickname || "", maxlength: 64, placeholder: "Optional" });
   const mileage = field("Current mileage", { inputmode: "numeric", value: v.current_mileage ?? "" });
@@ -344,7 +357,33 @@ export async function vehicleFormView(main, { params }) {
   const owners = field("Owner portal (optional override)", { value: v.owners_url || "", type: "url", placeholder: "https://" });
   const notes = field("Notes", { tag: "textarea", value: v.notes || "" });
   const photo = filePicker({ accept: "image/jpeg,image/png,image/heic,image/heif", multiple: false, label: id ? "Replace vehicle photo" : "Add a vehicle photo" });
-  let decodedSpecs = [];
+  let decodedSpecs = draft?.specs || [];
+
+  // Model suggestions for the chosen make (and year), from NHTSA via the server.
+  let modelsFor = "";
+  async function loadModels() {
+    const mk = make.input.value.trim();
+    const yr = parseIntOrNull(year.input.value);
+    const key = `${kind}|${mk.toLowerCase()}|${yr || ""}`;
+    if (!mk || key === modelsFor) return;
+    modelsFor = key;
+    try {
+      const r = await api(`/api/vehicle-models?make=${encodeURIComponent(mk)}&kind=${kind}${yr ? `&year=${yr}` : ""}`);
+      if (modelsFor === key) modelList.replaceChildren(...r.models.map((m) => h("option", { value: m })));
+    } catch { modelList.replaceChildren(); /* offline: you can still type the model */ }
+  }
+  function saveDraft() {
+    try {
+      sessionStorage.setItem(draftKey, JSON.stringify({ specs: decodedSpecs, data: {
+        kind, vin: vin.input.value, year: year.input.value, make: make.input.value, model: model.input.value, trim: trim.input.value,
+        nickname: nick.input.value, current_mileage: mileage.input.value, mileage_unit: unit.input.value,
+        parts_url: parts.input.value, owners_url: owners.input.value, notes: notes.input.value } }));
+    } catch { /* storage unavailable: nothing to restore later */ }
+  }
+  make.input.addEventListener("change", loadModels);
+  year.input.addEventListener("change", loadModels);
+  fillMakes();
+  if (v.make) loadModels();
 
   const decodeBtn = h("button", { class: "btn", type: "button", onclick: async () => {
     decodeBtn.disabled = true;
@@ -363,6 +402,7 @@ export async function vehicleFormView(main, { params }) {
       actions: [{ label: "Cancel", value: false }, { label: "Use these", primary: true, value: true }] });
       if (ok) {
         for (const b of boxes) if (b.box.checked) b.f.input.value = b.val;
+        loadModels(); saveDraft();
         if (d.kind) { kind = d.kind; kindSeg.value = d.kind; kindSeg.querySelectorAll("button").forEach((btn, i) => btn.setAttribute("aria-pressed", String(["car", "motorcycle"][i] === d.kind))); }
       } else decodedSpecs = [];
     } catch (e) { showError(e); } finally { decodeBtn.disabled = false; }
@@ -384,6 +424,7 @@ export async function vehicleFormView(main, { params }) {
         fd.append("file", file); fd.append("vehicle_id", saved.id); fd.append("category", "vehicle_photo");
         await api("/api/attachments", { method: "POST", body: fd });
       }
+      try { sessionStorage.removeItem(draftKey); } catch { /* ignore */ }
       toast("Vehicle saved");
       location.hash = `#/v/${saved.id}`;
     } catch (err) { showError(err); } finally { save.disabled = false; }
@@ -398,6 +439,8 @@ export async function vehicleFormView(main, { params }) {
         await api(`/api/vehicles/${id}`, { method: "DELETE" }); toast("Vehicle deleted"); location.hash = "#/";
       }
     } }, icon("u-trash"), "Delete vehicle") : null));
+  form.addEventListener("input", saveDraft);
+  form.append(makeList, modelList);
   const vinRow = form.children[1];
   vinRow.style.alignItems = "flex-end";
   vinRow.firstChild.style.flex = "1";

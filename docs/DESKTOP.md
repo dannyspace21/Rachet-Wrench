@@ -37,6 +37,8 @@ From then on, use the **Open Ratchet Wrench** button in the small window (or jus
 2. On your phone, open Ratchet Wrench:
    - **New install:** choose **"Connect to my computer or home server"**.
    - **Already using it on the phone only:** go to *Settings → Connect to my computer or server*. Everything already on the phone is copied to the computer.
+**Easiest — scan a QR code:** in the desktop window click **Connect a phone (QR code)**, then on the phone tap **Scan QR code** (Connect screen, or *Settings → Sync → Reconnect with QR code*). Nothing to type. The code works once, for 10 minutes. Or, by hand:
+
 3. Enter the address shown **first** in the desktop window (for example `192.168.1.20:8077`), plus your username and password. Tap **Sign in**, then **Yes, connect** when the app asks about plain HTTP on your home network.
 
 The phone and computer must be on the **same Wi-Fi**, or both on **Tailscale** (see [HTTPS.md](HTTPS.md)). The phone keeps working offline and syncs whenever it can reach the computer.

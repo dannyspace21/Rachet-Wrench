@@ -104,6 +104,21 @@ class AuthToken(Base):
     revoked: Mapped[bool] = mapped_column(Boolean, default=False)
 
 
+class PairingCode(Base):
+    """A one-time code shown as a QR code to connect a phone without typing
+    the address, username or password.  Only a SHA-256 hash is stored; the
+    code works once and expires after a few minutes."""
+
+    __tablename__ = "pairing_codes"
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=new_id)
+    user_id: Mapped[str] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), index=True)
+    code_hash: Mapped[str] = mapped_column(String(64), unique=True, index=True)
+    created_at: Mapped[datetime] = mapped_column(UTCDateTime, default=utcnow)
+    expires_at: Mapped[datetime] = mapped_column(UTCDateTime)
+    used_at: Mapped[datetime | None] = mapped_column(UTCDateTime, nullable=True)
+
+
 class UserSettings(Base):
     """Per-user preferences (theme, push notifications, units)."""
 

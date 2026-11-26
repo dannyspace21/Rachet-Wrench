@@ -47,6 +47,17 @@ class LoginIn(Strict):
     client: Literal["web", "android"] = "web"
 
 
+class PairStartIn(Strict):
+    """Make a "connect your phone" QR code.  address = how the PHONE reaches
+    this server, e.g. http://192.168.1.20:8077 (a guess is used if omitted)."""
+
+    address: Annotated[str, Field(max_length=200)] | None = None
+
+
+class PairClaimIn(Strict):
+    code: Annotated[str, Field(min_length=10, max_length=100)]
+
+
 class SetupIn(Strict):
     """First-run account creation (desktop app)."""
 

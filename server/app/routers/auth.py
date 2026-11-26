@@ -92,6 +92,52 @@ def _set_web_cookies(response: Response, token: str) -> None:
                         secure=settings.cookie_secure, samesite="strict", path="/")
 
 
+@router.post("/pair")
+def pair_start(body: schemas.PairStartIn, request: Request, user: User = Depends(current_user),
+               db: Session = Depends(get_db)) -> dict:
+    """Make a one-time QR code that connects a phone to this account without
+    typing the address, username or password.  Valid for 10 minutes, once."""
+    import re
+
+    import segno
+
+    from ..netinfo import lan_addresses
+    from ..security import create_pairing_code, pairing_payload
+
+    address = (body.address or "").strip().rstrip("/")
+    if address and not re.match(r"^https?://[A-Za-z0-9.\-\[\]:]+$", address):
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, "Enter the address as http://IP:port or https://name.")
+    if not address:
+        port = request.url.port
+        guesses = lan_addresses()
+        host = guesses[0] if guesses else (request.url.hostname or "localhost")
+        address = f"{request.url.scheme}://{host}" + (f":{port}" if port else "")
+    code, row = create_pairing_code(db, user)
+    payload = pairing_payload(address, code)
+    qr = segno.make(payload, error="m")
+    return {
+        "address": address,
+        "expires_at": row.expires_at.isoformat().replace("+00:00", "Z"),
+        "payload": payload,
+        "qr_svg": qr.svg_data_uri(scale=6, border=2),
+    }
+
+
+@router.post("/pair/claim")
+def pair_claim(body: schemas.PairClaimIn, request: Request, db: Session = Depends(get_db)) -> dict:
+    """The phone sends the code from the QR code and gets its own login."""
+    from ..security import claim_pairing_code
+
+    settings = get_settings()
+    if not login_limiter.allow(client_ip(request), settings.login_rate_per_minute):
+        raise HTTPException(status.HTTP_429_TOO_MANY_REQUESTS, "Too many attempts. Wait a minute and try again.")
+    user = claim_pairing_code(db, body.code)
+    if user is None:
+        raise HTTPException(status.HTTP_401_UNAUTHORIZED, "This QR code has expired or was already used. Show a new one on your computer.")
+    token, row = create_token(db, user, "android")
+    return {"user": user_out(db, user), "token": token, "expires_at": row.expires_at.isoformat().replace("+00:00", "Z")}
+
+
 @router.get("/setup-status")
 def setup_status(db: Session = Depends(get_db)) -> dict:
     """Does this server still need its first account created on the web?"""

@@ -200,7 +200,7 @@ object LocalReport {
             val kp = Paint(Paint.ANTI_ALIAS_FLAG).apply { textSize = 8f; this.color = color; typeface = Typeface.DEFAULT_BOLD }
             c().drawText(kindText, W - M - kp.measureText(kindText), top + 10, kp)
             val who = if (e.performed_by == "shop") (if (e.shop_name.isNotBlank()) "Shop: ${e.shop_name}" else "Shop") else "DIY"
-            pen.text(listOfNotNull(prettyDate(e.date), e.mileage?.let { miles(it, unit) }, e.cost_cents?.let { money(it, currency) }, who)
+            pen.text(listOfNotNull(prettyDate(e.date), e.mileage?.let { miles(it, unit) }, money(e.cost_cents, currency), who)
                 .joinToString("   |   "), 9f, MUTED, x = tx, width = tw)
             pen.y += 2
             if (e.description.isNotBlank()) pen.text(e.description, 9.5f, INK, x = tx, width = tw)

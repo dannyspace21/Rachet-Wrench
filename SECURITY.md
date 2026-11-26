@@ -12,7 +12,7 @@ Ratchet Wrench contains **no telemetry, analytics, crash reporting, ads or "phon
 
 | # | Where to | When | What is sent | How to turn off |
 |---|---|---|---|---|
-| 1 | `https://vpic.nhtsa.dot.gov` (US government VIN decoder) | You press **Decode VIN**. The server or desktop app makes this call; in phone-only mode the phone calls it directly. | The VIN only | `RW_NHTSA_ENABLED=false` (server); in phone-only mode, just don't press Decode VIN |
+| 1 | `https://vpic.nhtsa.dot.gov` (US government vehicle database) | You press **Decode VIN** (the server or desktop app calls it; in phone-only mode the phone does). Also when you choose a make in **Add vehicle**, to suggest that make's models (the phone calls it directly; the web app asks its server). | The VIN, or the make name and model year | `RW_NHTSA_ENABLED=false` (server); on the phone, type the model instead |
 | 2 | **Your own** ntfy server (`RW_NTFY_URL`) | A reminder becomes due (if you turned push alerts on) | Reminder title, vehicle name, miles/days left | Leave `RW_NTFY_URL` empty (default) |
 | 4 | GitHub (`api.github.com`, `github.com`, GitHub's download servers) — **Android app only** | When you open the app (at most every 6 hours) or tap *Check for updates* | Nothing about you or your data: only standard requests to read the latest release and download the app | *Settings → App updates* → off |
 | 3 | `https://api.anthropic.com` (Claude AI) | Only if the server owner enabled AI vision **and** you choose it for a sticker scan after a warning | The sticker photo | Off by default (`RW_AI_VISION_ENABLED=false`) |
@@ -22,6 +22,7 @@ Everything else stays on your server and your phone:
 - **The Android app** talks only to the server address you enter (enforced on every request), plus whatever links you choose to open in your browser (parts sites, owner portals).
 - **ML Kit** text and barcode recognition run on the phone with bundled models. Google's usage logger that ML Kit includes has its upload backend removed (see §4).
 - **Manufacturer links** are plain links you click. The server never fetches or scrapes them.
+- **Report a bug** opens a pre-filled issue form on GitHub in your browser. The app sends nothing itself: you see the whole report there (app version, device, and, if the app crashed, the first lines of the error), can edit or delete anything, and only your **Submit** sends it.
 
 ---
 
@@ -37,6 +38,11 @@ Everything else stays on your server and your phone:
   - **Generation and storage:** 256-bit random tokens. Only their **SHA-256 hash** is stored, so a stolen database can't be used to log in.
   - **Expiry:** 30 days (`RW_TOKEN_TTL_HOURS`).
   - **Revocation:** a token stops working at logout, and changing your password signs out all other devices.
+- **Connect a phone by QR code:**
+  - **Making a code:** only a signed-in user can make one, in the web app's Settings or the desktop window, which acts as the account on that computer.
+  - **The code:** a random 192-bit value that works **once** and expires after **10 minutes**. Only its SHA-256 hash is stored.
+  - **Using a code:** the phone exchanges it for its own Android login, with the same per-IP rate limit as password logins.
+  - **Plain HTTP:** the QR code holds the server address and the code. The phone still asks before using plain HTTP on the home network.
 - **Web cookies:** `HttpOnly` (scripts can't read them), `Secure` (HTTPS only), `SameSite=Strict`.
 - **CSRF protection:** every change made with a cookie must carry a matching `X-CSRF-Token` header (double-submit). The API also only accepts real JSON bodies, so cross-site form posts are rejected. Both are tested.
 
@@ -124,7 +130,7 @@ Everything else stays on your server and your phone:
 ## 3. Supply chain
 
 - **Few dependencies, all well known.**
-  - **Server:** FastAPI, Uvicorn, SQLAlchemy, python-multipart, argon2-cffi, Pillow, pillow-heif, pypdf, fpdf2, and anthropic (only used by the optional AI mode).
+  - **Server:** FastAPI, Uvicorn, SQLAlchemy, python-multipart, argon2-cffi, Pillow, pillow-heif, pypdf, fpdf2, segno (QR codes for connecting a phone; pure Python, no dependencies), and anthropic (only used by the optional AI mode).
   - **Web app:** no JavaScript libraries at all, apart from Swagger UI on the docs page.
   - **Android:** AndroidX (Compose, Room, WorkManager, CameraX), ML Kit, OkHttp and kotlinx.serialization.
 - **Exact names checked** against the official registries (no look-alike "typosquat" packages).

@@ -62,6 +62,7 @@ def main() -> None:
         "--collect-all=pillow_heif",
         "--collect-data=fpdf",
         "--hidden-import=anthropic",  # optional AI vision mode
+        "--hidden-import=segno",      # QR codes for "connect a phone"
         # Shared files the server serves or reads.
         data("web", "web"),
         data("icons", "icons"),

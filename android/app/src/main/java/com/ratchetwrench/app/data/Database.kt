@@ -108,6 +108,10 @@ interface AttachmentDao {
     @Query("SELECT * FROM attachments WHERE id = :id")
     suspend fun get(id: String): Attachment?
 
+    /** Every vehicle photo, newest first (for the garage list and vehicle header). */
+    @Query("SELECT * FROM attachments WHERE category = 'vehicle_photo' AND deleted_at IS NULL ORDER BY created_at DESC")
+    fun observeVehiclePhotos(): Flow<List<Attachment>>
+
     /** Photos taken on the phone that still need uploading. */
     @Query("SELECT * FROM attachments WHERE localPath IS NOT NULL AND has_file = 0 AND deleted_at IS NULL")
     suspend fun pendingUploads(): List<Attachment>

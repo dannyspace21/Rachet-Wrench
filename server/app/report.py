@@ -58,7 +58,7 @@ def safe(text) -> str:
 def money(cents: int | None, currency: str = "USD") -> str:
     """1234567 -> '$12,345.67' (other currencies get their code)."""
     if cents is None:
-        return "-"
+        cents = 0  # no cost entered shows as $0.00
     symbol = "$" if currency == "USD" else currency + " "
     return f"{symbol}{cents / 100:,.2f}"
 
@@ -226,7 +226,7 @@ def build_report(db: Session, user: User, vehicle: Vehicle, currency: str = "USD
         pdf.set_text_color(*MUTED)
         who = f"Shop: {e.shop_name}" if e.performed_by == "shop" and e.shop_name else ("Shop" if e.performed_by == "shop" else "DIY")
         meta = [e.date.strftime("%b %d, %Y"), f"{e.mileage:,} {unit}" if e.mileage is not None else None,
-                money(e.cost_cents, currency) if e.cost_cents is not None else None, who]
+                money(e.cost_cents or 0, currency), who]
         pdf.cell(0, 5, safe("   |   ".join(m for m in meta if m)), new_x="LMARGIN", new_y="NEXT")
         pdf.ln(1)
         text_x = pdf.l_margin + 12
