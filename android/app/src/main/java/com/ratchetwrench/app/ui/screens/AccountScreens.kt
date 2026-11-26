@@ -18,6 +18,8 @@ import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Checkbox
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Switch
@@ -91,12 +93,53 @@ fun LoginScreen(onSignedIn: () -> Unit, onBack: (() -> Unit)? = null) {
     val repo = LocalRepo.current
     val appContext = LocalContext.current.applicationContext
     val scope = rememberCoroutineScope()
-    var server by remember { mutableStateOf(repo.store.serverUrl.ifBlank { "https://" }) }
+    var server by remember { mutableStateOf(repo.store.serverUrl) }
     var user by remember { mutableStateOf(repo.store.username) }
     var pass by remember { mutableStateOf("") }
     var allowHttp by remember { mutableStateOf(repo.store.allowHttpLocal) }
     var busy by remember { mutableStateOf(false) }
     var error by remember { mutableStateOf<String?>(null) }
+    // A home-network address that answers in plain HTTP: ask before using it.
+    var askHttp by remember { mutableStateOf<String?>(null) }
+
+    /** Sign in to [url] (already checked against the connection rules). */
+    fun attempt(url: String) {
+        busy = true; error = null
+        scope.launch {
+            try {
+                val syncProblem = withContext(Dispatchers.IO) {
+                    repo.store.serverUrl = url
+                    repo.store.allowHttpLocal = allowHttp
+                    repo.store.token = null
+                    val api = Api(repo.store)
+                    // Make sure this really is a Ratchet Wrench server first.
+                    if (!api.isRatchetWrench()) throw com.ratchetwrench.app.data.ApiException(404, "Not a Ratchet Wrench server.")
+                    repo.store.token = api.login(user.trim(), pass)
+                    repo.store.username = user.trim()
+                    val me = api.me()
+                    repo.store.serverAiVision = me["server"]?.jsonObject?.get("ai_vision_available")?.jsonPrimitive?.content == "true"
+                    me["settings"]?.jsonObject?.get("theme")?.jsonPrimitive?.content?.let { repo.store.theme = it }
+                    repo.store.lastSince = null
+                    // Coming from phone-only mode: upload everything made on this phone.
+                    if (repo.store.mode == "local") repo.db.markEverythingForUpload()
+                    repo.store.mode = "server"
+                    // First full upload + download.  Signed in either way: if
+                    // this fails, background sync simply tries again later.
+                    runCatching { SyncEngine(appContext).run() }.exceptionOrNull()
+                }
+                pass = ""
+                if (syncProblem != null) android.widget.Toast.makeText(appContext,
+                    "Signed in. The first sync didn't finish (${syncProblem.message}); it will retry automatically.",
+                    android.widget.Toast.LENGTH_LONG).show()
+                com.ratchetwrench.app.ui.onMain { onSignedIn() }
+            } catch (e: Exception) {
+                // "https://" to a computer that speaks plain HTTP (the desktop
+                // app / Docker at home): offer the http:// address instead.
+                val http = if (e is javax.net.ssl.SSLException) UrlPolicy.httpVersion(url) else null
+                if (http != null) askHttp = http else error = UrlPolicy.explain(e, url)
+            } finally { busy = false }
+        }
+    }
 
     Scaffold(topBar = { if (onBack != null) TopBar("Connect", onBack = onBack) }) { pad ->
         Column(Modifier.fillMaxSize().padding(pad).imePadding().verticalScroll(rememberScrollState()).padding(24.dp),
@@ -105,50 +148,42 @@ fun LoginScreen(onSignedIn: () -> Unit, onBack: (() -> Unit)? = null) {
             AppLogo(84.dp)
             Text("Ratchet Wrench", style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.Bold)
             Text("Connect to your computer or home server", color = MaterialTheme.colorScheme.onSurfaceVariant)
-            Text("Desktop app: tick “Allow my phone to sync” in its window and type the address it shows " +
-                "(like http://192.168.1.20:8077), then tick “Allow plain HTTP on my home network” below.",
+            Text("Desktop app: tick “Allow my phone to sync” in its window and type the address it shows, " +
+                "like 192.168.1.20:8077.  Docker server: the computer's address with port 8000, like 192.168.1.20:8000.",
                 style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
             Column(Modifier.widthIn(max = 480.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                Field("Computer or server address", server, { server = it.trim() }, hint = "e.g. http://192.168.1.20:8077 or https://garage.your-tailnet.ts.net")
+                Field("Computer or server address", server, { server = it.trim() }, hint = "e.g. 192.168.1.20:8077 or https://garage.your-tailnet.ts.net")
                 Field("Username", user, { user = it })
                 Field("Password", pass, { pass = it }, password = true)
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Checkbox(allowHttp, { allowHttp = it })
-                    Text("Allow plain HTTP on my home network (not recommended; only for private addresses like 192.168.x.x)",
+                    Text("Allow plain HTTP on my home network (needed for the desktop app and Docker at home; only for private addresses like 192.168.x.x)",
                         style = MaterialTheme.typography.bodySmall)
                 }
                 error?.let { Text(it, color = MaterialTheme.colorScheme.error) }
                 PrimaryButton(if (busy) "Signing in…" else "Sign in", enabled = !busy, modifier = Modifier.fillMaxWidth()) {
-                    val url = server.trim().trimEnd('/')
+                    val url = UrlPolicy.complete(server)
+                    server = url
+                    // Plain HTTP at home but not allowed yet: ask, don't just fail.
+                    if (UrlPolicy.isLocalHttp(url) && !allowHttp) { askHttp = url; return@PrimaryButton }
                     val problem = UrlPolicy.problem(url, allowHttp)
                     if (problem != null) { error = problem; return@PrimaryButton }
-                    busy = true; error = null
-                    scope.launch {
-                        try {
-                            withContext(Dispatchers.IO) {
-                                repo.store.serverUrl = url
-                                repo.store.allowHttpLocal = allowHttp
-                                val api = Api(repo.store)
-                                repo.store.token = api.login(user.trim(), pass)
-                                repo.store.username = user.trim()
-                                val me = api.me()
-                                repo.store.serverAiVision = me["server"]?.jsonObject?.get("ai_vision_available")?.jsonPrimitive?.content == "true"
-                                me["settings"]?.jsonObject?.get("theme")?.jsonPrimitive?.content?.let { repo.store.theme = it }
-                                repo.store.lastSince = null
-                                // Coming from phone-only mode: upload everything made on this phone.
-                                if (repo.store.mode == "local") repo.db.markEverythingForUpload()
-                                repo.store.mode = "server"
-                                SyncEngine(appContext).run() // first full upload + download
-                            }
-                            pass = ""
-                            com.ratchetwrench.app.ui.onMain { onSignedIn() }
-                        } catch (e: Exception) {
-                            error = e.message ?: "Sign-in failed."
-                        } finally { busy = false }
-                    }
+                    attempt(url)
                 }
             }
         }
+    }
+    askHttp?.let { url ->
+        AlertDialog(onDismissRequest = { askHttp = null },
+            title = { Text("Connect with plain HTTP?") },
+            text = {
+                Text("$url uses plain HTTP (not encrypted). That's normal for the Ratchet Wrench desktop app and Docker server " +
+                    "on your home network. Only do this on your own Wi-Fi — never on public Wi-Fi.")
+            },
+            confirmButton = {
+                TextButton({ askHttp = null; allowHttp = true; server = url; attempt(url) }) { Text("Yes, connect") }
+            },
+            dismissButton = { TextButton({ askHttp = null }) { Text("Cancel") } })
     }
 }
 

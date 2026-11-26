@@ -217,6 +217,19 @@ class ScreensTest {
     }
 
     @Test
+    fun homeAddressAsksBeforePlainHttp() {
+        click("Connect")
+        waitForText("Sign in")
+        type("Computer or server address", "192.168.1.20:8077")
+        click("Sign in")
+        // Instead of a cryptic TLS error: ask, with the http:// address.
+        waitForText("Connect with plain HTTP?")
+        waitForText("http://192.168.1.20:8077", substring = true)
+        click("Cancel")
+        waitGone("Connect with plain HTTP?")
+    }
+
+    @Test
     fun everyCatalogTypeHasAnIcon() {
         val ctx = ApplicationProvider.getApplicationContext<Context>()
         val missing = com.ratchetwrench.app.domain.Catalog.get(ctx).types.map { it.key }

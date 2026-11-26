@@ -392,3 +392,26 @@ The desktop app *is* the existing server plus web app, packaged to run on a PC. 
   - **Settings → Release notes:** shows the installed version's notes, with earlier versions behind **Show earlier versions**.
 - **Backfilled:** notes for 1.0.9–1.0.13 were written from the release history.
 - **Tests:** `ReleaseNotesTest` checks the file loads, versions are unique and newest first, and every entry has content. It also checks the pop-up shows after an update and is remembered once dismissed. The Settings screen test checks the section is there.
+
+### D54. Connecting the phone to the desktop app or Docker: fixes for what went wrong
+- **What you hit:**
+  1. **"Unable to parse TLS packet header":** the connect screen started pre-filled with `https://`, but the desktop app (8077) and the Docker server (8000) speak plain HTTP at home.
+  2. **"failed to connect to 192.168.157.1:8077":** the desktop window showed a **virtual** adapter's address (VMware / VirtualBox / Hyper-V / WSL), on a different network from the phone (192.168.1.x).
+  3. **"Not found" at sign-in:** the likely causes were addressed — a copied browser link with a path, a different server on that port, or the first sync stopping on one photo the server refused.
+- **Phone fixes:**
+  - **Address box:** starts empty. A bare home-network address gets `http://`, anything else `https://`. Anything after the port (a pasted browser link) is dropped.
+  - **Plain HTTP only with consent:** for a home address, the app asks "Connect with plain HTTP?" instead of failing. The same question appears when an `https://` home address fails the TLS handshake. Plain HTTP is still used only after the user says yes, and only for private addresses, as the security rules require.
+  - **Checks it's our server:** before signing in, the phone calls `GET /api/health`. A wrong port then gets a clear message.
+  - **Plain-English errors:**
+    - TLS mismatch.
+    - Can't reach: checklist covering the app running, phone sync ticked, same Wi-Fi, Windows Firewall on Private networks, and the right port.
+    - Unknown host.
+    - Wrong password: notes that the desktop app and Docker keep separate accounts.
+    - Not our server.
+  - **Sign-in survives a first-sync problem:** if the login works, you're signed in and the sync retries in the background.
+  - **One rejected photo doesn't stop the sync:** a 4xx for one photo skips it, and it stays queued for the next sync. Photos also wait until their vehicle has reached the server.
+- **Desktop fix:** `lan_addresses()` finds the network card used for the internet route, using a UDP "connect" to the TEST-NET address 203.0.113.1, which picks the route without sending any packet. It lists that address first and separates out addresses that look virtual (x.x.x.1, 172.16–31.x, 192.168.56.x, 169.254.x), so they aren't mistaken for the right one. The phone section of the window explains that both devices' addresses should start the same way and mentions the Private-networks firewall prompt.
+- **Docs:** `docs/DESKTOP.md` has an "If the phone can't connect" table.
+- **Tests:**
+  - LogicTest covers address completion and cleanup, offering `http://` only for home addresses, and the error explanations.
+  - A screen test checks that a bare home address brings up the plain-HTTP question.

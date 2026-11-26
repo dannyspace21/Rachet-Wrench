@@ -37,11 +37,20 @@ From then on, use the **Open Ratchet Wrench** button in the small window (or jus
 2. On your phone, open Ratchet Wrench:
    - **New install:** choose **"Connect to my computer or home server"**.
    - **Already using it on the phone only:** go to *Settings → Connect to my computer or server*. Everything already on the phone is copied to the computer.
-3. Enter the address from the desktop window, plus your username and password. Tick **"Allow plain HTTP on my home network"**, then tap **Sign in**.
+3. Enter the address shown **first** in the desktop window (for example `192.168.1.20:8077`), plus your username and password. Tap **Sign in**, then **Yes, connect** when the app asks about plain HTTP on your home network.
 
 The phone and computer must be on the **same Wi-Fi**, or both on **Tailscale** (see [HTTPS.md](HTTPS.md)). The phone keeps working offline and syncs whenever it can reach the computer.
 
 When the box is unticked (the default), the app only listens to the computer itself, and nothing else on your network can reach it.
+
+### If the phone can't connect
+
+| What the phone says | What to do |
+|---|---|
+| "doesn't use secure HTTPS" / "Unable to parse TLS packet header" | The desktop app (port 8077) and the Docker server (port 8000) use `http://` at home. Type just the address, e.g. `192.168.1.20:8077`; the app asks before using plain HTTP. |
+| "Couldn't reach …" / "failed to connect … after 15000 ms" | **Check the address.** The phone and computer must be on the same network: if the phone is `192.168.1.x`, the computer's address must also start with `192.168.1.`. Addresses like `192.168.157.1` or `172.x.x.1` belong to *virtual* network adapters (VMware, VirtualBox, Hyper-V, WSL, Docker) and won't work. The desktop window lists the right address first. To double-check on Windows, run `ipconfig` and use the IPv4 address under your Wi-Fi or Ethernet adapter. **Also check:** "Allow my phone to sync" is ticked, and Windows Firewall allows Ratchet Wrench on **Private networks** (Windows Security → Firewall → Allow an app). |
+| "Incorrect username or password" | The desktop app and the Docker server keep **separate** accounts and data. Use the account you created on the one you're connecting to. |
+| "doesn't look like a Ratchet Wrench server" | Wrong port. Use 8077 for the desktop app and 8000 for Docker. |
 
 ## Where your data is
 

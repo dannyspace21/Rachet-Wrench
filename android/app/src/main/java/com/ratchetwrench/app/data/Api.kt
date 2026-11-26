@@ -54,9 +54,69 @@ object UrlPolicy {
         return false
     }
 
+    /**
+     * Tidy what was typed into a full address.  Without "http://" or
+     * "https://": home-network addresses get http:// (the desktop app and
+     * the Docker server speak plain HTTP at home; the user is still asked
+     * before it's used), anything else https://.
+     */
+    fun complete(input: String): String {
+        var t = input.trim()
+        if (t.isEmpty()) return t
+        if (!t.contains("://")) {
+            val host = t.substringBefore('/').substringBefore('#').substringBeforeLast(':').ifBlank { t }
+            t = (if (isPrivateHost(host)) "http://" else "https://") + t
+        }
+        // Keep only scheme://host:port — a link copied from the browser
+        // (".../#/garage", ".../setup") would otherwise break every request.
+        val p = t.toHttpUrlOrNull() ?: return t.trimEnd('/')
+        val defaultPort = if (p.scheme == "https") 443 else 80
+        return "${p.scheme}://${if (p.host.contains(':')) "[${p.host}]" else p.host}" + (if (p.port != defaultPort) ":${p.port}" else "")
+    }
+
+    /** True when this is a plain-http address on the home network. */
+    fun isLocalHttp(url: String): Boolean {
+        val p = url.toHttpUrlOrNull() ?: return false
+        return p.scheme == "http" && isPrivateHost(p.host)
+    }
+
+    /** The same address with http:// instead of https:// (home-network addresses only), or null. */
+    fun httpVersion(url: String): String? {
+        val p = url.toHttpUrlOrNull() ?: return null
+        if (p.scheme != "https" || !isPrivateHost(p.host)) return null
+        return "http://" + url.substringAfter("://")
+    }
+
+    /** A plain-English explanation of a connection failure. */
+    fun explain(e: Throwable, url: String): String {
+        val p = url.toHttpUrlOrNull()
+        val where = if (p != null) "${p.host}:${p.port}" else url
+        return when (e) {
+            is ApiException -> when (e.status) {
+                401 -> "Incorrect username or password. Note: the desktop app and the Docker server keep SEPARATE " +
+                    "accounts — use the account you created on the one at $where."
+                404 -> "$where answered, but it doesn't look like a Ratchet Wrench server. Check the port " +
+                    "(desktop app 8077, Docker 8000)."
+                else -> e.message ?: "The server refused the request."
+            }
+            is javax.net.ssl.SSLException ->
+                "$where doesn't use secure HTTPS. The desktop app and the Docker server use http:// on your home network " +
+                    "(e.g. http://192.168.1.20:8077). HTTPS works only through a proxy with a real certificate (see docs/HTTPS.md)."
+            is java.net.UnknownHostException -> "Couldn't find “${p?.host ?: url}”. Check the address for typos."
+            is java.net.ConnectException, is java.net.NoRouteToHostException, is java.net.SocketTimeoutException ->
+                "Couldn't reach $where. Check that:\n" +
+                    "• the desktop app (or Docker) is running on that computer,\n" +
+                    "• in the desktop app, “Allow my phone to sync” is ticked,\n" +
+                    "• your phone is on the same Wi-Fi as the computer,\n" +
+                    "• Windows Firewall allows the port (${p?.port ?: "8077 / 8000"}) on private networks,\n" +
+                    "• the port number is right (desktop app 8077, Docker 8000)."
+            else -> e.message ?: "Couldn't connect."
+        }
+    }
+
     /** Explain why a server address is not allowed, or null if it is fine. */
     fun problem(url: String, allowHttpLocal: Boolean): String? {
-        val parsed = url.toHttpUrlOrNull() ?: return "Enter a full address starting with https://"
+        val parsed = url.toHttpUrlOrNull() ?: return "Enter the address of your computer or server, e.g. http://192.168.1.20:8077"
         if (parsed.scheme == "https") return null
         if (!allowHttpLocal) return "Plain http:// is blocked. Use https://, or turn on \"Allow HTTP on my home network\"."
         if (!isPrivateHost(parsed.host)) return "http:// is only allowed for home-network addresses. Use https:// for anything else."
@@ -131,6 +191,12 @@ class Api(private val store: SecureStore) {
     }
 
     // ---- Convenience calls ------------------------------------------------
+    /** Is a Ratchet Wrench server answering at this address? (GET /api/health) */
+    fun isRatchetWrench(): Boolean = try {
+        json.parseToJsonElement(get("/api/health")).jsonObject["status"]?.jsonPrimitive?.content == "ok"
+    } catch (e: ApiException) { false } catch (e: kotlinx.serialization.SerializationException) { false }
+      catch (e: IllegalArgumentException) { false }
+
     /** Sign in; returns the token. */
     fun login(username: String, password: String): String {
         val body = JsonObject(mapOf(

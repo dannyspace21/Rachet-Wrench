@@ -92,4 +92,31 @@ class LogicTest {
         assertNotNull(UrlPolicy.problem("http://8.8.8.8", true))
         assertNotNull(UrlPolicy.problem("ftp://192.168.1.10", true))
     }
+
+    @Test fun addressWithoutSchemeIsCompleted() {
+        assertEquals("http://192.168.1.20:8077", UrlPolicy.complete("192.168.1.20:8077"))
+        assertEquals("http://192.168.1.20:8000", UrlPolicy.complete(" 192.168.1.20:8000/ "))
+        assertEquals("https://garage.example.ts.net", UrlPolicy.complete("garage.example.ts.net"))
+        assertEquals("https://10.0.0.5:8000", UrlPolicy.complete("https://10.0.0.5:8000"))
+        // A link copied from the browser: keep only scheme://host:port.
+        assertEquals("http://192.168.1.20:8077", UrlPolicy.complete("http://192.168.1.20:8077/#/garage"))
+        assertEquals("http://192.168.1.20:8000", UrlPolicy.complete("192.168.1.20:8000/setup"))
+        assertEquals("https://garage.example.ts.net", UrlPolicy.complete("https://garage.example.ts.net/"))
+    }
+
+    @Test fun httpsToHomeComputerOffersHttp() {
+        // The reported error: "https://" typed for the desktop app / Docker (plain HTTP).
+        assertEquals("http://192.168.1.20:8077", UrlPolicy.httpVersion("https://192.168.1.20:8077"))
+        assertNull("never offered for internet addresses", UrlPolicy.httpVersion("https://garage.example.com"))
+        assertTrue(UrlPolicy.isLocalHttp("http://192.168.1.20:8000"))
+        assertFalse(UrlPolicy.isLocalHttp("http://example.com"))
+        val msg = UrlPolicy.explain(javax.net.ssl.SSLException("Unable to parse TLS packet header"), "https://example.com:8000")
+        assertTrue(msg, msg.contains("doesn't use secure HTTPS"))
+        val down = UrlPolicy.explain(java.net.ConnectException("refused"), "http://192.168.1.20:8077")
+        assertTrue(down, down.contains("Windows Firewall") && down.contains("8077"))
+        val wrong = UrlPolicy.explain(com.ratchetwrench.app.data.ApiException(401, "Incorrect username or password."), "http://192.168.1.20:8000")
+        assertTrue(wrong, wrong.contains("SEPARATE"))
+        val notUs = UrlPolicy.explain(com.ratchetwrench.app.data.ApiException(404, "Not Found"), "http://192.168.1.20:8080")
+        assertTrue(notUs, notUs.contains("doesn't look like a Ratchet Wrench server"))
+    }
 }

@@ -139,8 +139,9 @@ class SyncEngine(private val context: Context) {
         for (a in db.attachments().pendingUploads()) {
             val file = a.localPath?.let { File(it) }
             if (file == null || !file.exists()) { db.attachments().remove(a.id); continue }
-            // The entry must exist on the server first (pushed above).
+            // The vehicle and entry must exist on the server first (pushed above).
             if (a.entry_id != null && db.entries().get(a.entry_id)?.dirty == true) continue
+            if (a.vehicle_id != null && db.vehicles().get(a.vehicle_id)?.dirty == true) continue
             val fields = buildMap {
                 put("id", a.id)
                 put("vehicle_id", a.vehicle_id ?: return@runBlocking)
@@ -148,7 +149,10 @@ class SyncEngine(private val context: Context) {
                 put("caption", a.caption.take(255))
                 a.entry_id?.let { put("entry_id", it) }
             }
-            val res = api.upload("/api/attachments", file, a.content_type, fields)
+            // One photo the server refuses must not stop the whole sync:
+            // skip it (it stays queued and is retried next time).
+            val res = try { api.upload("/api/attachments", file, a.content_type, fields) }
+                catch (e: com.ratchetwrench.app.data.ApiException) { if (e.status in 400..499) continue else throw e }
             val server = json.decodeFromString(Attachment.serializer(), res)
             db.attachments().upsert(server.copy(localPath = a.localPath, dirty = false))
         }

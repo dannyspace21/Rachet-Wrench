@@ -90,14 +90,35 @@ def save_prefs(prefs: dict) -> None:
     (data_dir() / "desktop.json").write_text(json.dumps(prefs, indent=2), encoding="utf-8")
 
 
-def lan_addresses() -> list[str]:
+def _looks_virtual(ip: str) -> bool:
+    """Addresses that usually belong to a VIRTUAL network adapter (VMware,
+    VirtualBox, Hyper-V, WSL, Docker), which a phone on Wi-Fi can't reach.
+    The PC's own side of such a network is almost always x.x.x.1."""
+    parts = [int(p) for p in ip.split(".")]
+    return (ip.endswith(".1")                                   # host side of a virtual network
+            or (parts[0] == 172 and 16 <= parts[1] <= 31)       # Docker / WSL / Hyper-V default switch
+            or (parts[0] == 192 and parts[1] == 168 and parts[2] == 56)  # VirtualBox host-only
+            or parts[0] == 169)                                 # no network (link-local)
+
+
+def lan_addresses() -> tuple[list[str], list[str]]:
     """This computer's home-network IP addresses (to type into the phone).
-    Uses a UDP "connect", which picks the outgoing interface without sending
-    any packet, plus the host name lookup."""
+
+    Returns (likely, other):
+      likely — the address of the network card the computer uses to reach
+               the internet (found with a UDP "connect" to a reserved
+               documentation address: this picks the route WITHOUT sending
+               any packet), plus any other non-virtual addresses;
+      other  — addresses that look like virtual adapters (VMware,
+               VirtualBox, Hyper-V, WSL, Docker), shown separately so they
+               aren't mistaken for the right one.
+    """
     found = []
     try:
         with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as s:
-            s.connect(("10.255.255.255", 1))
+            # 203.0.113.1 is TEST-NET-3 (never a real host). connect() on a
+            # UDP socket only chooses the route; nothing is sent.
+            s.connect(("203.0.113.1", 9))
             found.append(s.getsockname()[0])
     except OSError:
         pass
@@ -106,7 +127,13 @@ def lan_addresses() -> list[str]:
             found.append(info[4][0])
     except OSError:
         pass
-    return [ip for ip in dict.fromkeys(found) if not ip.startswith("127.")]
+    found = [ip for ip in dict.fromkeys(found) if not ip.startswith("127.") and ip != "0.0.0.0"]
+    likely = [ip for ip in found if not _looks_virtual(ip)]
+    other = [ip for ip in found if _looks_virtual(ip)]
+    # The route to the internet is the best guess even if it "looks" virtual.
+    if not likely and other:
+        likely, other = other[:1], other[1:]
+    return likely, other
 
 
 def already_running(port: int) -> bool:
@@ -211,11 +238,15 @@ def run_window(runner: ServerRunner, prefs: dict) -> None:
 
     def describe() -> None:
         if phone_var.get():
-            addrs = lan_addresses() or ["<this computer's IP address>"]
-            lines = "\n".join(f"   http://{ip}:{runner.port}" for ip in addrs)
-            phone_info.config(text="Phone sync is ON. In the Android app choose\n“Connect to my computer” and enter:\n"
-                                   f"{lines}\nand tick “Allow plain HTTP on my home network”.\n"
-                                   "Your phone must be on the same Wi-Fi (or use Tailscale).")
+            likely, other = lan_addresses()
+            main = "\n".join(f"   http://{ip}:{runner.port}" for ip in likely) or "   http://<this computer's IP address>:" + str(runner.port)
+            extra = ("\n\nOther network adapters on this PC (usually virtual — VMware,\nVirtualBox, Hyper-V, WSL; a phone can't reach these):\n"
+                     + "\n".join(f"   {ip}" for ip in other)) if other else ""
+            phone_info.config(text="Phone sync is ON. In the Android app choose “Connect”\nand enter this address:\n"
+                                   f"{main}\n"
+                                   "Your phone must be on the same Wi-Fi, and its address should\n"
+                                   "start the same way (e.g. both 192.168.1.x). If Windows asked\n"
+                                   "about the firewall, allow “Private networks”." + extra)
             status.config(text="Running — reachable from your home network for phone sync.")
         else:
             phone_info.config(text="Phone sync is off: only this computer can open Ratchet Wrench.")
