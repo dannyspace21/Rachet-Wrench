@@ -27,6 +27,10 @@ import androidx.camera.core.Preview
 import androidx.camera.lifecycle.ProcessCameraProvider
 import androidx.camera.view.PreviewView
 import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.border
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.rememberScrollState
@@ -106,6 +110,25 @@ fun CameraPermissionGate(onCancel: () -> Unit, content: @Composable () -> Unit) 
  * Tapping the preview focuses on that spot.
  */
 @android.annotation.SuppressLint("ClickableViewAccessibility")
+/**
+ * A button for the camera screens.  They sit on a dark see-through panel
+ * over the live picture, in light AND dark mode, so the app's normal
+ * outlined button (theme text colour, no fill) disappears there.  This one
+ * is always white text and icon, a white outline and a light fill.
+ */
+@Composable
+internal fun OverlayButton(text: String, icon: String? = null, onClick: () -> Unit) {
+    androidx.compose.material3.OutlinedButton(onClick,
+        modifier = Modifier.heightIn(min = 52.dp),
+        shape = RoundedCornerShape(14.dp),
+        border = androidx.compose.foundation.BorderStroke(1.5.dp, Color.White.copy(alpha = 0.85f)),
+        colors = androidx.compose.material3.ButtonDefaults.outlinedButtonColors(
+            containerColor = Color.White.copy(alpha = 0.14f), contentColor = Color.White)) {
+        if (icon != null) { com.ratchetwrench.app.ui.UiIcon(icon, Modifier.size(20.dp), Color.White); Spacer(Modifier.width(8.dp)) }
+        Text(text, fontWeight = FontWeight.SemiBold, color = Color.White)
+    }
+}
+
 @Composable
 private fun CameraPreview(modifier: Modifier, analysis: ImageAnalysis? = null, capture: ImageCapture? = null,
                           onCamera: (Camera) -> Unit = {}) {
@@ -217,11 +240,11 @@ fun VinScanScreen(onResult: (String) -> Unit, onCancel: () -> Unit) {
                 }
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     if (camera?.cameraInfo?.hasFlashUnit() == true) {
-                        SecondaryButton(if (torch) "Light off" else "Flashlight", "sun") {
+                        OverlayButton(if (torch) "Light off" else "Flashlight", "sun") {
                             torch = !torch; camera?.cameraControl?.enableTorch(torch)
                         }
                     }
-                    SecondaryButton("Cancel") { onCancel() }
+                    OverlayButton("Cancel") { onCancel() }
                 }
             }
         }
@@ -277,7 +300,7 @@ fun PairScanScreen(onResult: (String) -> Unit, onCancel: () -> Unit) {
                 Text(if (seenOther) "That QR code isn't a Ratchet Wrench connect code." else
                     "Desktop app: “Connect a phone (QR code)”.  Web app: Settings → Connect a phone.",
                     color = Color.White, style = MaterialTheme.typography.bodySmall)
-                SecondaryButton("Cancel") { onCancel() }
+                OverlayButton("Cancel") { onCancel() }
             }
         }
     }
@@ -341,7 +364,7 @@ fun CaptureScreen(onDone: (List<String>) -> Unit, onCancel: () -> Unit) {
                                 override fun onError(exception: ImageCaptureException) { busy = false }
                             })
                     }
-                    SecondaryButton(if (shots.isEmpty()) "Cancel" else "Done") { if (shots.isEmpty()) onCancel() else onDone(shots.toList()) }
+                    OverlayButton(if (shots.isEmpty()) "Cancel" else "Done") { if (shots.isEmpty()) onCancel() else onDone(shots.toList()) }
                 }
             }
         }
