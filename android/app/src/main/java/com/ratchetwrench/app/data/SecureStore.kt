@@ -112,6 +112,11 @@ class SecureStore(context: Context) {
         get() = prefs.getString("currency", "USD") ?: "USD"
         set(v) = prefs.edit().putString("currency", v).apply()
 
+    /** Asked once for notification permission at start-up (Android 13+). */
+    var notifyAsked: Boolean
+        get() = prefs.getBoolean("notify_asked", false)
+        set(v) = prefs.edit().putBoolean("notify_asked", v).apply()
+
     var notificationsEnabled: Boolean
         get() = prefs.getBoolean("notify", true)
         set(v) = prefs.edit().putBoolean("notify", v).apply()

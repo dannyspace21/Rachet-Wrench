@@ -93,9 +93,10 @@ Build-sandbox notes: the sandbox blocks dl.google.com, api.osv.dev, semgrep.dev 
 
 - v1.0.32: affiliate-ready Smart Shopping (all off; per retailer/platform config, disclosure, opt-out, admin guide) (D66).
 
+- v1.0.33: issues #3 (VIN decode fallback), #4 (scan box + double read), #5 (notification permission + Check now); compact dismissible sync banner; README + new web and Android screenshots (D67).
+
 ## Ideas for later (not started)
 - Code-sign the desktop app (paid Apple/Microsoft certificates) to remove first-launch warnings; add an Intel-Mac build if needed.
-- Run the Android app on a real device/emulator and add phone screenshots to the README (no emulator was available in the build sandbox).
 - Database migrations with Alembic once the schema needs to change.
 - A specific paid VIN-spec provider class (plug-in point exists in `server/app/vin.py`).
 - Verify the manufacturer parts/owner-portal links in `catalog/build_catalog.py` (they couldn't be checked live from the sandbox).

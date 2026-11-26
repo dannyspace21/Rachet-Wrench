@@ -22,31 +22,65 @@ Ratchet Wrench keeps the complete history of your vehicles **on your own devices
 
 You can start with the phone alone and connect it to a computer or server later: everything you've added is copied over.
 
-- **Vehicles:** cars and motorcycles with year, make, model, nickname, VIN, mileage and a photo.
-- **VIN:** type it, or **scan the VIN barcode** with the phone camera. The free US government (NHTSA) decoder fills in what it knows.
-- **Door-jamb sticker scan:** photograph the stickers inside the driver's door. The phone reads the text itself (offline) and finds the VIN, tire sizes, tire pressures, paint and trim codes, build date and weight ratings. You **confirm, edit or reject every value** before it is saved as "From door sticker". On the web, the server reads the photo instead.
-- **Specs:** oil type and capacity, tire sizes and pressures, paint code, fluids and more. Every value shows where it came from: **From VIN**, **From door sticker**, **Entered by me** or **Unverified**. Nothing is ever guessed; unknown stays blank.
-- **Maintenance and repair records**, kept clearly separate. Each has the date, mileage, type (with its own icon), description, parts, cost, shop or DIY, notes, and **any number of photos and receipts**.
-- **Connect your phone by QR code:** the desktop app (or Settings → Connect a phone on the web) shows a one-time QR code; scan it in the Android app — no address, username or password to type.
-- **Add vehicle with make/model lists:** pick the make, then the models for that make and year (from NHTSA's vehicle database); add a photo of the vehicle.
-- **Smart Shopping (optional):** "Find supplies" on reminders and "Shop" on parts open a search at Amazon, Walmart or Advance Auto Parts built from your specs and part numbers (exact OEM numbers first; nothing invented). Retailers are configured in one place (`catalog/build_catalog.py`); turn it off in Settings.
-- **Metrics:** each vehicle's history as charts — by category, service and year, total spent, how often each service is done. Tap any number, slice, bar or year to filter everything and see exactly which records make up that number.
-- **Shopping list:** collect what you need before a job — from a reminder, a saved part, or typed in — with quantity, OEM part number, spec, notes and the vehicle/reminder it's for. Search any item at your chosen retailer, tick it off when bought. Syncs between phone and computer; never creates expenses or marks maintenance done by itself.
-- **Report a bug:** Settings opens a pre-filled GitHub issue you review before sending.
-- **Carfax import:** upload a Carfax PDF — the classic history report, or the carfax.com "Service History" page printed to PDF. Every visit is split into what was done (each with its own icon), DIY vs shop is kept, and you review everything before saving. Importing also brings the odometer and your reminders up to date.
-- **Reminders** by mileage, by date, or **whichever comes first** (e.g. oil every 5,000 miles or 6 months).
-- **Alerts:** phone notifications that work offline, plus optional push alerts through your own ntfy server. Never email.
-- **Odometer history**, a **parts list** with OEM part numbers, and one-tap links to the **manufacturer's official parts site and owner portal**.
-- **Owner's manual:** link to the owner portal, or upload the PDF.
-- **History report PDF** with a summary, specs, every record in date order with icons, costs, totals and photos — from the web or the phone.
-- **Light, Dark or System theme** in both apps.
+**Manage your vehicles**
+- **Vehicles:** cars and motorcycles with year, make, model (pick from NHTSA's lists for that make and year), nickname, VIN, mileage and a photo.
+- **VIN:** type it, or **scan the barcode** with the phone camera (only what's inside the on-screen box is read). The free US government (NHTSA) decoder fills in what it knows.
+- **Door-jamb sticker scan:** photograph the stickers inside the driver's door. The phone reads them offline and finds the VIN, tire sizes and pressures, paint and trim codes, build date and weight ratings. You **confirm, edit or reject every value** before it's saved.
+- **Specs** (oil type and capacity, tire sizes, fluids, paint code…). Every value shows where it came from: **From VIN**, **From door sticker**, **Entered by me** or **Unverified**. Nothing is guessed.
+- **Parts** with OEM part numbers and a link to the manufacturer's official parts site. Specs that are parts (oil type, oil filter number, tire sizes, battery group, wiper sizes…) are **added to Parts automatically**.
+- **Maintenance and repair history:** date, mileage, type (each with its own icon), description, parts, cost, shop or DIY, notes, and any number of photos and receipts. Costs with nothing entered show $0.00.
+- **Reminders** by mileage, by date, or **whichever comes first**. A vehicle opens on its reminders, **overdue first**. Tap one and **Mark as done**: it fills in today's date and mileage, adds the job to the history, and the status changes from Overdue to OK. Any matching record you log also updates the reminder.
+- **Recalls:** the History tab lists every safety recall NHTSA has for your vehicle's year, make and model — the problem, the risk and the fix — marked **Open**, **Done** or **Doesn't apply**. A recall in your history (for example from a Carfax import) counts as done. "Check my VIN" opens NHTSA's own page for your exact car.
+- **Alerts:** phone notifications that work offline (and "Check reminders now" in Settings), plus optional push alerts through your own ntfy server. Never email.
+- **Carfax import:** upload a Carfax PDF; every visit is split into what was done, DIY vs shop is kept, and you review everything before saving.
+- **Owner's manual:** link to the owner portal or upload the PDF. **History report PDF** with everything in date order, costs, totals and photos.
+
+**Analyze**
+- **Metrics:** each vehicle's history as charts — by category, by service and by year, total spent, how often each service is done and the miles and months between them. **Every number, slice, bar and year is clickable** and filters everything else, and the list at the bottom always shows the exact records behind the numbers (the total row equals the tile).
+
+**Shop (optional)**
+- **Smart Shopping:** "Find supplies" on reminders and "Shop" on parts open a search at Amazon, Walmart or Advance Auto Parts built from your specs and part numbers (exact OEM numbers first; nothing invented). Turn it off or choose retailers in Settings. Affiliate links are **off**; the app is ready for approved programs, disclosed and optional ([docs/AFFILIATES.md](docs/AFFILIATES.md)).
+- **Shopping list:** collect what you need before a job — from a reminder, a saved part, or typed in — with quantity, OEM part number, spec and notes. Search any item, tick it off when bought. Never creates expenses or marks maintenance done by itself.
+
+**Everything else**
+- **Connect your phone by QR code:** the desktop app (or Settings → Connect a phone on the web) shows a one-time QR code; scan it in the Android app. A small banner offers **Resync** when the phone can't reach the computer (and can be dismissed).
+- **Report a bug** from inside the app: describe the problem, see exactly what will be sent, and press Send — it goes straight to the project's GitHub issues ([docs/BUG-REPORTS.md](docs/BUG-REPORTS.md)).
+- **"What's new"** after every update (including versions you skipped), and **Light, Dark or System** theme.
 
 ## Screenshots
 
-All screenshots were captured automatically from the running web app with the sample data (`tools/screenshots/run.sh`). The sticker and Carfax files are synthetic samples.
+**Android app** — rendered from the real app screens with sample data (`PhoneScreenshots` test).
+
+| Garage | Reminders | Recalls | Metrics | Parts |
+|---|---|---|---|---|
+| ![Garage](docs/screenshots/phone-garage.png) | ![Reminders](docs/screenshots/phone-reminders.png) | ![Recalls](docs/screenshots/phone-recalls.png) | ![Metrics](docs/screenshots/phone-metrics.png) | ![Parts](docs/screenshots/phone-parts.png) |
+
+**Desktop / web app** — captured automatically from the running app with sample data (`tools/screenshots/run.sh`). The sticker, Carfax files and the Forte's long service history are synthetic samples; the recalls are real NHTSA data.
 
 | | Light | Dark |
 |---|---|---|
+| **Garage** | ![Garage, light](docs/screenshots/dashboard-light.png) | ![Garage, dark](docs/screenshots/dashboard-dark.png) |
+| **Vehicle — reminders (overdue first)** | ![Reminders, light](docs/screenshots/vehicle-reminders-light.png) | ![Reminders, dark](docs/screenshots/vehicle-reminders-dark.png) |
+| **Tap a reminder — Mark as done** | ![Mark as done, light](docs/screenshots/reminder-done-light.png) | ![Mark as done, dark](docs/screenshots/reminder-done-dark.png) |
+| **Metrics** | ![Metrics, light](docs/screenshots/metrics-light.png) | ![Metrics, dark](docs/screenshots/metrics-dark.png) |
+| **Metrics — where the money went** | ![Costs, light](docs/screenshots/metrics-costs-light.png) | ![Costs, dark](docs/screenshots/metrics-costs-dark.png) |
+| **History — recalls** | ![Recalls, light](docs/screenshots/recalls-light.png) | ![Recalls, dark](docs/screenshots/recalls-dark.png) |
+| **History** | ![History, light](docs/screenshots/vehicle-history-light.png) | ![History, dark](docs/screenshots/vehicle-history-dark.png) |
+| **Parts (specs added automatically)** | ![Parts, light](docs/screenshots/vehicle-parts-light.png) | ![Parts, dark](docs/screenshots/vehicle-parts-dark.png) |
+| **Specs with source labels** | ![Specs, light](docs/screenshots/vehicle-specs-light.png) | ![Specs, dark](docs/screenshots/vehicle-specs-dark.png) |
+| **Shopping list** | ![Shopping list, light](docs/screenshots/shopping-list-light.png) | ![Shopping list, dark](docs/screenshots/shopping-list-dark.png) |
+| **Door-jamb sticker scan — review** | ![Sticker review, light](docs/screenshots/sticker-review-light.png) | ![Sticker review, dark](docs/screenshots/sticker-review-dark.png) |
+| **Adding a repair with photos** | ![Add entry, light](docs/screenshots/add-entry-light.png) | ![Add entry, dark](docs/screenshots/add-entry-dark.png) |
+| **Carfax import — review** | ![Carfax review, light](docs/screenshots/carfax-review-light.png) | ![Carfax review, dark](docs/screenshots/carfax-review-dark.png) |
+| **Icon set** | ![Icon set, light](docs/screenshots/icon-set-light.png) | ![Icon set, dark](docs/screenshots/icon-set-dark.png) |
+
+**History report (PDF)**
+
+| Page 1 | Page 2 |
+|---|---|
+| ![History report page 1](docs/screenshots/history-report-1.png) | ![History report page 2](docs/screenshots/history-report-2.png) |
+
+---|---|---|
 | **Garage dashboard** | ![Dashboard, light](docs/screenshots/dashboard-light.png) | ![Dashboard, dark](docs/screenshots/dashboard-dark.png) |
 | **Vehicle page — history** | ![Vehicle history, light](docs/screenshots/vehicle-history-light.png) | ![Vehicle history, dark](docs/screenshots/vehicle-history-dark.png) |
 | **Vehicle page — specs with source labels** | ![Specs, light](docs/screenshots/vehicle-specs-light.png) | ![Specs, dark](docs/screenshots/vehicle-specs-dark.png) |
@@ -165,7 +199,7 @@ Security was the top priority. Highlights:
 - **File uploads:** checked by their real content type, with GPS and other metadata stripped from photos, and untrusted PDFs read in a sandbox.
 - **Server container:** runs as non-root with a read-only filesystem.
 - **Android app:** the login token is encrypted with the Android Keystore, and HTTPS is enforced.
-- **No telemetry or tracking.** There are only three documented outbound connections, and two are optional.
+- **No telemetry or tracking.** Outbound connections are few, documented and mostly optional: NHTSA (VIN decoding, model lists and recalls — year/make/model only), GitHub (app updates, and bug reports only when you press Send), your own ntfy server, and AI sticker reading only if the owner turns it on. Smart Shopping links only open a retailer's site when you tap them. Full table in [SECURITY.md](SECURITY.md).
 
 Every dependency is pinned and scanned with pip-audit, npm audit, OSV-Scanner, Trivy, Semgrep, Gitleaks, Android lint and CodeQL.
 
@@ -181,9 +215,9 @@ Every dependency is pinned and scanned with pip-audit, npm audit, OSV-Scanner, T
 | `desktop/` | The desktop app: a launcher that runs the same server on your computer, plus the packaging script |
 | `web/` | The web app (plain HTML/CSS/JavaScript, no third-party libraries) |
 | `android/` | The Android app (Kotlin, Jetpack Compose) |
-| `catalog/` | The shared list of maintenance types, spec fields and manufacturer links |
+| `catalog/` | The shared catalog (maintenance types, spec fields, manufacturer links, Smart Shopping retailers, metric categories) plus the shared test cases both apps must pass; `affiliates.json` holds the (switched-off) affiliate settings |
 | `icons/`, `brand/` | The icon set and logo, plus the scripts that draw them |
-| `docs/` | HTTPS guide and screenshots |
+| `docs/` | Guides (desktop, Android updates, HTTPS, bug reports, affiliate links) and screenshots |
 | `scripts/security-scan.sh` | Runs every security scanner |
 | [DECISIONS.md](DECISIONS.md) | Why each design choice was made |
 | [PROGRESS.md](PROGRESS.md) | Build status and notes for future work |

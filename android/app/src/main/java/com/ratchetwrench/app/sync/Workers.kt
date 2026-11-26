@@ -93,11 +93,31 @@ class ReminderWorker(context: Context, params: WorkerParameters) : CoroutineWork
             context.getSystemService(NotificationManager::class.java).createNotificationChannel(channel)
         }
 
-        /** Check all reminders on the phone and notify about due ones. */
-        suspend fun checkAndNotify(context: Context): Int {
+        /** Can this app show notifications right now? (permission + not blocked in Android settings) */
+        fun canNotify(context: Context): Boolean =
+            (android.os.Build.VERSION.SDK_INT < 33 ||
+                ContextCompat.checkSelfPermission(context, Manifest.permission.POST_NOTIFICATIONS) == PackageManager.PERMISSION_GRANTED) &&
+                NotificationManagerCompat.from(context).areNotificationsEnabled()
+
+        /** How many reminders are due or overdue right now (whether or not notified). */
+        suspend fun dueCount(context: Context): Int {
+            val db = AppDatabase.get(context)
+            val vehicles = db.vehicles().all().associateBy { it.id }
+            return db.reminders().all().count { r ->
+                val v = vehicles[r.vehicle_id] ?: return@count false
+                Reminders.status(r, v.current_mileage).status.let { it == "due_soon" || it == "overdue" }
+            }
+        }
+
+        /**
+         * Check all reminders on the phone and notify about due ones.  The
+         * twice-a-day check repeats a reminder at most every 3 days;
+         * [force] ("Check reminders now") shows every due one immediately.
+         */
+        suspend fun checkAndNotify(context: Context, force: Boolean = false): Int {
             val store = SecureStore(context)
             if (!store.notificationsEnabled) return 0
-            if (ContextCompat.checkSelfPermission(context, Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED) return 0
+            if (!canNotify(context)) return 0
             val db = AppDatabase.get(context)
             val vehicles = db.vehicles().all().associateBy { it.id }
             var sent = 0
@@ -106,7 +126,7 @@ class ReminderWorker(context: Context, params: WorkerParameters) : CoroutineWork
                 val v = vehicles[r.vehicle_id] ?: continue
                 val st = Reminders.status(r, v.current_mileage)
                 if (st.status != "due_soon" && st.status != "overdue") continue
-                if (now - store.lastNotified(r.id) < RENOTIFY_MS) continue
+                if (!force && now - store.lastNotified(r.id) < RENOTIFY_MS) continue
                 val what = r.title.ifBlank { Catalog.typeLabel(context, r.type_key) }
                 val open = PendingIntent.getActivity(context, r.id.hashCode(),
                     Intent(context, MainActivity::class.java).addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP),

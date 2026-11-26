@@ -21,6 +21,8 @@ import androidx.compose.ui.test.performScrollTo
 import androidx.compose.ui.test.performTextInput
 import androidx.compose.ui.test.printToString
 import androidx.compose.ui.test.performScrollToNode
+import androidx.compose.ui.test.performTouchInput
+import androidx.compose.ui.test.swipeDown
 import androidx.compose.ui.test.captureToImage
 import androidx.compose.ui.graphics.asAndroidBitmap
 import androidx.test.core.app.ApplicationProvider
@@ -443,6 +445,33 @@ class ScreensTest {
             org.junit.Assert.assertEquals("recall", e.type_key)
             org.junit.Assert.assertEquals("Lexus of Town", e.shop_name)
             org.junit.Assert.assertTrue(e.description.startsWith("Recall 20V012000"))
+        }
+    }
+
+    /** Sync problem banner: small, Resync, fix link after a failed retry, and ✕ to dismiss. */
+    @Test
+    fun syncBannerIsCompactAndDismissible() {
+        click("Start on this phone")
+        waitForText("No vehicles yet")
+        val store = com.ratchetwrench.app.data.SecureStore(ApplicationProvider.getApplicationContext())
+        store.serverUrl = "http://127.0.0.1:9"   // nothing listens there
+        store.allowHttpLocal = true
+        com.ratchetwrench.app.data.SecureStore.tokenForTests = "t"
+        try {
+            store.token = "t"
+            store.mode = "server"
+            // Pull to refresh = a sync attempt.
+            rule.onAllNodes(androidx.compose.ui.test.hasScrollToNodeAction())[0].performTouchInput { swipeDown() }
+            waitForText("Not synced with your computer")
+            click("Resync")
+            waitForText("Still can't reach your computer")
+            waitForText("Fix in Settings")
+            tapIcon("Dismiss")
+            waitGone("Still can't reach your computer")
+        } finally {
+            // Don't leave this test's "signed in" state for the next tests.
+            store.mode = "local"
+            com.ratchetwrench.app.data.SecureStore.tokenForTests = null
         }
     }
 

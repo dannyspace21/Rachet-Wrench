@@ -27,6 +27,9 @@ import androidx.camera.core.Preview
 import androidx.camera.lifecycle.ProcessCameraProvider
 import androidx.camera.view.PreviewView
 import androidx.compose.foundation.background
+import androidx.compose.ui.unit.toSize
+import androidx.compose.ui.layout.boundsInParent
+import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.size
@@ -158,6 +161,32 @@ private fun CameraPreview(modifier: Modifier, analysis: ImageAnalysis? = null, c
     AndroidView({ view }, modifier)
 }
 
+/**
+ * Maps the on-screen scan box onto the camera picture.  The preview fills the
+ * screen and is cropped in the middle (FILL_CENTER), so a point on screen is
+ * (x + cropX) / scale in the picture.  A barcode/line counts as inside when
+ * its centre is inside the box (with a small margin).
+ */
+object ScanRegion {
+    /** box = [left, top, right, bottom, viewW, viewH] in screen pixels; null = whole picture. */
+    fun inImage(box: FloatArray?, imageW: Int, imageH: Int): android.graphics.RectF? {
+        if (box == null || imageW <= 0 || imageH <= 0) return null
+        val (l, t, r, b, vw, vh) = box
+        if (vw <= 0f || vh <= 0f) return null
+        val scale = maxOf(vw / imageW, vh / imageH)
+        val offX = (imageW * scale - vw) / 2f
+        val offY = (imageH * scale - vh) / 2f
+        val padX = (r - l) * 0.06f
+        val padY = (b - t) * 0.25f
+        return android.graphics.RectF((l - padX + offX) / scale, (t - padY + offY) / scale, (r + padX + offX) / scale, (b + padY + offY) / scale)
+    }
+
+    fun contains(region: android.graphics.RectF?, r: android.graphics.Rect?): Boolean =
+        region == null || (r != null && region.contains(r.exactCenterX(), r.exactCenterY()))
+
+    private operator fun FloatArray.component6() = this[5]
+}
+
 /** Kept for existing callers/tests: see VinFinder.fromBarcode. */
 fun vinFromBarcode(raw: String): String? = VinFinder.fromBarcode(raw)
 
@@ -191,6 +220,11 @@ fun VinScanScreen(onResult: (String) -> Unit, onCancel: () -> Unit) {
                 Barcode.FORMAT_CODE_39, Barcode.FORMAT_CODE_128, Barcode.FORMAT_DATA_MATRIX, Barcode.FORMAT_QR_CODE, Barcode.FORMAT_PDF417).build())
         }
         val reader = remember { TextRecognition.getClient(TextRecognizerOptions.DEFAULT_OPTIONS) }
+        // Where the orange box is, as fractions of the camera picture on screen
+        // (left, top, right, bottom, viewWidth, viewHeight) — only what's inside
+        // it is read (issue #4: it used to read the whole picture).
+        val box = remember { java.util.concurrent.atomic.AtomicReference<FloatArray?>(null) }
+        val barcodeHits = remember { java.util.concurrent.ConcurrentHashMap<String, Int>() }
         val main = remember { ContextCompat.getMainExecutor(ctx) }
         val analysis = remember {
             ImageAnalysis.Builder()
@@ -200,20 +234,28 @@ fun VinScanScreen(onResult: (String) -> Unit, onCancel: () -> Unit) {
                 a.setAnalyzer(executor) { proxy ->
                     val media = proxy.image
                     if (media == null || done.get() || paused.get()) { proxy.close(); return@setAnalyzer }
-                    val image = InputImage.fromMediaImage(media, proxy.imageInfo.rotationDegrees)
-                    // 1) Barcode.
+                    val rot = proxy.imageInfo.rotationDegrees
+                    val image = InputImage.fromMediaImage(media, rot)
+                    // The upright picture's size, and the box mapped onto it.
+                    val (iw, ih) = if (rot == 90 || rot == 270) proxy.height to proxy.width else proxy.width to proxy.height
+                    val region = ScanRegion.inImage(box.get(), iw, ih)
+                    // 1) Barcode — only inside the box, and the same VIN in 2 frames.
                     scanner.process(image).addOnCompleteListener { task ->
                         val codes = if (task.isSuccessful) task.result.orEmpty() else emptyList()
                         for (c in codes) {
+                            if (!ScanRegion.contains(region, c.boundingBox)) continue
                             val raw = c.rawValue ?: continue
                             val vin = VinFinder.fromBarcode(raw)
-                            if (vin != null && done.compareAndSet(false, true)) { main.execute { onResult(vin) }; break }
-                            main.execute { status = "Barcode seen: $raw (not a valid VIN)" }
+                            if (vin == null) { main.execute { status = "Barcode seen: $raw (not a valid VIN)" }; continue }
+                            val n = barcodeHits.merge(vin, 1, Int::plus) ?: 1
+                            if (n >= 2 && done.compareAndSet(false, true)) { main.execute { onResult(vin) }; break }
+                            main.execute { status = "Reading… hold steady" }
                         }
                         if (done.get()) { proxy.close(); return@addOnCompleteListener }
-                        // 2) Printed text.
+                        // 2) Printed text — only lines inside the box.
                         reader.process(image).addOnSuccessListener { text ->
-                            for (vin in VinFinder.fromText(text.text)) {
+                            val inside = text.textBlocks.flatMap { it.lines }.filter { ScanRegion.contains(region, it.boundingBox) }
+                            for (vin in VinFinder.fromText(inside.joinToString("\n") { it.text })) {
                                 val n = textHits.merge(vin, 1, Int::plus) ?: 1
                                 if (n >= 2 && !done.get() && paused.compareAndSet(false, true)) main.execute { proposed = vin }
                             }
@@ -224,12 +266,25 @@ fun VinScanScreen(onResult: (String) -> Unit, onCancel: () -> Unit) {
         }
         DisposableEffect(Unit) { onDispose { scanner.close(); reader.close(); executor.shutdown() } }
         Box(Modifier.fillMaxSize().background(Color.Black)) {
-            CameraPreview(Modifier.fillMaxSize(), analysis = analysis, onCamera = { camera = it })
-            Box(Modifier.align(Alignment.Center).fillMaxWidth().padding(24.dp).height(120.dp).border(3.dp, Color(0xFFFB7A35), RoundedCornerShape(16.dp)))
+            var viewSize by remember { mutableStateOf(androidx.compose.ui.geometry.Size.Zero) }
+            CameraPreview(Modifier.fillMaxSize().onGloballyPositioned { viewSize = it.size.toSize() }, analysis = analysis, onCamera = { cam ->
+                camera = cam
+                // Focus on the box straight away.
+                runCatching {
+                    val f = androidx.camera.core.SurfaceOrientedMeteringPointFactory(1f, 1f)
+                    cam.cameraControl.startFocusAndMetering(FocusMeteringAction.Builder(f.createPoint(0.5f, 0.5f)).build())
+                }
+            })
+            Box(Modifier.align(Alignment.Center).fillMaxWidth().padding(24.dp).height(140.dp)
+                .onGloballyPositioned { c ->
+                    val r = c.boundsInParent()
+                    if (viewSize.width > 0f) box.set(floatArrayOf(r.left, r.top, r.right, r.bottom, viewSize.width, viewSize.height))
+                }
+                .border(3.dp, Color(0xFFFB7A35), RoundedCornerShape(16.dp)))
             Column(Modifier.align(Alignment.BottomCenter).safeDrawingPadding().padding(16.dp).background(Color(0xCC000000), RoundedCornerShape(16.dp)).padding(16.dp),
                 verticalArrangement = Arrangement.spacedBy(10.dp)) {
                 Text("Point at the VIN barcode or the printed VIN", color = Color.White, fontWeight = FontWeight.Bold)
-                Text(status ?: "Fill the box with the barcode. Tap the picture to focus. Turning the phone sideways helps with long barcodes.",
+                Text(status ?: "Fit the barcode (or printed VIN) inside the orange box — only what's in the box is read. Tap the picture to focus. Turning the phone sideways helps with long barcodes.",
                     color = Color.White, style = MaterialTheme.typography.bodySmall)
                 camera?.let { cam ->
                     val zoomState = remember(cam) { SliderState(value = 0f) }

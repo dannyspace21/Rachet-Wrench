@@ -548,11 +548,15 @@ fun VehicleEditScreen(nav: NavHostController, id: String?) {
                 SecondaryButton("Decode VIN", "search") {
                     scope.launch {
                         try {
-                            if (repo.store.mode == "server") {
-                                // Connected: ask the computer/server (it also checks a paid spec service if configured).
-                                val res = withContext(Dispatchers.IO) {
+                            // Connected: ask the computer/server first (it also checks a paid spec
+                            // service if one is set up).  If the computer can't be reached (away from
+                            // home, computer off), decode directly with NHTSA instead (issue #3).
+                            val res = if (repo.store.mode != "server") null else withContext(Dispatchers.IO) {
+                                runCatching {
                                     JsonFormat.parseToJsonElement(Api(repo.store).send("POST", "/api/vin/decode", JsonObject(mapOf("vin" to JsonPrimitive(vin))))).jsonObject
-                                }
+                                }.getOrElse { e -> if (e is com.ratchetwrench.app.data.ApiException && e.status in 400..499 && e.status != 401) throw e else null }
+                            }
+                            if (res != null) {
                                 val veh = res["vehicle"]!!.jsonObject
                                 veh["year"]?.jsonPrimitive?.content?.let { year = it }
                                 veh["make"]?.jsonPrimitive?.content?.let { make = it }
@@ -561,7 +565,7 @@ fun VehicleEditScreen(nav: NavHostController, id: String?) {
                                 veh["kind"]?.jsonPrimitive?.content?.let { kind = it }
                                 setDecoded(res["specs"]!!.jsonArray.map { it.jsonObject["key"]!!.jsonPrimitive.content to it.jsonObject["value"]!!.jsonPrimitive.content })
                             } else {
-                                // Phone only: ask NHTSA directly (only the VIN is sent).
+                                // Phone only, or the computer didn't answer: ask NHTSA directly (only the VIN is sent).
                                 val r = withContext(Dispatchers.IO) { Nhtsa.decode(vin) }
                                 r.year?.let { year = it.toString() }
                                 r.make?.let { make = it }
@@ -572,7 +576,10 @@ fun VehicleEditScreen(nav: NavHostController, id: String?) {
                                 r.warning?.let { snack.showSnackbar(it) }
                             }
                             snack.showSnackbar("Filled from VIN. ${decodedSpecs.size} spec(s) will be saved as “From VIN”. Check them before saving.")
-                        } catch (e: Exception) { snack.showSnackbar("VIN decoding needs an internet connection: ${e.message}") }
+                        } catch (e: Exception) {
+                            snack.showSnackbar(if (e is com.ratchetwrench.app.data.ApiException) "Couldn't decode this VIN: ${e.message}"
+                                else "Couldn't reach the NHTSA VIN service — check the phone's internet connection. (${e.message})")
+                        }
                     }
                 }
             }

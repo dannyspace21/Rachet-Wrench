@@ -82,6 +82,8 @@ fun GarageScreen(nav: NavHostController) {
     val reminders by repo.db.reminders().observeAll().collectAsState(initial = emptyList())
     var refreshing by remember { mutableStateOf(false) }
     var syncError by remember { mutableStateOf<String?>(null) }
+    var syncHidden by remember { mutableStateOf(false) }       // ✕ pressed (until the app is reopened)
+    var retriedAndFailed by remember { mutableStateOf(false) } // "Resync" pressed and it failed again
 
     suspend fun refresh() {
         refreshing = true
@@ -109,6 +111,19 @@ fun GarageScreen(nav: NavHostController) {
 
     // After an update: "What's new" (once per version; not while the crash notice shows).
     if (crash == null) com.ratchetwrench.app.ui.WhatsNewDialog()
+
+    // Reminder notifications are on by default, but Android 13+ also needs the
+    // app to ask permission — ask once here so they actually arrive (issue #5).
+    val askNotify = androidx.activity.compose.rememberLauncherForActivityResult(
+        androidx.activity.result.contract.ActivityResultContracts.RequestPermission()) { }
+    LaunchedEffect(Unit) {
+        if (android.os.Build.VERSION.SDK_INT >= 33 && repo.store.notificationsEnabled && !repo.store.notifyAsked &&
+            androidx.core.content.ContextCompat.checkSelfPermission(ctx, android.Manifest.permission.POST_NOTIFICATIONS) !=
+            android.content.pm.PackageManager.PERMISSION_GRANTED) {
+            repo.store.notifyAsked = true
+            askNotify.launch(android.Manifest.permission.POST_NOTIFICATIONS)
+        }
+    }
 
     LaunchedEffect(Unit) {
         Updater.autoCheck(ctx) // app updates (at most every 6 hours)
@@ -153,20 +168,26 @@ fun GarageScreen(nav: NavHostController) {
             LazyColumn(Modifier.fillMaxSize(), contentPadding = androidx.compose.foundation.layout.PaddingValues(16.dp, 8.dp, 16.dp, 96.dp),
                 verticalArrangement = Arrangement.spacedBy(10.dp)) {
                 item { UpdateBanner() }
-                syncError?.let { msg ->
-                    item {
-                        // Not hidden in small grey text: say clearly that sync failed, why, and where to fix it.
-                        SectionCard {
-                            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                                UiIcon("warning", tint = LocalExtra.current.warn)
-                                Text("Couldn't sync with your computer", fontWeight = FontWeight.Bold)
+                // Compact: the phone often isn't near the computer.  Resync, a short
+                // fix link after a failed retry (details are in Settings), and ✕ to hide
+                // it until the next sync problem.
+                if (syncError != null && !syncHidden) item {
+                    androidx.compose.material3.Surface(shape = androidx.compose.foundation.shape.RoundedCornerShape(12.dp),
+                        color = MaterialTheme.colorScheme.surfaceVariant) {
+                        Row(Modifier.padding(start = 12.dp, end = 4.dp, top = 4.dp, bottom = 4.dp), verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            UiIcon("sync", Modifier.size(18.dp), LocalExtra.current.warn)
+                            Column(Modifier.weight(1f)) {
+                                Text(if (retriedAndFailed) "Still can't reach your computer" else "Not synced with your computer",
+                                    style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.SemiBold)
+                                if (retriedAndFailed) Text("Fix in Settings", color = MaterialTheme.colorScheme.primary,
+                                    style = MaterialTheme.typography.bodySmall, fontWeight = FontWeight.SemiBold,
+                                    modifier = Modifier.clickable { nav.navigate("settings") }.padding(vertical = 2.dp))
                             }
-                            Text(msg, style = MaterialTheme.typography.bodySmall)
-                            Text("Showing what's saved on this phone. Last successful sync: ${repo.store.lastSyncOk?.let { com.ratchetwrench.app.ui.prettyDateTime(it) } ?: "never"}.",
-                                color = LocalExtra.current.muted, style = MaterialTheme.typography.bodySmall)
-                            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                                com.ratchetwrench.app.ui.SecondaryButton("Try again", "sync") { scope.launch { refresh() } }
-                                com.ratchetwrench.app.ui.SecondaryButton("Fix in Settings", "settings") { nav.navigate("settings") }
+                            androidx.compose.material3.TextButton({ scope.launch { refresh(); retriedAndFailed = syncError != null } },
+                                enabled = !refreshing) { Text(if (refreshing) "Syncing…" else "Resync") }
+                            androidx.compose.material3.IconButton({ syncHidden = true }) {
+                                UiIcon("x", Modifier.size(18.dp), LocalExtra.current.muted, description = "Dismiss")
                             }
                         }
                     }

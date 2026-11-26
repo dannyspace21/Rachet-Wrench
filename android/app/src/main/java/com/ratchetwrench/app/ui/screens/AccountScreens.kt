@@ -236,9 +236,20 @@ fun SettingsScreen(nav: NavHostController, onSignedOut: () -> Unit) {
     var unit by remember { mutableStateOf(repo.store.distanceUnit) }
     var notify by remember { mutableStateOf(repo.store.notificationsEnabled) }
     var message by remember { mutableStateOf<String?>(null) }
-    val askNotify = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
-        message = if (granted) "Reminder notifications are on." else "Notifications are blocked in Android settings."
+    // "Check reminders now": notifies every due reminder right away and says exactly what happened.
+    suspend fun checkNow() {
+        val due = withContext(Dispatchers.IO) { ReminderWorker.dueCount(ctx) }
+        val n = withContext(Dispatchers.IO) { ReminderWorker.checkAndNotify(ctx, force = true) }
+        message = when {
+            due == 0 -> "Nothing is due right now — you'll get a notification when something is."
+            n > 0 -> "$n reminder notification${if (n == 1) "" else "s"} shown."
+            else -> "$due reminder${if (due == 1) " is" else "s are"} due, but notifications are blocked. Tap “Allow notifications”."
+        }
     }
+    val askNotify = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
+        if (granted) scope.launch { checkNow() } else message = "Notifications are blocked. Tap “Allow notifications” to turn them on in Android settings."
+    }
+    var canNotify by remember { mutableStateOf(ReminderWorker.canNotify(ctx)) }
 
     /** Save a preference on the server too (best effort; works offline later). */
     fun pushSetting(key: String, value: String) = scope.launch(Dispatchers.IO) {
@@ -264,9 +275,19 @@ fun SettingsScreen(nav: NavHostController, onSignedOut: () -> Unit) {
                     })
                 }
                 SecondaryButton("Check reminders now", "bell") {
-                    scope.launch {
-                        val n = withContext(Dispatchers.IO) { ReminderWorker.checkAndNotify(ctx) }
-                        message = if (n == 0) "Nothing new is due (or notifications are off)." else "$n reminder notification(s) shown."
+                    when {
+                        !notify -> message = "Turn on “Notify me when maintenance is due” first."
+                        !ReminderWorker.canNotify(ctx) && Build.VERSION.SDK_INT >= 33 &&
+                            androidx.core.content.ContextCompat.checkSelfPermission(ctx, Manifest.permission.POST_NOTIFICATIONS) != android.content.pm.PackageManager.PERMISSION_GRANTED ->
+                            askNotify.launch(Manifest.permission.POST_NOTIFICATIONS)
+                        else -> scope.launch { checkNow(); canNotify = ReminderWorker.canNotify(ctx) }
+                    }
+                }
+                // Blocked in Android settings: one tap to fix it.
+                if (notify && !canNotify) SecondaryButton("Allow notifications", "settings") {
+                    runCatching {
+                        ctx.startActivity(android.content.Intent(android.provider.Settings.ACTION_APP_NOTIFICATION_SETTINGS)
+                            .putExtra(android.provider.Settings.EXTRA_APP_PACKAGE, ctx.packageName))
                     }
                 }
             }
