@@ -114,7 +114,7 @@ You need a computer that stays on (a home server, NAS or mini PC) with **Docker*
 
 1. **Download Ratchet Wrench.** Open a terminal on the server and run:
    ```bash
-   git clone https://github.com/dannyspace21/Rachet-Wrench.git
+   git clone https://github.com/dannyspace21/Ratchet-Wrench.git
    cd Rachet-Wrench
    ```
 2. **Create your settings file:**
@@ -157,7 +157,7 @@ Your database and photos live in the Docker volume `ratchet-data`. Back it up re
 
 The app needs **Android 10 or newer**.
 
-**Install once:** on your phone, open <https://github.com/dannyspace21/Rachet-Wrench/releases/latest>, tap the **`.apk`** file under *Assets*, then open it and tap **Install**. Android asks once to allow installs from your browser.
+**Install once:** on your phone, open <https://github.com/dannyspace21/Ratchet-Wrench/releases/latest>, tap the **`.apk`** file under *Assets*, then open it and tap **Install**. Android asks once to allow installs from your browser.
 
 **Updates are automatic:** whenever you open the app, it checks for a newer version and installs it. It downloads on Wi-Fi; on mobile data it asks first. Android shows an "Update this app?" prompt; tap **Update**. Details: **[docs/ANDROID-UPDATES.md](docs/ANDROID-UPDATES.md)**.
 

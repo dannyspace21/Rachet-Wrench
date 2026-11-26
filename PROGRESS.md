@@ -103,6 +103,8 @@ Build-sandbox notes: the sandbox blocks dl.google.com, api.osv.dev, semgrep.dev 
 
 - v1.0.38: empty manual-findable specs open the edit box again (type it in), with "Import from owner's manual" inside it.
 
+- v1.0.39: GitHub repository renamed to Ratchet-Wrench; app, server and docs use the new address (old one redirects, but issue creation from the server doesn't follow the redirect).
+
 ## Ideas for later (not started)
 - Code-sign the desktop app (paid Apple/Microsoft certificates) to remove first-launch warnings; add an Intel-Mac build if needed.
 - Database migrations with Alembic once the schema needs to change.

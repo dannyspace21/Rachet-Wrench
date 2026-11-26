@@ -103,7 +103,7 @@ class Settings:
     # RW_ISSUE_TOKEN, or from the file the release build bundles into the
     # desktop app.  Empty = the form offers "open on GitHub" instead.
     # TEMPORARY: move this key to a relay service (see docs/BUG-REPORTS.md).
-    issue_repo: str = field(default_factory=lambda: os.environ.get("RW_ISSUE_REPO", "dannyspace21/Rachet-Wrench").strip())
+    issue_repo: str = field(default_factory=lambda: os.environ.get("RW_ISSUE_REPO", "dannyspace21/Ratchet-Wrench").strip())
     issue_token: str = field(default_factory=lambda: os.environ.get("RW_ISSUE_TOKEN", "").strip() or _bundled_issue_token())
 
     # Optional AI vision for hard-to-read door stickers.  OFF by default

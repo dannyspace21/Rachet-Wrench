@@ -61,7 +61,7 @@ sealed class UpdateState {
 }
 
 object Updater {
-    private const val REPO = "dannyspace21/Rachet-Wrench"
+    private const val REPO = "dannyspace21/Ratchet-Wrench"
     private const val LATEST = "https://api.github.com/repos/$REPO/releases/latest"
     private val ALLOWED_HOSTS = setOf(
         "api.github.com", "github.com", "objects.githubusercontent.com", "release-assets.githubusercontent.com",

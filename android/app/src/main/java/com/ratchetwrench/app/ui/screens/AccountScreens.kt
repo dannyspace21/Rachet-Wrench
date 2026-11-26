@@ -395,8 +395,8 @@ fun AboutCard() {
             "connect one), the U.S. government NHTSA service (to decode a VIN, when you ask), and GitHub (to check for " +
             "app updates). Crash details are kept on this phone only.",
             color = MaterialTheme.colorScheme.onSurfaceVariant, style = MaterialTheme.typography.bodySmall)
-        SecondaryButton("Project page and help", "external") { open("https://github.com/dannyspace21/Rachet-Wrench") }
-        SecondaryButton("Security and privacy details", "book") { open("https://github.com/dannyspace21/Rachet-Wrench/blob/main/SECURITY.md") }
+        SecondaryButton("Project page and help", "external") { open("https://github.com/dannyspace21/Ratchet-Wrench") }
+        SecondaryButton("Security and privacy details", "book") { open("https://github.com/dannyspace21/Ratchet-Wrench/blob/main/SECURITY.md") }
     }
 }
 
@@ -471,7 +471,7 @@ fun ChangeAddressDialog(onClose: () -> Unit, onSaved: (String, String) -> Unit) 
  */
 fun bugReportUrl(context: android.content.Context, text: String = ""): String {
     val details = (if (text.isNotBlank()) text.trim() + "\n\n" else "") + bugDetails(context)
-    return android.net.Uri.parse("https://github.com/dannyspace21/Rachet-Wrench/issues/new").buildUpon()
+    return android.net.Uri.parse("https://github.com/dannyspace21/Ratchet-Wrench/issues/new").buildUpon()
         .appendQueryParameter("template", "bug_report.yml")
         .appendQueryParameter("labels", "bug")
         .appendQueryParameter("platform", "Android")

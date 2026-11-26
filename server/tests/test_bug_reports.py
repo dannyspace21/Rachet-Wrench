@@ -34,7 +34,7 @@ def test_report_becomes_an_issue(client, admin, github):
         "details": "Browser: test"})
     assert r.status_code == 200 and r.json()["number"] == 42
     repo, token, title, body = github[0]
-    assert repo == "dannyspace21/Rachet-Wrench" and token == "test-token"
+    assert repo == "dannyspace21/Ratchet-Wrench" and token == "test-token"
     assert title == "[Bug] Camera buttons hard to see"
     assert "@​someone" in body and "## Steps to reproduce" in body and "Browser: test" in body
 

@@ -141,7 +141,7 @@ function pairCard() {
 // Report a bug: opens a pre-filled issue on the project's GitHub page.
 // Nothing is sent from here — you review the report and press Submit there.
 // ---------------------------------------------------------------------------
-export const ISSUE_URL = "https://github.com/dannyspace21/Rachet-Wrench/issues/new";
+export const ISSUE_URL = "https://github.com/dannyspace21/Ratchet-Wrench/issues/new";
 
 export function bugReportUrl(platform, details) {
   const q = new URLSearchParams({ template: "bug_report.yml", labels: "bug", platform, details });

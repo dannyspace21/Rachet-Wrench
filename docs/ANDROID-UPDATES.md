@@ -2,7 +2,7 @@
 
 ## Install (one time)
 
-1. On your phone, open **<https://github.com/dannyspace21/Rachet-Wrench/releases/latest>**.
+1. On your phone, open **<https://github.com/dannyspace21/Ratchet-Wrench/releases/latest>**.
 2. Under **Assets**, tap **`ratchet-wrench-1.0.N.apk`** to download it.
 3. Open the download. Android asks whether to allow installing apps from your browser; allow it, then tap **Install**.
 4. Open **Ratchet Wrench**.

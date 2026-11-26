@@ -28,7 +28,7 @@ android {
         // debug/test builds.  TEMPORARY until reports move to a relay
         // service (docs/BUG-REPORTS.md).
         buildConfigField("String", "ISSUE_TOKEN", "\"\"")
-        buildConfigField("String", "ISSUE_REPO", "\"dannyspace21/Rachet-Wrench\"")
+        buildConfigField("String", "ISSUE_REPO", "\"dannyspace21/Ratchet-Wrench\"")
     }
 
     // PERMANENT RELEASE SIGNING KEY
