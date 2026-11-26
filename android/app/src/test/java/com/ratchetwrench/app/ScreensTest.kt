@@ -234,6 +234,67 @@ class ScreensTest {
         waitForText("Tire rotation")
     }
 
+    /** Shopping list: from a reminder, from a part, typed in; tick off; remove. */
+    @Test
+    fun shoppingListFromReminderPartAndManual() {
+        startPhoneOnlyWithVehicle()
+        val ctx = ApplicationProvider.getApplicationContext<Context>()
+        val repo = com.ratchetwrench.app.data.Repository(ctx)
+        kotlinx.coroutines.runBlocking {
+            val v = repo.db.vehicles().observeAll().first().first()
+            repo.saveSpec(v.id, "oil_type", "0W-20 full synthetic", "user")
+            repo.saveReminder(com.ratchetwrench.app.data.Reminder(vehicle_id = v.id, type_key = "oil_change",
+                interval_miles = 5000, last_done_mileage = 30000, last_done_date = "2026-06-01"))
+            repo.savePart(com.ratchetwrench.app.data.Part(vehicle_id = v.id, type_key = "air_filter", name = "Engine air filter", part_number = "17801-31120"))
+        }
+        // 1. From a reminder: oil (with the oil type from Specs) + oil filter.
+        click("Reminders")
+        click("Oil change")
+        waitForText("Did it? Log it as done")
+        click("Add to shopping list")
+        waitForText("Added 2 items to the shopping list.")
+        click("Add to shopping list")
+        waitForText("Already on your shopping list.")
+        tapIcon("Back")
+
+        // 2. From a saved part.
+        click("Parts")
+        tapIcon("Add Engine air filter to the shopping list")
+
+        // 3. The list (from the Garage).
+        tapIcon("Back")
+        tapIcon("Shopping list, 3 to buy")
+        waitForText("Engine oil")
+        waitForText("0W-20 full synthetic")
+        waitForText("For: Oil change", substring = true)
+        waitForText("OEM 17801-31120")
+
+        // 4. Typed in.
+        tapIcon("Add item")
+        waitForText("Save item")
+        type("Item", "Shop towels")
+        type("Notes (optional)", "the blue ones")
+        click("Save item")
+        waitGone("Save item")
+        waitForText("Shop towels")
+        waitForText("Not for a vehicle")
+
+        // 5. Bought: tick it off, then remove bought items.  The reminder stays as it was.
+        tapIcon("Bought Engine oil")
+        click("Remove bought")
+        click("Remove")
+        waitGone("Engine oil")
+        kotlinx.coroutines.runBlocking {
+            val r = repo.db.reminders().all().first()
+            org.junit.Assert.assertEquals("buying never marks maintenance done", 30000, r.last_done_mileage)
+            org.junit.Assert.assertTrue("no expense created", repo.db.entries().dirty().isEmpty())
+        }
+        // 6. Remove one directly.
+        tapIcon("Remove Shop towels")
+        waitGone("Shop towels")
+        waitForText("Oil filter")
+    }
+
     @Test
     fun settingsAboutAndTheme() {
         startPhoneOnlyWithVehicle()

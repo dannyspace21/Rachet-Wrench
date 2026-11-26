@@ -23,6 +23,12 @@ data class ShopContext(
 
 data class ShopItem(val label: String, val query: String, val exact: Boolean, val hint: String?)
 
+/** A shopping-list line worked out from a reminder (what's KNOWN, never guessed). */
+data class ListLine(val description: String, val part_number: String, val spec: String, val type_key: String)
+
+/** What went into a filled template (for shopping-list lines). */
+class Used { var partNumber = ""; val specs = mutableListOf<String>() }
+
 object Shopping {
     private val placeholderRe = Regex("""\{([^}]+)\}""")
     private val numberRe = Regex("""\d+(?:\.\d+)?""")
@@ -56,10 +62,21 @@ object Shopping {
         }
     }
 
-    /** Fill one template; null if any of its information is missing. */
-    fun fill(template: String, c: ShopContext): String? {
+    /** Fill one template; null if any of its information is missing.
+     *  [used] (optional) collects the part number / specs that went in. */
+    fun fill(template: String, c: ShopContext, used: Used? = null): String? {
         var missing = false
-        val out = placeholderRe.replace(template) { m -> placeholder(m.groupValues[1], c) ?: run { missing = true; "" } }
+        val out = placeholderRe.replace(template) { m ->
+            val name = m.groupValues[1]
+            val v = placeholder(name, c) ?: run { missing = true; return@replace "" }
+            if (used != null && name.startsWith("part:")) used.partNumber = v
+            if (used != null && name.startsWith("spec:")) {
+                val key = name.removePrefix("spec:").substringBefore('|')
+                // "..._part" specs hold an OEM part number; other specs are kept as written ("26 in").
+                if (key.endsWith("_part")) used.partNumber = v else used.specs += c.specs[key].orEmpty().trim()
+            }
+            v
+        }
         return if (missing) null else out.replace(Regex("""\s+"""), " ").trim()
     }
 
@@ -80,6 +97,28 @@ object Shopping {
             }
         }
         return items
+    }
+
+    /** Shopping-list lines for a reminder (same rules as web listItemsFor). */
+    fun listItemsFor(typeKey: String, name: String, c: ShopContext, catalog: CatalogData): List<ListLine> {
+        val recipe = catalog.shopping[typeKey] ?: return listOf(ListLine(name, "", "", typeKey))
+        return recipe.map { item ->
+            item.queries.firstNotNullOfOrNull { t ->
+                val used = Used()
+                fill(t, c, used)?.let { ListLine(item.label, used.partNumber, used.specs.joinToString(" / "), typeKey) }
+            } ?: ListLine(item.label, "", "", typeKey)
+        }
+    }
+
+    /** Search text for a shopping-list line: part number, else spec + description, else vehicle + description. */
+    fun listItemQuery(description: String, partNumber: String, spec: String, c: ShopContext?): Pair<String, Boolean> {
+        val what = description.trim()
+        val pn = partNumber.trim()
+        if (pn.isNotEmpty()) return "$pn $what".trim() to true
+        val sp = spec.trim()
+        if (sp.isNotEmpty()) return "$sp $what".trim() to true
+        val ymm = c?.let { yearMakeModel(it) }
+        return (if (ymm != null) "$ymm $what" else what) to false
     }
 
     /** Search text for one saved part: the exact part number when there is one. */

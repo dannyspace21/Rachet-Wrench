@@ -170,6 +170,32 @@ data class Part(
     @Transient override val dirty: Boolean = false,
 ) : Synced
 
+/**
+ * One line of the shopping list: something to buy before doing the work.
+ * vehicle_id is optional (a general item); reminder_id / part_id say where
+ * it came from.  Never an expense, and ticking it off never marks
+ * maintenance done.
+ */
+@Serializable
+@Entity(tableName = "shopping_items", indices = [Index("vehicle_id")])
+data class ShoppingItem(
+    @PrimaryKey override val id: String = newId(),
+    val vehicle_id: String? = null,
+    val reminder_id: String? = null,
+    val part_id: String? = null,
+    val type_key: String = "custom",
+    val description: String = "",
+    val part_number: String = "",
+    val spec: String = "",
+    val quantity: Int = 1,
+    val purchased: Boolean = false,
+    val notes: String = "",
+    val created_at: String = nowIso(),
+    override val updated_at: String = nowIso(),
+    override val deleted_at: String? = null,
+    @Transient override val dirty: Boolean = false,
+) : Synced
+
 /** Per-user settings from the server (theme, units, currency). */
 @Serializable
 data class UserSettings(
@@ -192,5 +218,6 @@ data class SyncPull(
     val odometer: List<OdometerReading> = emptyList(),
     val parts: List<Part> = emptyList(),
     val attachments: List<Attachment> = emptyList(),
+    val shopping: List<ShoppingItem> = emptyList(),
     val settings: UserSettings? = null,
 )

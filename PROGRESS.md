@@ -77,6 +77,8 @@ Build-sandbox notes: the sandbox blocks dl.google.com, api.osv.dev, semgrep.dev 
 
 - v1.0.21: tap a reminder → Mark as done (date + mileage + history in one step); any new record updates matching reminders (D60).
 
+- v1.0.22: Shopping list — from reminders, parts or typed in; quantity, OEM number, spec, notes, vehicle, reminder; search at retailers; tick off/remove; synced; Room v2 auto-migration (D61).
+
 ## Ideas for later (not started)
 - Code-sign the desktop app (paid Apple/Microsoft certificates) to remove first-launch warnings; add an Intel-Mac build if needed.
 - Run the Android app on a real device/emulator and add phone screenshots to the README (no emulator was available in the build sandbox).

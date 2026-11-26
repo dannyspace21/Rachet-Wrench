@@ -122,6 +122,14 @@ fun GarageScreen(nav: NavHostController) {
     Scaffold(
         topBar = {
             TopBarImpl("Garage", null) {
+                // The shopping list (with how many things are still to buy).
+                val toBuy by repo.db.shopping().observeAll().collectAsState(initial = emptyList())
+                val count = toBuy.count { !it.purchased }
+                androidx.compose.material3.TextButton({ nav.navigate("shopping") },
+                    modifier = Modifier.semantics { contentDescription = "Shopping list" + if (count > 0) ", $count to buy" else "" }) {
+                    UiIcon("cart", Modifier.size(20.dp), MaterialTheme.colorScheme.primary)
+                    if (count > 0) { Spacer(Modifier.size(4.dp)); Text("$count") }
+                }
                 // Labelled (not just a gear) so Settings & About are easy to find.
                 androidx.compose.material3.TextButton({ nav.navigate("settings") }) {
                     UiIcon("settings", Modifier.size(20.dp), MaterialTheme.colorScheme.primary)

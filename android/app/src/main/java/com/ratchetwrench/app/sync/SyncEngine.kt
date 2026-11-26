@@ -22,6 +22,7 @@ import com.ratchetwrench.app.data.OdometerReading
 import com.ratchetwrench.app.data.Part
 import com.ratchetwrench.app.data.Reminder
 import com.ratchetwrench.app.data.SecureStore
+import com.ratchetwrench.app.data.ShoppingItem
 import com.ratchetwrench.app.data.Spec
 import com.ratchetwrench.app.data.SyncPull
 import com.ratchetwrench.app.data.Synced
@@ -55,11 +56,17 @@ class SyncEngine(private val context: Context) {
         "odometer" to setOf("id", "updated_at", "deleted_at", "vehicle_id", "date", "mileage", "note"),
         "parts" to setOf("id", "updated_at", "deleted_at", "vehicle_id", "type_key", "name", "part_number", "brand", "notes"),
         "attachments" to setOf("id", "updated_at", "deleted_at", "vehicle_id", "entry_id", "category", "caption"),
+        "shopping" to setOf("id", "updated_at", "deleted_at", "vehicle_id", "reminder_id", "part_id", "type_key", "description",
+            "part_number", "spec", "quantity", "purchased", "notes"),
     )
 
     private fun <T> toPush(kind: String, ser: KSerializer<T>, item: T): JsonObject {
         val full = json.encodeToJsonElement(ser, item).jsonObject
-        return JsonObject(full.filterKeys { it in allowed.getValue(kind) })
+        val out = full.filterKeys { it in allowed.getValue(kind) }.toMutableMap()
+        // A shopping line can be unlinked from its vehicle/reminder/part: send
+        // those as explicit nulls (missing would mean "unchanged").
+        if (kind == "shopping") for (k in listOf("vehicle_id", "reminder_id", "part_id")) out.putIfAbsent(k, kotlinx.serialization.json.JsonNull)
+        return JsonObject(out)
     }
 
     /** Run a full sync.  Throws on network/auth errors (the worker retries). */
@@ -73,6 +80,7 @@ class SyncEngine(private val context: Context) {
         }
         try {
             push()
+            pushShopping()
             uploadPhotos()
             pull()
         } catch (e: Exception) {
@@ -112,6 +120,22 @@ class SyncEngine(private val context: Context) {
         applyResults(results["odometer"], OdometerReading.serializer(), { db.odometer().upsert(it) }, { db.odometer().remove(it) }, { db.odometer().get(it) }) { it.copy(dirty = false) }
         applyResults(results["parts"], Part.serializer(), { db.parts().upsert(it) }, { db.parts().remove(it) }, { db.parts().get(it) }) { it.copy(dirty = false) }
         applyResults(results["attachments"], Attachment.serializer(), { db.attachments().upsert(it) }, { db.attachments().remove(it) }, { db.attachments().get(it) }) { it.copy(dirty = false) }
+    }
+
+    /**
+     * The shopping list goes in its own request: a computer still running an
+     * older Ratchet Wrench doesn't know the shopping list and refuses it
+     * (422).  Then the lines simply stay on the phone (still queued) and
+     * everything else keeps syncing; they go up once the computer is updated.
+     */
+    private fun pushShopping() = kotlinx.coroutines.runBlocking {
+        val items = db.shopping().dirty()
+        if (items.isEmpty()) return@runBlocking
+        val body = JsonObject(mapOf("shopping" to JsonArray(items.map { toPush("shopping", ShoppingItem.serializer(), it) })))
+        val res = try { api.send("POST", "/api/sync", body) }
+            catch (e: com.ratchetwrench.app.data.ApiException) { if (e.status == 422) return@runBlocking else throw e }
+        val results = json.parseToJsonElement(res).jsonObject["results"]!!.jsonObject
+        applyResults(results["shopping"], ShoppingItem.serializer(), { db.shopping().upsert(it) }, { db.shopping().remove(it) }, { db.shopping().get(it) }) { it.copy(dirty = false) }
     }
 
     /**
@@ -193,6 +217,7 @@ class SyncEngine(private val context: Context) {
             val local = db.attachments().get(server.id)
             db.attachments().upsert(server.copy(localPath = local?.localPath))
         }
+        merge(data.shopping, { db.shopping().get(it) }) { db.shopping().upsert(it) }
         data.settings?.let { s ->
             store.theme = s.theme
             store.distanceUnit = s.distance_unit

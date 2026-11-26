@@ -25,7 +25,7 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from . import schemas
-from .models import Attachment, Entry, OdometerReading, Part, Reminder, User, Vehicle, VehicleSpec, utcnow
+from .models import Attachment, Entry, OdometerReading, Part, Reminder, ShoppingItem, User, Vehicle, VehicleSpec, utcnow
 from .reminders import mark_done_from_entry
 from .uploads import delete_stored
 
@@ -38,6 +38,7 @@ ENTITIES: dict[str, tuple[type, type[BaseModel]]] = {
     "odometer": (OdometerReading, schemas.OdometerIn),
     "parts": (Part, schemas.PartIn),
     "attachments": (Attachment, schemas.AttachmentIn),
+    "shopping": (ShoppingItem, schemas.ShoppingItemIn),
 }
 
 # Columns never sent to clients (internal bookkeeping / storage details).
@@ -50,6 +51,7 @@ REQUIRED_ON_CREATE = {
     "reminders": ("vehicle_id",),
     "odometer": ("vehicle_id", "date", "mileage"),
     "parts": ("vehicle_id",),
+    "shopping": ("description",),
 }
 
 
@@ -110,7 +112,7 @@ def soft_delete(db: Session, obj, when: datetime | None = None) -> None:
     obj.server_modified_at = now
     children = []
     if isinstance(obj, Vehicle):
-        for model in (VehicleSpec, Entry, Reminder, OdometerReading, Part, Attachment):
+        for model in (VehicleSpec, Entry, Reminder, OdometerReading, Part, Attachment, ShoppingItem):
             children += db.scalars(select(model).where(model.vehicle_id == obj.id, model.deleted_at.is_(None))).all()
     elif isinstance(obj, Entry):
         children += db.scalars(select(Attachment).where(Attachment.entry_id == obj.id, Attachment.deleted_at.is_(None))).all()
@@ -198,11 +200,21 @@ def upsert(db: Session, user: User, kind: str, data: BaseModel, record_id: str |
 
     # Validate references to other records.
     if "vehicle_id" in values:
-        if values["vehicle_id"] is None and kind != "attachments":
+        if values["vehicle_id"] is None and kind not in ("attachments", "shopping"):
             raise HTTPException(status.HTTP_400_BAD_REQUEST, "'vehicle_id' is required.")
         _check_vehicle_ref(db, user, values["vehicle_id"])
-        if existing is not None and kind != "attachments" and values["vehicle_id"] != existing.vehicle_id:
+        if existing is not None and kind not in ("attachments", "shopping") and values["vehicle_id"] != existing.vehicle_id:
             raise HTTPException(status.HTTP_400_BAD_REQUEST, "Records can't be moved to another vehicle.")
+    if kind == "shopping":
+        # Links to a reminder / saved part are only hints: one that isn't
+        # yours (or no longer exists) is dropped instead of losing the item.
+        for field, ref in (("reminder_id", Reminder), ("part_id", Part)):
+            if values.get(field):
+                row = db.get(ref, values[field])
+                if row is None or row.owner_id != user.id:
+                    values[field] = None
+        if "description" in values and not str(values["description"] or "").strip():
+            raise HTTPException(status.HTTP_400_BAD_REQUEST, "Describe the item.")
     if kind == "attachments" and values.get("entry_id"):
         get_owned(db, Entry, values["entry_id"], user)
     if kind == "vehicles" and values.get("photo_attachment_id"):

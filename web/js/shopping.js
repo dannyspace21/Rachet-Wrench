@@ -42,12 +42,23 @@ function placeholder(name, ctx) {
   return null;
 }
 
-/** Fill one template; null if any of its information is missing. */
-export function fill(template, ctx) {
+/**
+ * Fill one template; null if any of its information is missing.  `used`
+ * (optional) collects the part number and spec values that went in.
+ */
+export function fill(template, ctx, used = null) {
   let missing = false;
   const out = template.replace(/\{([^}]+)\}/g, (_, name) => {
     const v = placeholder(name, ctx);
     if (v === null) { missing = true; return ""; }
+    if (used && name.startsWith("part:")) used.part_number = v;
+    if (used && name.startsWith("spec:")) {
+      const key = name.slice(5).split("|")[0];
+      // Specs like "oil_filter_part" hold an OEM part number; other specs
+      // are kept as written in Specs (e.g. "26 in"), not the search form ("26").
+      if (key.endsWith("_part")) used.part_number = v;
+      else used.specs.push(String(ctx.specs[key]).trim());
+    }
     return v;
   });
   return missing ? null : out.replace(/\s+/g, " ").trim();
@@ -78,6 +89,39 @@ export function itemsFor(typeKey, ctx, catalog) {
     }
   }
   return items;
+}
+
+// ---------------------------------------------------------------------------
+// Shopping list
+// ---------------------------------------------------------------------------
+/**
+ * Shopping-list lines for a reminder: one per thing to buy, with the OEM
+ * part number and/or spec that is KNOWN (never guessed).  A reminder type
+ * with nothing in the catalog becomes a single line named after it.
+ * Returns [{description, part_number, spec, type_key}].
+ */
+export function listItemsFor(typeKey, name, ctx, catalog) {
+  const recipe = (catalog.shopping || {})[typeKey];
+  if (!recipe) return [{ description: name, part_number: "", spec: "", type_key: typeKey }];
+  return recipe.map((item) => {
+    for (const t of item.queries) {
+      const used = { part_number: "", specs: [] };
+      if (fill(t, ctx, used) === null) continue;
+      return { description: item.label, part_number: used.part_number, spec: used.specs.join(" / "), type_key: typeKey };
+    }
+    return { description: item.label, part_number: "", spec: "", type_key: typeKey };
+  });
+}
+
+/** Search text for a shopping-list line: part number, else spec + description, else vehicle + description. */
+export function listItemQuery(item, vehicle) {
+  const pn = String(item.part_number || "").trim();
+  const what = String(item.description || "").trim();
+  if (pn) return { query: `${pn} ${what}`.trim(), exact: true };
+  const spec = String(item.spec || "").trim();
+  if (spec) return { query: `${spec} ${what}`.trim(), exact: true };
+  const ymm = yearMakeModel(vehicle);
+  return { query: ymm ? `${ymm} ${what}` : what, exact: false };
 }
 
 /** Search text for one saved part: the exact part number when there is one. */

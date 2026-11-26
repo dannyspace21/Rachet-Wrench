@@ -83,6 +83,7 @@ fun ReminderScreen(nav: NavHostController, id: String) {
     var message by remember { mutableStateOf<String?>(null) }
     var error by remember { mutableStateOf<String?>(null) }
     var editing by remember { mutableStateOf(false) }
+    var listMessage by remember { mutableStateOf<String?>(null) }
     var confirmDelete by remember { mutableStateOf(false) }
     var shopping by remember { mutableStateOf<List<ShopItem>?>(null) }
     val shopCtx = rememberShopContext(v)
@@ -137,6 +138,19 @@ fun ReminderScreen(nav: NavHostController, id: String) {
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 SecondaryButton("Edit schedule", "edit") { editing = true }
                 if (shopItems.isNotEmpty()) SecondaryButton("Find supplies", "cart") { shopping = shopItems }
+            }
+            // Collect what this job needs on the shopping list (doesn't mark it done).
+            SecondaryButton("Add to shopping list", "list", Modifier.fillMaxWidth()) {
+                scope.launch {
+                    val added = repo.addToShoppingList(reminderLines(v, r, name, shopCtx, Catalog.get(ctx)))
+                    listMessage = if (added == 0) "Already on your shopping list." else "Added $added item${if (added == 1) "" else "s"} to the shopping list."
+                }
+            }
+            listMessage?.let { m ->
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text(m, Modifier.weight(1f), color = LocalExtra.current.muted)
+                    TextButton({ nav.navigate("shopping") }) { Text("View list") }
+                }
             }
             TextButton({ confirmDelete = true }) { Text("Delete reminder", color = MaterialTheme.colorScheme.error) }
         }

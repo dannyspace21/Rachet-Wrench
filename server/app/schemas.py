@@ -208,6 +208,26 @@ class PartIn(SyncFields):
         return _known_type(v)
 
 
+class ShoppingItemIn(SyncFields):
+    """A shopping-list line.  vehicle_id may be null (a general item)."""
+
+    vehicle_id: UUIDStr | None = None
+    reminder_id: UUIDStr | None = None
+    part_id: UUIDStr | None = None
+    type_key: str | None = None
+    description: Annotated[str, Field(max_length=200)] | None = None
+    part_number: Annotated[str, Field(max_length=64)] | None = None
+    spec: Annotated[str, Field(max_length=200)] | None = None
+    quantity: Annotated[int, Field(ge=1, le=999)] | None = None
+    purchased: bool | None = None
+    notes: Text | None = None
+
+    @field_validator("type_key")
+    @classmethod
+    def valid_type(cls, v):
+        return _known_type(v)
+
+
 class AttachmentIn(SyncFields):
     """Metadata changes only (caption, links); the file itself is uploaded
     through POST /api/attachments."""
@@ -228,6 +248,7 @@ class SyncPushIn(Strict):
     odometer: Annotated[list[OdometerIn], Field(max_length=500)] = []
     parts: Annotated[list[PartIn], Field(max_length=500)] = []
     attachments: Annotated[list[AttachmentIn], Field(max_length=500)] = []
+    shopping: Annotated[list[ShoppingItemIn], Field(max_length=500)] = []
 
 
 class StickerFieldIn(Strict):

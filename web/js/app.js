@@ -9,6 +9,7 @@
 //   #/e/<id>               one entry;  #/e/<id>/edit to change it
 //   #/v/<id>/sticker       door-jamb sticker scan + review
 //   #/v/<id>/carfax        Carfax import + review
+//   #/shopping             the shopping list
 //   #/settings, #/icons, #/login
 
 import { getMe } from "./api.js";
@@ -19,6 +20,7 @@ import { vehicleView, vehicleFormView } from "./views/vehicle.js";
 import { entryFormView, entryDetailView } from "./views/entry.js";
 import { stickerView, carfaxView } from "./views/scan.js";
 import { settingsView, iconsView } from "./views/settings.js";
+import { shoppingListView } from "./views/shopping-list.js";
 
 const UUID = "([0-9a-fA-F-]{36})";
 const routes = [
@@ -33,6 +35,7 @@ const routes = [
   [new RegExp(`^/v/${UUID}(?:/(history|specs|reminders|parts|odometer|docs))?$`), vehicleView, { nav: "home" }],
   [new RegExp(`^/e/${UUID}/edit$`), entryFormView, { nav: "home", entryEdit: true }],
   [new RegExp(`^/e/${UUID}$`), entryDetailView, { nav: "home" }],
+  [/^\/shopping$/, shoppingListView, { nav: "shopping" }],
   [/^\/settings$/, settingsView, { nav: "settings" }],
   [/^\/icons$/, iconsView, { nav: "icons" }],
 ];

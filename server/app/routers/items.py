@@ -40,6 +40,8 @@ def _sort(kind: str, rows: list) -> list:
         return sorted(rows, key=lambda r: (r.date, r.mileage or 0), reverse=True)
     if kind == "vehicles":
         return sorted(rows, key=lambda r: r.created_at)
+    if kind == "shopping":  # still to buy first, then oldest first
+        return sorted(rows, key=lambda r: (r.purchased, r.created_at))
     return rows
 
 

@@ -271,3 +271,24 @@ class Part(SyncMixin, Base):
     part_number: Mapped[str] = mapped_column(String(64), default="")
     brand: Mapped[str] = mapped_column(String(64), default="")
     notes: Mapped[str] = mapped_column(Text, default="")
+
+
+class ShoppingItem(SyncMixin, Base):
+    """One line of the shopping list (supplies/parts to buy before a job).
+
+    Not an expense: nothing here is money spent.  A purchase becomes an
+    expense only when the user records it as a history entry."""
+
+    __tablename__ = "shopping_items"
+
+    # Optional links: a general item ("shop towels") has no vehicle.
+    vehicle_id: Mapped[str | None] = mapped_column(ForeignKey("vehicles.id", ondelete="CASCADE"), index=True, nullable=True)
+    reminder_id: Mapped[str | None] = mapped_column(String(36), nullable=True)  # the reminder it's for
+    part_id: Mapped[str | None] = mapped_column(String(36), nullable=True)  # the saved part it came from
+    type_key: Mapped[str] = mapped_column(String(64), default="custom")
+    description: Mapped[str] = mapped_column(String(200), default="")
+    part_number: Mapped[str] = mapped_column(String(64), default="")  # OEM part number
+    spec: Mapped[str] = mapped_column(String(200), default="")  # e.g. "0W-20 full synthetic, 5 qt"
+    quantity: Mapped[int] = mapped_column(Integer, default=1)
+    purchased: Mapped[bool] = mapped_column(Boolean, default=False)
+    notes: Mapped[str] = mapped_column(Text, default="")

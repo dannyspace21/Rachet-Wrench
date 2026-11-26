@@ -4,7 +4,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
-import { itemsFor, partQuery, retailerUrl, activeRetailers } from "../js/shopping.js";
+import { itemsFor, partQuery, retailerUrl, activeRetailers, listItemsFor, listItemQuery } from "../js/shopping.js";
 
 const root = new URL("../../", import.meta.url);
 const catalog = JSON.parse(readFileSync(new URL("catalog/catalog.json", root), "utf8"));
@@ -44,5 +44,17 @@ test("every shopping recipe points at real catalog types and specs", () => {
     for (const it of items) for (const q of it.queries) for (const [, kind, key] of q.matchAll(/\{(spec|part):([a-z_]+)/g)) {
       assert.ok(kind === "spec" ? specs.has(key) : types.has(key), `${type}: ${q}`);
     }
+  }
+});
+
+test("shopping-list lines from a reminder keep the known part number / spec", () => {
+  for (const c of cases.list_items) {
+    assert.deepEqual(listItemsFor(c.type_key, c.name, ctx(c.vehicle), catalog), c.items, `${c.vehicle} / ${c.type_key}`);
+  }
+});
+
+test("shopping-list searches: part number, then spec, then vehicle", () => {
+  for (const c of cases.list_queries) {
+    assert.deepEqual(listItemQuery(c.item, ctx(c.vehicle).vehicle), { query: c.query, exact: c.exact });
   }
 });

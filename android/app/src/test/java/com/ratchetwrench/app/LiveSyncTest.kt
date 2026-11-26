@@ -85,6 +85,24 @@ class LiveSyncTest {
         // 5) Edit the same entry on the phone again.
         repo.saveEntry(AppDatabase.get(ctx).entries().get(e.id)!!.copy(notes = "Edited on the phone"), isNew = false)
         sync("fifth sync (phone edit of a synced record)")
+        // 6) Shopping list: made on the phone -> on the server; ticked off on
+        //    the computer -> ticked on the phone; a general item has no vehicle.
+        val line = com.ratchetwrench.app.data.ShoppingItem(vehicle_id = v.id, description = "Oil filter", part_number = "26300-35505", quantity = 2)
+        val general = com.ratchetwrench.app.data.ShoppingItem(description = "Shop towels")
+        repo.saveShoppingItem(line); repo.saveShoppingItem(general)
+        sync("sixth sync (shopping list made on the phone)")
+        val onServer = com.ratchetwrench.app.data.JsonFormat.decodeFromString(
+            kotlinx.serialization.builtins.ListSerializer(com.ratchetwrench.app.data.ShoppingItem.serializer()), api.get("/api/shopping"))
+        assertEquals(2, onServer.firstOrNull { it.id == line.id }?.quantity)
+        assertEquals(null, onServer.firstOrNull { it.id == general.id }?.vehicle_id)
+        api.send("PATCH", "/api/shopping/${line.id}", JsonObject(mapOf("purchased" to kotlinx.serialization.json.JsonPrimitive(true))))
+        sync("seventh sync (ticked off on the computer)")
+        assertEquals(true, AppDatabase.get(ctx).shopping().get(line.id)?.purchased)
+        repo.deleteShoppingItem(general.id)
+        sync("eighth sync (removed on the phone)")
+        assertTrue(com.ratchetwrench.app.data.JsonFormat.decodeFromString(
+            kotlinx.serialization.builtins.ListSerializer(com.ratchetwrench.app.data.ShoppingItem.serializer()), api.get("/api/shopping"))
+            .none { it.id == general.id })
         println("all syncs OK")
     }
 }

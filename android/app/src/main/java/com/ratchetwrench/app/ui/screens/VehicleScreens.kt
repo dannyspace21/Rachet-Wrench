@@ -457,6 +457,18 @@ private fun PartsTab(v: Vehicle) {
                         shopping = "Shop — $name" to listOf(com.ratchetwrench.app.domain.ShopItem(name, q, exact, null))
                     }
                 }
+                // Put it on the shopping list (once).
+                val partName = p.name.ifBlank { Catalog.typeLabel(ctx, p.type_key) }
+                IconButton({
+                    scope.launch {
+                        val added = repo.addToShoppingList(listOf(com.ratchetwrench.app.data.ShoppingItem(vehicle_id = v.id, part_id = p.id,
+                            type_key = p.type_key, description = partName, part_number = p.part_number)))
+                        com.ratchetwrench.app.ui.onMain {
+                            android.widget.Toast.makeText(ctx, if (added == 0) "Already on your shopping list" else "Added to the shopping list",
+                                android.widget.Toast.LENGTH_SHORT).show()
+                        }
+                    }
+                }) { UiIcon("list", Modifier.size(22.dp), MaterialTheme.colorScheme.primary, description = "Add $partName to the shopping list") }
             }
         }
     }

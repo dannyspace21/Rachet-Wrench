@@ -370,3 +370,16 @@ a.item:hover { border-color: color-mix(in srgb, var(--brand) 40%, var(--border))
 .shop-item:last-of-type { border-bottom: 0; }
 .shop-retailer { border-left: 4px solid var(--retailer, var(--brand)); }
 .shop-btn { min-height: 36px; }
+
+/* Shopping list */
+.shop-filter { max-width: 320px; }
+.shop-line .check { min-height: 0; }
+.shop-line.bought .title { text-decoration: line-through; color: var(--muted); }
+.shop-line.bought .meta { opacity: .7; }
+.shop-filter { margin-bottom: 8px; }
+@media (max-width: 640px) {
+  /* Phone: actions move under the text so nothing gets squeezed. */
+  .shop-line { flex-wrap: wrap; }
+  .shop-line .main { flex-basis: calc(100% - 60px); }
+  .shop-line .right { flex-basis: 100%; justify-items: start; padding-left: 44px; }
+}

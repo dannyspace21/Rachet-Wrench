@@ -29,6 +29,10 @@ class Repository(private val context: Context) {
         val now = nowIso()
         // The server cascades the delete to everything that belongs to it.
         db.vehicles().upsert(v.copy(deleted_at = now, updated_at = now, dirty = true))
+        // Its shopping-list lines go too (the server does the same).
+        for (i in db.shopping().all().filter { it.vehicle_id == id }) {
+            db.shopping().upsert(i.copy(deleted_at = now, updated_at = now, dirty = true))
+        }
         requestSync()
     }
 
@@ -111,6 +115,41 @@ class Repository(private val context: Context) {
     suspend fun deletePart(id: String) {
         val p = db.parts().get(id) ?: return
         db.parts().upsert(p.copy(deleted_at = nowIso(), updated_at = nowIso(), dirty = true)); requestSync()
+    }
+
+    // ------------------------------------------------------------ shopping list
+    suspend fun saveShoppingItem(i: ShoppingItem) {
+        db.shopping().upsert(i.copy(description = i.description.trim().take(200), part_number = i.part_number.trim().take(64),
+            spec = i.spec.trim().take(200), quantity = i.quantity.coerceIn(1, 999), updated_at = nowIso(), dirty = true))
+        requestSync()
+    }
+    suspend fun deleteShoppingItem(id: String) {
+        val i = db.shopping().get(id) ?: return
+        db.shopping().upsert(i.copy(deleted_at = nowIso(), updated_at = nowIso(), dirty = true)); requestSync()
+    }
+    suspend fun setPurchased(id: String, purchased: Boolean) {
+        val i = db.shopping().get(id) ?: return
+        saveShoppingItem(i.copy(purchased = purchased))
+    }
+    /** Remove every ticked-off line; returns how many. */
+    suspend fun removeBought(): Int {
+        val bought = db.shopping().all().filter { it.purchased }
+        bought.forEach { deleteShoppingItem(it.id) }
+        return bought.size
+    }
+    /** Add lines (e.g. a reminder's supplies), skipping ones already waiting
+     *  on the list for the same reminder/part.  Returns how many were added. */
+    suspend fun addToShoppingList(lines: List<ShoppingItem>): Int {
+        val open = db.shopping().all().filter { !it.purchased }
+        var added = 0
+        for (l in lines) {
+            val dup = open.any { o ->
+                (l.part_id != null && o.part_id == l.part_id) ||
+                    (l.reminder_id != null && o.reminder_id == l.reminder_id && o.description.equals(l.description, ignoreCase = true))
+            }
+            if (!dup) { saveShoppingItem(l); added++ }
+        }
+        return added
     }
 
     suspend fun addOdometer(vehicleId: String, date: String, mileage: Int) {

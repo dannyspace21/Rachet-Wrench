@@ -98,6 +98,11 @@ fun AppRoot() {
                 composable("entry-edit/{vehicleId}/{entryId}") {
                     EntryEditScreen(nav, it.arguments!!.getString("vehicleId")!!, it.arguments!!.getString("entryId")!!.takeIf { id -> id != "new" })
                 }
+                composable("shopping") { com.ratchetwrench.app.ui.screens.ShoppingListScreen(nav) }
+                composable("shopping-item/new?vehicle={vehicle}") {
+                    com.ratchetwrench.app.ui.screens.ShoppingItemScreen(nav, null, it.arguments?.getString("vehicle")?.takeIf { v -> v != "none" })
+                }
+                composable("shopping-item/{id}") { com.ratchetwrench.app.ui.screens.ShoppingItemScreen(nav, it.arguments!!.getString("id")!!, null) }
                 composable("reminder/{id}") { com.ratchetwrench.app.ui.screens.ReminderScreen(nav, it.arguments!!.getString("id")!!) }
                 composable("entry/{id}") { EntryDetailScreen(nav, it.arguments!!.getString("id")!!) }
                 composable("sticker/{vehicleId}") { StickerScreen(nav, it.arguments!!.getString("vehicleId")!!) }

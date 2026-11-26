@@ -5,6 +5,7 @@ package com.ratchetwrench.app
 
 import com.ratchetwrench.app.domain.Affiliate
 import com.ratchetwrench.app.domain.CatalogData
+import com.ratchetwrench.app.domain.ListLine
 import com.ratchetwrench.app.domain.Retailer
 import com.ratchetwrench.app.domain.ShopContext
 import com.ratchetwrench.app.domain.ShopItem
@@ -54,6 +55,27 @@ class ShoppingTest {
             }
             assertEquals("${str(o["vehicle"])} / ${str(o["type_key"])}", expected,
                 Shopping.itemsFor(str(o["type_key"])!!, ctx(str(o["vehicle"])!!), catalog))
+        }
+    }
+
+    @Test fun shoppingListLinesMatchSharedCases() {
+        for (case in cases["list_items"]!!.jsonArray) {
+            val o = case.jsonObject
+            val expected = o["items"]!!.jsonArray.map {
+                val i = it.jsonObject
+                ListLine(str(i["description"])!!, str(i["part_number"])!!, str(i["spec"])!!, str(i["type_key"])!!)
+            }
+            assertEquals("${str(o["vehicle"])} / ${str(o["type_key"])}", expected,
+                Shopping.listItemsFor(str(o["type_key"])!!, str(o["name"])!!, ctx(str(o["vehicle"])!!), catalog))
+        }
+    }
+
+    @Test fun shoppingListSearchesMatchSharedCases() {
+        for (case in cases["list_queries"]!!.jsonArray) {
+            val o = case.jsonObject
+            val i = o["item"]!!.jsonObject
+            assertEquals(str(o["query"])!! to o["exact"]!!.jsonPrimitive.booleanOrNull!!,
+                Shopping.listItemQuery(str(i["description"])!!, str(i["part_number"])!!, str(i["spec"])!!, ctx(str(o["vehicle"])!!)))
         }
     }
 
