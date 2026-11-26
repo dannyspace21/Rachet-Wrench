@@ -101,6 +101,8 @@ Build-sandbox notes: the sandbox blocks dl.google.com, api.osv.dev, semgrep.dev 
 
 - v1.0.37 (1.0.35/1.0.36 builds failed on a test timing issue; included here): Specs → Vehicle section (VIN/year/make/model/trim); several-trims VINs no longer set a list as the trim (Tiguan added to shared VIN tests); GVWR/GAWR from more sticker layouts and from the manual (D70).
 
+- v1.0.38: empty manual-findable specs open the edit box again (type it in), with "Import from owner's manual" inside it.
+
 ## Ideas for later (not started)
 - Code-sign the desktop app (paid Apple/Microsoft certificates) to remove first-launch warnings; add an Intel-Mac build if needed.
 - Database migrations with Alembic once the schema needs to change.

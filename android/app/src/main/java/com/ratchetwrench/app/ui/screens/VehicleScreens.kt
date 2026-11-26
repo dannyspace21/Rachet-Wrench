@@ -318,9 +318,9 @@ private fun SpecsTab(nav: NavHostController, v: Vehicle) {
                     Column(Modifier.weight(1f)) {
                         Text(d.label, style = MaterialTheme.typography.bodySmall, color = LocalExtra.current.muted)
                         if (s?.value.isNullOrBlank()) {
-                            if (d.key in fromManual) Text("Not set · can be filled from owner's manual", fontStyle = FontStyle.Italic,
-                                color = LocalExtra.current.muted, textDecoration = androidx.compose.ui.text.style.TextDecoration.Underline,
-                                modifier = Modifier.clickable { nav.navigate("manual/${v.id}") })
+                            // Tapping the row opens the edit box (type it in); the box also offers the manual.
+                            if (d.key in fromManual) Text("Not set · type it in or import from owner's manual", fontStyle = FontStyle.Italic,
+                                color = LocalExtra.current.muted)
                             else Text("Unknown", fontStyle = FontStyle.Italic, color = LocalExtra.current.muted)
                         }
                         else Text(s.value, fontWeight = FontWeight.SemiBold)
@@ -338,6 +338,7 @@ private fun SpecsTab(nav: NavHostController, v: Vehicle) {
                 Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     Field("Value", value, { value = it }, hint = Catalog.get(ctx).specs.firstOrNull { it.key == key }?.hint?.ifBlank { null })
                     Segmented(listOf("user" to "Entered by me", "unverified" to "Unverified"), if (unverified) "unverified" else "user") { unverified = it == "unverified" }
+                    if (key in fromManual) TextButton({ editing = null; nav.navigate("manual/${v.id}") }) { Text("Import from owner's manual") }
                 }
             },
             confirmButton = { TextButton({

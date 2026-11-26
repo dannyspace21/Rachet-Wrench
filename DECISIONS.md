@@ -587,7 +587,7 @@ The desktop app *is* the existing server plus web app, packaged to run on a PC. 
 - **Not done on purpose:** no crawling or "next page" following (only the exact pasted links), no signing in to maker websites, no OCR of scanned manuals (paste the text or use links instead).
 - **New outbound connection** (SECURITY.md #6): only to the links the user pastes, with SSRF protection (public addresses only, pinned connection, redirects re-checked, https/443, size/time limits) — `manual_fetch.py`, no new libraries (Python standard library). Can be turned off: `RW_MANUAL_LINKS_ENABLED=false`.
 - **"Engine code" renamed "Engine model"** (e.g. 2GR-FSE): it's NHTSA's engine designation used when ordering engine parts, not a check-engine trouble code.
-- **Empty manual-findable specs** say "Not set · can be filled from owner's manual" and link to the reader (`catalog.manual_specs`, kept equal to the reader's rules by a test).
+- **Empty manual-findable specs** say "Not set · type it in or import from owner's manual". Tapping always opens the edit box (typing is never blocked); the box has "Import from owner's manual" (changed in 1.0.38 — the first version jumped straight to the reader) (`catalog.manual_specs`, kept equal to the reader's rules by a test).
 
 ### D70. Vehicle section in Specs; several-trim VINs; GVWR/GAWR from more labels and the manual
 - **Specs → Vehicle:** VIN, year, make, model and trim are fields of the vehicle (its title), not specs, so they didn't appear in Specs and looked "missing" after a VIN decode. They're now shown first in Specs and edited with Edit vehicle (no duplicate data).

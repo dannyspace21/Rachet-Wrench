@@ -266,8 +266,8 @@ a.item:hover { border-color: color-mix(in srgb, var(--brand) 40%, var(--border))
 }
 .spec-row .v { font-weight: 650; }
 .spec-row .v.unknown { color: var(--muted); font-weight: 400; font-style: italic; }
-.spec-row a.v.from-manual { text-decoration: underline dotted; text-underline-offset: 3px; }
-.spec-row a.v.from-manual:hover { color: var(--brand-strong); }
+.spec-row button.v.from-manual { all: unset; cursor: pointer; color: var(--muted); font-style: italic; text-decoration: underline dotted; text-underline-offset: 3px; }
+.spec-row button.v.from-manual:hover, .spec-row button.v.from-manual:focus-visible { color: var(--brand-strong); outline: revert; }
 @media (max-width: 640px) { .spec-row { grid-template-columns: 1fr auto; } .spec-row .v { grid-column: 1; } }
 
 /* Type picker */

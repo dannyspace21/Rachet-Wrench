@@ -475,6 +475,26 @@ class ScreensTest {
         }
     }
 
+    /**
+     * An empty spec the manual covers can always be typed in: the hint has no
+     * tap action of its own (it used to jump to the manual reader), so tapping
+     * it taps the row, which opens the edit box ("Import from owner's manual"
+     * is inside that box).  The dialog itself can't be opened in Robolectric
+     * (text fields in dialogs never go idle), so this checks the semantics.
+     */
+    @Test
+    fun emptyManualSpecCanBeTypedIn() {
+        startPhoneOnlyWithVehicle()
+        click("Specs")
+        scrollTo("Coolant type")
+        val hint = "Not set · type it in or import from owner's manual"
+        waitForText(hint)
+        org.junit.Assert.assertTrue("the hint itself has no click action",
+            rule.onAllNodes(hasText(hint) and androidx.compose.ui.test.hasClickAction(), useUnmergedTree = true).fetchSemanticsNodes().isEmpty())
+        org.junit.Assert.assertTrue("the row (label + hint) is clickable and opens the edit box",
+            rule.onAllNodes(hasText("Coolant type") and androidx.compose.ui.test.hasClickAction()).fetchSemanticsNodes().isNotEmpty())
+    }
+
     /** Settings → Sync: every button full width, one per line ("Sign in again" was squeezed to the right). */
     @Test
     fun syncButtonsAreFullWidth() {

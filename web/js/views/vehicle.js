@@ -164,10 +164,11 @@ async function specsTab(body, v, { catalog }) {
       list.map((r) => h("div", { class: "spec-row" },
         h("span", {}, r.label),
         r.value ? h("span", { class: "v" }, r.value)
-          : fromManual.has(r.key) ? h("a", { class: "v unknown from-manual", href: `#/v/${v.id}/manual`, title: "Find it in your owner's manual" }, "Not set · can be filled from owner's manual")
+          // Clicking opens the edit box (type it in); the box also offers the manual.
+          : fromManual.has(r.key) ? h("button", { class: "v unknown from-manual", type: "button", onclick: () => editSpec(v, r, sources, true) }, "Not set · type it in or import from owner's manual")
             : h("span", { class: "v unknown" }, "Unknown"),
         r.source ? h("span", { class: "pill " + (SOURCE_CLASS[r.source] || "") }, sources[r.source] || r.source) : h("span", {}),
-        h("button", { class: "btn small ghost", type: "button", "aria-label": `Edit ${r.label}`, onclick: () => editSpec(v, r, sources) }, icon("u-edit")))))))));
+        h("button", { class: "btn small ghost", type: "button", "aria-label": `Edit ${r.label}`, onclick: () => editSpec(v, r, sources, fromManual.has(r.key)) }, icon("u-edit")))))))));
 }
 
 /** VIN, year, make, model and trim live on the vehicle itself (they're the
@@ -182,13 +183,16 @@ function vehicleGroup(v) {
       h("button", { class: "btn small ghost", type: "button", "aria-label": `Edit ${label} (Edit vehicle)`, onclick: edit }, icon("u-edit")))));
 }
 
-async function editSpec(v, row, sources) {
+async function editSpec(v, row, sources, manualToo = false) {
   const val = field(row.label, { value: row.value || "", placeholder: row.hint || "", maxlength: 255 }, row.hint ? `Example: ${row.hint}` : "");
   const src = field("Label", { tag: "select", value: row.source && row.source !== "vin" && row.source !== "sticker" ? row.source : "user",
     options: [{ value: "user", label: sources.user }, { value: "unverified", label: sources.unverified }] },
   "Saving an edit marks it as entered or confirmed by you.");
   const choice = await modal({ title: "Edit spec", body: h("div", { class: "form" }, val, src), actions: [
-    row.id ? { label: "Clear", danger: true, value: "clear" } : null, { label: "Cancel", value: null }, { label: "Save", primary: true, value: "save" }].filter(Boolean) });
+    row.id ? { label: "Clear", danger: true, value: "clear" } : null,
+    manualToo ? { label: "Import from owner's manual", value: "manual" } : null,
+    { label: "Cancel", value: null }, { label: "Save", primary: true, value: "save" }].filter(Boolean) });
+  if (choice === "manual") { location.hash = `#/v/${v.id}/manual`; return; }
   try {
     if (choice === "clear" && row.id) await api(`/api/specs/${row.id}`, { method: "DELETE" });
     else if (choice === "save") {
