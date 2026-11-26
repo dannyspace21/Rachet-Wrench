@@ -1,0 +1,435 @@
+{
+  "_comment": "Hand-worked cases for the Metrics tab. The web app (web/tests/metrics.test.mjs) and Android (MetricsTest.kt) must both give exactly these numbers. today = 2026-11-26; e10 is deleted and must never count; e9 sits one day outside the 12-month range.",
+  "today": "2026-11-26",
+  "entries": [
+    {
+      "id": "e1",
+      "date": "2018-03-01",
+      "type_key": "oil_change",
+      "kind": "maintenance",
+      "mileage": 30000,
+      "cost_cents": 5000,
+      "performed_by": "diy"
+    },
+    {
+      "id": "e2",
+      "date": "2018-09-01",
+      "type_key": "oil_change",
+      "kind": "maintenance",
+      "mileage": 35000,
+      "cost_cents": 6000,
+      "performed_by": "shop"
+    },
+    {
+      "id": "e3",
+      "date": "2019-03-01",
+      "type_key": "oil_change",
+      "kind": "maintenance",
+      "mileage": 40500,
+      "cost_cents": null,
+      "performed_by": "diy"
+    },
+    {
+      "id": "e4",
+      "date": "2019-06-15",
+      "type_key": "brake_pads",
+      "kind": "repair",
+      "mileage": 42000,
+      "cost_cents": 30000,
+      "performed_by": "shop"
+    },
+    {
+      "id": "e5",
+      "date": "2024-12-01",
+      "type_key": "tire_rotation",
+      "kind": "maintenance",
+      "mileage": 90000,
+      "cost_cents": 2500,
+      "performed_by": "shop"
+    },
+    {
+      "id": "e6",
+      "date": "2025-12-01",
+      "type_key": "oil_change",
+      "kind": "maintenance",
+      "mileage": 99000,
+      "cost_cents": 8000,
+      "performed_by": "shop"
+    },
+    {
+      "id": "e7",
+      "date": "2026-06-01",
+      "type_key": "inspection",
+      "kind": "maintenance",
+      "mileage": null,
+      "cost_cents": 3500,
+      "performed_by": "shop"
+    },
+    {
+      "id": "e8",
+      "date": "2026-01-10",
+      "type_key": "tire_replacement",
+      "kind": "repair",
+      "mileage": 100000,
+      "cost_cents": 100000,
+      "performed_by": "shop"
+    },
+    {
+      "id": "e9",
+      "date": "2025-11-26",
+      "type_key": "wipers",
+      "kind": "maintenance",
+      "mileage": 98000,
+      "cost_cents": 4000,
+      "performed_by": "diy"
+    },
+    {
+      "id": "e10",
+      "date": "2026-02-01",
+      "type_key": "oil_change",
+      "kind": "maintenance",
+      "mileage": 101000,
+      "cost_cents": 9999,
+      "performed_by": "diy",
+      "deleted_at": "2026-02-02T00:00:00Z"
+    }
+  ],
+  "cutoffs": {
+    "all": null,
+    "1y": "2025-11-27",
+    "2y": "2024-11-27",
+    "5y": "2021-11-27"
+  },
+  "filters": [
+    {
+      "f": {},
+      "ids": [
+        "e1",
+        "e2",
+        "e3",
+        "e4",
+        "e5",
+        "e6",
+        "e7",
+        "e8",
+        "e9"
+      ],
+      "count": 9,
+      "cents": 159000,
+      "paid": 8
+    },
+    {
+      "f": {
+        "range": "1y"
+      },
+      "ids": [
+        "e6",
+        "e7",
+        "e8"
+      ],
+      "count": 3,
+      "cents": 111500,
+      "paid": 3
+    },
+    {
+      "f": {
+        "range": "2y"
+      },
+      "ids": [
+        "e5",
+        "e6",
+        "e7",
+        "e8",
+        "e9"
+      ],
+      "count": 5,
+      "cents": 118000,
+      "paid": 5
+    },
+    {
+      "f": {
+        "paid": true
+      },
+      "ids": [
+        "e1",
+        "e2",
+        "e4",
+        "e5",
+        "e6",
+        "e7",
+        "e8",
+        "e9"
+      ],
+      "count": 8,
+      "cents": 159000,
+      "paid": 8
+    },
+    {
+      "f": {
+        "group": "tires"
+      },
+      "ids": [
+        "e5",
+        "e8"
+      ],
+      "count": 2,
+      "cents": 102500,
+      "paid": 2
+    },
+    {
+      "f": {
+        "kind": "repair"
+      },
+      "ids": [
+        "e4",
+        "e8"
+      ],
+      "count": 2,
+      "cents": 130000,
+      "paid": 2
+    },
+    {
+      "f": {
+        "type": "oil_change",
+        "by": "diy"
+      },
+      "ids": [
+        "e1",
+        "e3"
+      ],
+      "count": 2,
+      "cents": 5000,
+      "paid": 1
+    },
+    {
+      "f": {
+        "year": 2019
+      },
+      "ids": [
+        "e3",
+        "e4"
+      ],
+      "count": 2,
+      "cents": 30000,
+      "paid": 1
+    },
+    {
+      "f": {
+        "group": "tires",
+        "kind": "repair"
+      },
+      "ids": [
+        "e8"
+      ],
+      "count": 1,
+      "cents": 100000,
+      "paid": 1
+    }
+  ],
+  "groups_all": [
+    {
+      "key": "engine",
+      "slot": 0,
+      "count": 4,
+      "cents": 19000
+    },
+    {
+      "key": "tires",
+      "slot": 1,
+      "count": 2,
+      "cents": 102500
+    },
+    {
+      "key": "brakes",
+      "slot": 2,
+      "count": 1,
+      "cents": 30000
+    },
+    {
+      "key": "body",
+      "slot": 6,
+      "count": 1,
+      "cents": 4000
+    },
+    {
+      "key": "other",
+      "slot": 7,
+      "count": 1,
+      "cents": 3500
+    }
+  ],
+  "groups_except": {
+    "f": {
+      "group": "tires",
+      "year": 2026
+    },
+    "except": [
+      "group"
+    ],
+    "groups": [
+      {
+        "key": "tires",
+        "slot": 1,
+        "count": 1,
+        "cents": 100000
+      },
+      {
+        "key": "other",
+        "slot": 7,
+        "count": 1,
+        "cents": 3500
+      }
+    ]
+  },
+  "types_all": [
+    {
+      "type": "oil_change",
+      "count": 4,
+      "cents": 19000
+    },
+    {
+      "type": "brake_pads",
+      "count": 1,
+      "cents": 30000
+    },
+    {
+      "type": "inspection",
+      "count": 1,
+      "cents": 3500
+    },
+    {
+      "type": "tire_replacement",
+      "count": 1,
+      "cents": 100000
+    },
+    {
+      "type": "tire_rotation",
+      "count": 1,
+      "cents": 2500
+    },
+    {
+      "type": "wipers",
+      "count": 1,
+      "cents": 4000
+    }
+  ],
+  "years_all": {
+    "from": 2018,
+    "to": 2026,
+    "years": [
+      {
+        "year": 2018,
+        "maintenance": 2,
+        "repair": 0,
+        "cents": 11000
+      },
+      {
+        "year": 2019,
+        "maintenance": 1,
+        "repair": 1,
+        "cents": 30000
+      },
+      {
+        "year": 2020,
+        "maintenance": 0,
+        "repair": 0,
+        "cents": 0
+      },
+      {
+        "year": 2021,
+        "maintenance": 0,
+        "repair": 0,
+        "cents": 0
+      },
+      {
+        "year": 2022,
+        "maintenance": 0,
+        "repair": 0,
+        "cents": 0
+      },
+      {
+        "year": 2023,
+        "maintenance": 0,
+        "repair": 0,
+        "cents": 0
+      },
+      {
+        "year": 2024,
+        "maintenance": 1,
+        "repair": 0,
+        "cents": 2500
+      },
+      {
+        "year": 2025,
+        "maintenance": 2,
+        "repair": 0,
+        "cents": 12000
+      },
+      {
+        "year": 2026,
+        "maintenance": 1,
+        "repair": 1,
+        "cents": 103500
+      }
+    ]
+  },
+  "oil_intervals": {
+    "ids": [
+      "e1",
+      "e2",
+      "e3",
+      "e6"
+    ],
+    "sinceMiles": [
+      null,
+      5000,
+      5500,
+      58500
+    ],
+    "sinceMonths": [
+      null,
+      6.0,
+      5.9,
+      81.1
+    ],
+    "avgMiles": 23000,
+    "avgMonths": 31.0
+  },
+  "negative_gap": {
+    "entries": [
+      {
+        "id": "n1",
+        "date": "2020-01-01",
+        "type_key": "brake_pads",
+        "kind": "repair",
+        "mileage": 1000,
+        "cost_cents": 100,
+        "performed_by": "shop"
+      },
+      {
+        "id": "n2",
+        "date": "2021-01-01",
+        "type_key": "brake_pads",
+        "kind": "repair",
+        "mileage": 5000,
+        "cost_cents": 100,
+        "performed_by": "shop"
+      },
+      {
+        "id": "n3",
+        "date": "2022-01-01",
+        "type_key": "brake_pads",
+        "kind": "repair",
+        "mileage": 3000,
+        "cost_cents": 100,
+        "performed_by": "shop"
+      }
+    ],
+    "sinceMiles": [
+      null,
+      4000,
+      -2000
+    ],
+    "avgMiles": 4000
+  }
+}

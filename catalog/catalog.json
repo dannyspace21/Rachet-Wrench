@@ -1392,5 +1392,73 @@
       "name": "Drive chain",
       "format": "{v}"
     }
+  ],
+  "metric_groups": [
+    {
+      "key": "engine",
+      "label": "Engine & oil",
+      "categories": [
+        "Engine",
+        "Fuel system",
+        "Ignition",
+        "Cooling"
+      ]
+    },
+    {
+      "key": "tires",
+      "label": "Tires & wheels",
+      "categories": [
+        "Tires & wheels"
+      ]
+    },
+    {
+      "key": "brakes",
+      "label": "Brakes",
+      "categories": [
+        "Brakes"
+      ]
+    },
+    {
+      "key": "fluids",
+      "label": "Fluids",
+      "categories": [
+        "Fluids"
+      ]
+    },
+    {
+      "key": "chassis",
+      "label": "Suspension & drivetrain",
+      "categories": [
+        "Suspension & steering",
+        "Drivetrain",
+        "Exhaust",
+        "Motorcycle"
+      ]
+    },
+    {
+      "key": "electrical",
+      "label": "Electrical & climate",
+      "categories": [
+        "Electrical",
+        "Climate"
+      ]
+    },
+    {
+      "key": "body",
+      "label": "Body & interior",
+      "categories": [
+        "Body & glass",
+        "Interior"
+      ]
+    },
+    {
+      "key": "other",
+      "label": "Inspections & other",
+      "categories": [
+        "Paperwork",
+        "Repairs",
+        "Other"
+      ]
+    }
   ]
 }

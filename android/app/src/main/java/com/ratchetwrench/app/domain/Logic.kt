@@ -90,7 +90,11 @@ object Reminders {
     val shopping: Map<String, List<ShopRecipe>> = emptyMap(),
     /** Specs that are also parts (oil type, oil filter number, tire sizes…). */
     val spec_parts: List<SpecPart> = emptyList(),
+    /** Metrics: categories folded into 8 chart groups (order = colour order). */
+    val metric_groups: List<MetricGroup> = emptyList(),
 )
+
+@Serializable data class MetricGroup(val key: String, val label: String, val categories: List<String>)
 
 @Serializable data class SpecPart(val spec: String, val type_key: String, val name: String, val format: String = "{v}")
 

@@ -8,12 +8,13 @@ import {
 import { reminderItem } from "./dashboard.js";
 import { partShopButton, reminderShopButton, shoppingContext } from "./shopping-ui.js";
 import { addPartToList, addReminderToList } from "./shopping-list.js";
+import { metricsTab } from "./metrics-tab.js";
 
 // In the order you use them: what's due, what fits, what was done, the specs.
 // (Mileage is updated with the "Update mileage" button; no separate tab.)
 const TABS = [
   ["reminders", "Reminders", "u-bell"], ["parts", "Parts", "u-part"], ["history", "History", "u-list"],
-  ["specs", "Specs", "u-spec"], ["docs", "Documents", "u-book"],
+  ["metrics", "Metrics", "u-chart"], ["specs", "Specs", "u-spec"], ["docs", "Documents", "u-book"],
 ];
 const SOURCE_CLASS = { vin: "src-vin", provider: "src-vin", sticker: "src-sticker", user: "src-user", unverified: "src-unverified", carfax: "src-vin" };
 
@@ -54,7 +55,7 @@ export async function vehicleView(main, { params }) {
   main.children[2].style.height = "22px";
   // Fixed allow-list of tab screens (anything else shows Reminders).
   const renderers = new Map([["history", historyTab], ["specs", specsTab], ["reminders", remindersTab],
-    ["parts", partsTab], ["docs", docsTab]]);
+    ["parts", partsTab], ["metrics", metricsTab], ["docs", docsTab]]);
   const renderTab = renderers.get(tab) || remindersTab;
   await renderTab(body, v, { catalog, label });
 }

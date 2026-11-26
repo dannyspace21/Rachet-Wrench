@@ -87,7 +87,7 @@ import java.time.LocalDate
 
 // In the order you use them: what's due, what fits, what was done, the specs.
 // (Mileage is updated with the "Mileage" button; no separate tab.)
-private val TABS = listOf("Reminders", "Parts", "History", "Specs")
+private val TABS = listOf("Reminders", "Parts", "History", "Metrics", "Specs")
 
 /** Opens a web link in the phone's browser. */
 fun openLink(context: Context, url: String) {
@@ -219,6 +219,7 @@ fun VehicleScreen(nav: NavHostController, id: String) {
                 0 -> RemindersTab(nav, v)
                 1 -> PartsTab(v)
                 2 -> HistoryTab(nav, v)
+                3 -> MetricsTab(nav, v)
                 else -> SpecsTab(v)
             }
         }

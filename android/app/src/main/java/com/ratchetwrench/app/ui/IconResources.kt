@@ -98,6 +98,7 @@ val UI_ICON_RES: Map<String, Int> = mapOf(
     "upload" to R.drawable.ic_ui_upload,
     "download" to R.drawable.ic_ui_download,
     "bell" to R.drawable.ic_ui_bell,
+    "chart" to R.drawable.ic_ui_chart,
     "gauge" to R.drawable.ic_ui_gauge,
     "part" to R.drawable.ic_ui_part,
     "book" to R.drawable.ic_ui_book,

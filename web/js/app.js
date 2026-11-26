@@ -2,7 +2,7 @@
 //
 // The address bar holds the current screen after the "#", e.g.
 //   #/                     garage dashboard
-//   #/v/<id>/history       a vehicle (tabs: reminders, parts, history, specs, docs)
+//   #/v/<id>/history       a vehicle (tabs: reminders, parts, history, metrics, specs, docs)
 //   #/v/new                add a vehicle
 //   #/v/<id>/edit          edit a vehicle
 //   #/v/<id>/entry/new     add a maintenance/repair entry
@@ -32,7 +32,7 @@ const routes = [
   [new RegExp(`^/v/${UUID}/entry/new$`), entryFormView, { nav: "home" }],
   [new RegExp(`^/v/${UUID}/sticker$`), stickerView, { nav: "home" }],
   [new RegExp(`^/v/${UUID}/carfax$`), carfaxView, { nav: "home" }],
-  [new RegExp(`^/v/${UUID}(?:/(history|specs|reminders|parts|odometer|docs))?$`), vehicleView, { nav: "home" }],
+  [new RegExp(`^/v/${UUID}(?:/(history|specs|reminders|parts|metrics|odometer|docs))?$`), vehicleView, { nav: "home" }],
   [new RegExp(`^/e/${UUID}/edit$`), entryFormView, { nav: "home", entryEdit: true }],
   [new RegExp(`^/e/${UUID}$`), entryDetailView, { nav: "home" }],
   [/^\/shopping$/, shoppingListView, { nav: "shopping" }],

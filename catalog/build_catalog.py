@@ -366,6 +366,22 @@ SPEC_PARTS = [
 ]
 
 
+# ---------------------------------------------------------------------------
+# Metrics: the catalog's categories folded into 8 groups for the charts (a
+# chart can't show more than 8 colours clearly).  Order = colour order.
+# ---------------------------------------------------------------------------
+METRIC_GROUPS = [
+    {"key": "engine", "label": "Engine & oil", "categories": ["Engine", "Fuel system", "Ignition", "Cooling"]},
+    {"key": "tires", "label": "Tires & wheels", "categories": ["Tires & wheels"]},
+    {"key": "brakes", "label": "Brakes", "categories": ["Brakes"]},
+    {"key": "fluids", "label": "Fluids", "categories": ["Fluids"]},
+    {"key": "chassis", "label": "Suspension & drivetrain", "categories": ["Suspension & steering", "Drivetrain", "Exhaust", "Motorcycle"]},
+    {"key": "electrical", "label": "Electrical & climate", "categories": ["Electrical", "Climate"]},
+    {"key": "body", "label": "Body & interior", "categories": ["Body & glass", "Interior"]},
+    {"key": "other", "label": "Inspections & other", "categories": ["Paperwork", "Repairs", "Other"]},
+]
+
+
 def main() -> None:
     """Assemble the three lists into one JSON document and write it to disk."""
     keys = [t[0] for t in TYPES]
@@ -373,6 +389,8 @@ def main() -> None:
     assert len(keys) == len(set(keys)), "duplicate maintenance type key"
     spec_keys = [s[0] for s in SPECS]
     assert len(spec_keys) == len(set(spec_keys)), "duplicate spec key"
+    cats = [c for g in METRIC_GROUPS for c in g["categories"]]
+    assert sorted(cats) == sorted({t[2] for t in TYPES}), "every category in exactly one metric group"
     for sp in SPEC_PARTS:
         assert sp["spec"] in spec_keys and sp["type_key"] in keys and "{v}" in sp["format"], sp
 
@@ -392,6 +410,7 @@ def main() -> None:
         "retailers": RETAILERS,
         "shopping": SHOPPING,
         "spec_parts": SPEC_PARTS,
+        "metric_groups": METRIC_GROUPS,
     }
     out = HERE / "catalog.json"
     out.write_text(json.dumps(catalog, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")

@@ -81,6 +81,8 @@ Build-sandbox notes: the sandbox blocks dl.google.com, api.osv.dev, semgrep.dev 
 
 - v1.0.23: reminders by urgency; tabs Reminders/Parts/History/Specs (no Odometer tab); single parts-site button; specs auto-added to Parts (D62).
 
+- v1.0.24: Metrics tab with drill-down on every number, cross-filtering, shared hand-worked tests (D63).
+
 ## Ideas for later (not started)
 - Code-sign the desktop app (paid Apple/Microsoft certificates) to remove first-launch warnings; add an Intel-Mac build if needed.
 - Run the Android app on a real device/emulator and add phone screenshots to the README (no emulator was available in the build sandbox).

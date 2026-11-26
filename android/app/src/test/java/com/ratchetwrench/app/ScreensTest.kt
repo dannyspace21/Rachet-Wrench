@@ -20,6 +20,9 @@ import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollTo
 import androidx.compose.ui.test.performTextInput
 import androidx.compose.ui.test.printToString
+import androidx.compose.ui.test.performScrollToNode
+import androidx.compose.ui.test.captureToImage
+import androidx.compose.ui.graphics.asAndroidBitmap
 import androidx.test.core.app.ApplicationProvider
 import androidx.work.testing.WorkManagerTestInitHelper
 import kotlinx.coroutines.flow.first
@@ -334,6 +337,78 @@ class ScreensTest {
         }
         waitForText("90915-YZZD1")
         waitGone("Rear tires")
+    }
+
+    /** Scroll whichever list holds this text (lists only build what's visible). */
+    private fun scrollTo(text: String, substring: Boolean = false) {
+        rule.waitForIdle()
+        val lists = rule.onAllNodes(androidx.compose.ui.test.hasScrollToNodeAction())
+        for (i in 0 until lists.fetchSemanticsNodes().size) {
+            if (runCatching { lists[i].performScrollToNode(hasText(text, substring = substring) or androidx.compose.ui.test.hasContentDescription(text, substring = substring)) }.isSuccess) break
+        }
+        val m = hasText(text, substring = substring) or androidx.compose.ui.test.hasContentDescription(text, substring = substring)
+        try { rule.waitUntil(5_000) { rule.onAllNodes(m).fetchSemanticsNodes().isNotEmpty() } } catch (e: Throwable) { waitForText(text, substring) }
+    }
+
+    /** Save what's on screen (for reviewing the design); build/metrics-shots/<name>.png */
+    private fun snap(name: String) {
+        rule.waitForIdle()
+        val img = rule.onAllNodes(androidx.compose.ui.test.isRoot())[0].captureToImage().asAndroidBitmap()
+        val dir = java.io.File("build/metrics-shots").apply { mkdirs() }
+        java.io.FileOutputStream(java.io.File(dir, "$name.png")).use { img.compress(android.graphics.Bitmap.CompressFormat.PNG, 100, it) }
+    }
+
+    /** Metrics: every number opens the records behind it, and they add up. */
+    @Test
+    fun metricsDrillDownAddsUp() {
+        startPhoneOnlyWithVehicle()
+        val ctx = ApplicationProvider.getApplicationContext<Context>()
+        val repo = com.ratchetwrench.app.data.Repository(ctx)
+        kotlinx.coroutines.runBlocking {
+            val v = repo.db.vehicles().observeAll().first().first()
+            fun e(d: String, t: String, k: String, m: Int?, c: Int?, by: String = "shop") =
+                com.ratchetwrench.app.data.Entry(vehicle_id = v.id, date = d, type_key = t, kind = k, mileage = m, cost_cents = c, performed_by = by)
+            listOf(e("2023-03-01", "oil_change", "maintenance", 30000, 5000, "diy"), e("2023-09-01", "oil_change", "maintenance", 35000, 6000),
+                e("2024-03-01", "oil_change", "maintenance", 40500, null, "diy"), e("2024-06-15", "brake_pads", "repair", 42000, 30000),
+                e("2025-12-01", "tire_rotation", "maintenance", 41000, 2500), e("2026-01-10", "tire_replacement", "repair", 41500, 100000))
+                .forEach { repo.saveEntry(it, isNew = true) }
+        }
+        click("Metrics")
+        // $50 + $60 + $0 + $300 + $25 + $1,000 = $1,435 across 5 records with a cost.
+        snap("1-overview")
+        tapIcon("Total spent: \$1,435.00")
+        scrollTo("\$1,435.00 across 5 records")
+        snap("2-costs")
+        scrollTo("Total (5)")
+        // A category filters everything: Brakes = 1 record, $300.
+        scrollTo("Category Brakes: 1")
+        tapIcon("Category Brakes: 1")
+        scrollTo("Remove filter: Brakes")
+        tapIcon("Remove filter: Brakes")
+        scrollTo("Category Tires & wheels: 2")
+        tapIcon("Category Tires & wheels: 2")
+        scrollTo("\$1,025.00 across 2 records")
+        scrollTo("Remove filter: Tires & wheels")
+        tapIcon("Remove filter: Tires & wheels")
+        // A service: oil changes, and the time between them.
+        scrollTo("Service Oil change: 3")
+        tapIcon("Service Oil change: 3")
+        scrollTo("Total (3)")
+        scrollTo("Intervals")
+        click("Intervals")
+        scrollTo("Average (2 gaps)")
+        waitForText("5,250 mi · 6.0 mo")     // (5,000 + 5,500) / 2 ; 366 days / 2 / 30.4375
+        snap("3-intervals")
+        scrollTo("Remove filter: Oil change")
+        tapIcon("Remove filter: Oil change")
+        // A year's repair part: 2024 repairs = the brake job.
+        scrollTo("2024 repairs: 1")
+        tapIcon("2024 repairs: 1")
+        scrollTo("1 record · \$300.00")
+        // Tapping a record opens it.
+        scrollTo("Brake pads · repair")
+        click("Brake pads · repair")
+        waitForText("Brake pads")
     }
 
     @Test

@@ -2,6 +2,17 @@
   "_comment": "Release notes shown in the app ('What's new' pop-up after an update, and Settings > Release notes) and on the GitHub release page. Newest first. EVERY Android release needs an entry here whose version matches the release (1.0.<workflow run number>); the release workflow refuses to publish otherwise. Keep it high level and in plain English.",
   "releases": [
     {
+      "version": "1.0.24",
+      "date": "2026-11-26",
+      "new": [
+        "Metrics: a new tab on every vehicle showing how its history adds up — records, total spent, how often each service was done and the miles/months between them, by category (chart), by service and by year.",
+        "Everything is tappable and filters everything else: a time range, maintenance or repairs, DIY or shop, a category, a service, a year (or just its repairs). Tap “Total spent” to see every record with a cost, most expensive first, adding up to the total. Tap a record to open it.",
+        "A record whose mileage is lower than the one before it (usually a typo) is flagged and left out of averages."
+      ],
+      "improved": [],
+      "fixed": []
+    },
+    {
       "version": "1.0.23",
       "date": "2026-11-26",
       "new": [
