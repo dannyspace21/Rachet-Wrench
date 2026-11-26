@@ -369,3 +369,11 @@ The desktop app *is* the existing server plus web app, packaged to run on a PC. 
   - the note is removed;
   - upright photos are left untouched;
   - older photos display upright.
+
+### D52. Better VIN scanning: higher resolution, printed-text reading, flashlight, zoom
+- **Why scanning was poor:** the analysis stream was left at CameraX's default 640×480, which is meant for fast, simple codes. A VIN barcode (Code 39, 17 characters) is long with very thin bars, which blur together at that size. Now 1920×1080 is requested (closest available otherwise).
+- **Reads printed VINs too:** every frame is checked as a barcode and then as text, using the ML Kit text recognizer already bundled for the door-sticker reader (no new dependency).
+  - **Look-alike repair:** `VinFinder.fromText` drops spaces, dashes and a "VIN" label, checks every 17-character stretch against the check digit, and repairs a single look-alike misread (S/5, B/8, Z/2, G/6, D/0, T/7, A/4). A repair is used only if there is one clear winner. Ties are broken by the rule that a major manufacturer's last 5 characters are digits.
+  - **Safeguards:** a check digit can't catch everything (two misreads can still pass about 1 time in 11). So a VIN read from text must be read identically in two frames *and* confirmed by the user ("Is this the VIN?") before it's used. Barcode reads with a valid check digit are still used immediately.
+- **Controls:** flashlight toggle (if the phone has one), zoom slider, and tap-to-focus.
+- **Tests:** `VinFinderTest` covers the barcode variants, labelled, spaced and multi-line text, O/0 and lowercase, look-alike repair, and that ordinary sticker text is not mistaken for a VIN.

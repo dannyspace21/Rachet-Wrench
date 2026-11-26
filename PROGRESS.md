@@ -59,6 +59,8 @@ Build-sandbox notes: the sandbox blocks dl.google.com, api.osv.dev, semgrep.dev 
 
 - v1.0.12: photos survive turning the phone and are always saved/shown upright (D51).
 
+- v1.0.13: VIN scanner at 1080p, also reads printed VINs (with confirmation), flashlight, zoom, tap-to-focus (D52).
+
 ## Ideas for later (not started)
 - Code-sign the desktop app (paid Apple/Microsoft certificates) to remove first-launch warnings; add an Intel-Mac build if needed.
 - Run the Android app on a real device/emulator and add phone screenshots to the README (no emulator was available in the build sandbox).
