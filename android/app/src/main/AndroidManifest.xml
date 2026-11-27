@@ -15,7 +15,7 @@
         login token) is never copied to cloud backups or other devices
     networkSecurityConfig  system certificates only; plain HTTP is further
         restricted in code (see data/Api.kt, UrlPolicy)
-    Only MainActivity is exported (it's the launcher icon).
+    Only MainActivity (the launcher icon) and ShareActivity ("Share → Ratchet Wrench", plain text only) are exported.
 -->
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools">
@@ -72,6 +72,27 @@
         <!-- Receives the result of installing an app update.  Not exported:
              only Android's installer can reach it (via our PendingIntent). -->
         <receiver android:name=".update.InstallResultReceiver" android:exported="false" />
+
+        <!-- Reviewed: "Share → Ratchet Wrench" for selected text (owner's-manual
+             text copied from a web manual).  Exported so other apps can share
+             to it; it accepts ONLY plain text (text/plain), reads nothing else
+             from the intent, caps the length, opens no links and saves nothing
+             by itself: the text goes to the manual review screen.  No UI of
+             its own (it hands over to MainActivity and closes). -->
+        <!-- nosemgrep: java.android.security.exported_activity.exported_activity -->
+        <activity
+            android:name=".ShareActivity"
+            android:exported="true"
+            android:label="Ratchet Wrench (owner's manual)"
+            android:excludeFromRecents="true"
+            android:noHistory="true"
+            android:theme="@android:style/Theme.Translucent.NoTitleBar">
+            <intent-filter>
+                <action android:name="android.intent.action.SEND" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <data android:mimeType="text/plain" />
+            </intent-filter>
+        </activity>
 
         <!-- Reviewed: the launcher activity must be exported so Android can
              open the app from its icon.  It accepts no data from other apps.

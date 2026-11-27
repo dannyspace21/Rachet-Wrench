@@ -495,6 +495,17 @@ class ScreensTest {
             rule.onAllNodes(hasText("Coolant type") and androidx.compose.ui.test.hasClickAction()).fetchSemanticsNodes().isNotEmpty())
     }
 
+    /** "Share → Ratchet Wrench" with manual text: goes to the manual screen of the (only) vehicle. */
+    @Test
+    fun sharedManualTextOpensTheManualScreen() {
+        startPhoneOnlyWithVehicle()
+        rule.runOnIdle { SharedManualText.pending.value = "Technical data\nLow beam H7" }
+        // Phone only: the manual reader needs the computer, and says so.
+        waitForText("Fill from owner's manual")
+        waitForText("Needs your computer")
+        org.junit.Assert.assertNull("the shared text was taken", SharedManualText.pending.value)
+    }
+
     /** Settings → Sync: every button full width, one per line ("Sign in again" was squeezed to the right). */
     @Test
     fun syncButtonsAreFullWidth() {

@@ -109,6 +109,8 @@ Build-sandbox notes: the sandbox blocks dl.google.com, api.osv.dev, semgrep.dev 
 
 - v1.0.41: 25 more manual-readable specs (bulbs, A/C, drivetrain oils, capacities, motorcycle torques/valves); bulbs, spare tire, refrigerant and oils added to Parts; battery "Group Group" fix (D72).
 
+- v1.0.42: browser-only web manuals (Audi): Share → Ratchet Wrench on Android, several pasted sections, clear message for JavaScript/bot-protected links, section checklist (D73).
+
 ## Ideas for later (not started)
 - Code-sign the desktop app (paid Apple/Microsoft certificates) to remove first-launch warnings; add an Intel-Mac build if needed.
 - Database migrations with Alembic once the schema needs to change.

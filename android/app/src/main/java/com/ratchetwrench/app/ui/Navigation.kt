@@ -74,6 +74,11 @@ fun AppRoot() {
 
     CompositionLocalProvider(LocalRepo provides repo, LocalSetTheme provides { t: String -> repo.store.theme = t; theme = t }) {
         RatchetTheme(theme) {
+            // Text shared from another app ("Share → Ratchet Wrench"): pick the vehicle, then read it.
+            val shared by com.ratchetwrench.app.SharedManualText.pending
+            androidx.compose.runtime.LaunchedEffect(shared) {
+                if (shared != null && repo.store.mode.isNotEmpty()) nav.navigate("share-manual") { launchSingleTop = true }
+            }
             NavHost(nav, startDestination = start) {
                 composable("welcome") {
                     WelcomeScreen(
@@ -108,6 +113,7 @@ fun AppRoot() {
                 composable("reminder/{id}") { com.ratchetwrench.app.ui.screens.ReminderScreen(nav, it.arguments!!.getString("id")!!) }
                 composable("entry/{id}") { EntryDetailScreen(nav, it.arguments!!.getString("id")!!) }
                 composable("sticker/{vehicleId}") { StickerScreen(nav, it.arguments!!.getString("vehicleId")!!) }
+                composable("share-manual") { com.ratchetwrench.app.ui.screens.ShareManualScreen(nav) }
                 composable("manual/{vehicleId}") { com.ratchetwrench.app.ui.screens.ManualScreen(nav, it.arguments!!.getString("vehicleId")!!) }
                 composable("scan-vin") { VinScanScreen(onResult = { vin -> nav.returnResult("vin", vin) }, onCancel = { nav.popBackStack() }) }
                 composable("capture") { CaptureScreen(onDone = { paths -> nav.returnResult("photos", ArrayList(paths)) }, onCancel = { nav.popBackStack() }) }

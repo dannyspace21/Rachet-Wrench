@@ -202,7 +202,7 @@ class Api(private val store: SecureStore) {
      * up to [timeoutSeconds] for the answer — reading a long owner's manual
      * on the computer can take a few minutes.
      */
-    fun postForm(path: String, fields: Map<String, String>, file: File? = null, mime: String = "application/pdf", timeoutSeconds: Long = 300): String {
+    fun postForm(path: String, fields: List<Pair<String, String>>, file: File? = null, mime: String = "application/pdf", timeoutSeconds: Long = 300): String {
         val form = MultipartBody.Builder().setType(MultipartBody.FORM)
         fields.forEach { (k, v) -> form.addFormDataPart(k, v) }
         if (file != null) form.addFormDataPart("file", file.name, file.asRequestBody(mime.toMediaType()))

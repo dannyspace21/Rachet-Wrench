@@ -24,6 +24,7 @@ able to reach the router, NAS or the server itself):
 from __future__ import annotations
 
 import http.client
+import re
 import ipaddress
 import socket
 import ssl
@@ -39,6 +40,25 @@ USER_AGENT = "RatchetWrench (self-hosted owner's manual reader)"
 
 class LinkError(ValueError):
     """A link that can't or mustn't be fetched (message is shown to the owner)."""
+
+
+# Shown when a site builds its manual with JavaScript or blocks automatic
+# downloads (bot protection) — e.g. Audi's ownersmanual.audi.com.  The
+# owner's own browser can open it, so the way in is copying the text.
+BROWSER_ONLY = ("{host} only shows its manual inside a web browser (it builds the pages with JavaScript and blocks "
+                "automatic downloads), so it can't be read from a link. Open it in your browser, go to the "
+                "Technical data / Specifications section, select the text and use “Paste text” — or on your phone, "
+                "Share → Ratchet Wrench. You can paste several sections.")
+
+
+def _looks_blocked(status: int, headers, body: bytes) -> bool:
+    """Bot protection (AWS WAF / CloudFront / Cloudflare challenge pages)."""
+    if status not in (202, 403, 405, 429, 503):
+        return False
+    text = body[:4000].decode("latin-1", "replace").lower()
+    names = " ".join(f"{k}:{v}" for k, v in (headers or [])).lower()
+    return any(w in text or w in names for w in ("awswaf", "cloudfront", "cf-chl", "cloudflare", "captcha",
+                                                    "request could not be satisfied", "challenge", "x-amzn-waf"))
 
 
 @dataclass
@@ -119,6 +139,8 @@ def fetch(url: str, max_bytes: int) -> Fetched:
                     raise LinkError("The website redirected without saying where.")
                 url = urllib.parse.urljoin(url, loc)
                 continue
+            if res.status != 200 and _looks_blocked(res.status, res.getheaders(), res.read(4000)):
+                raise LinkError(BROWSER_ONLY.format(host=u.hostname))
             if res.status != 200:
                 raise LinkError(f"The website answered {res.status} for {u.hostname}{u.path[:60]}." +
                                 (" It may need you to sign in — download the PDF and upload it instead." if res.status in (401, 403) else ""))
@@ -136,7 +158,11 @@ def fetch(url: str, max_bytes: int) -> Fetched:
             return Fetched(url, "pdf", data=data)
         if ctype in ("text/html", "application/xhtml+xml", "text/plain") or data.lstrip()[:1] == b"<":
             text = data.decode(_charset(res.getheader("Content-Type")), errors="replace")
-            return Fetched(url, "text", text=html_to_text(text) if ctype != "text/plain" else text)
+            plain = html_to_text(text) if ctype != "text/plain" else text
+            # An empty "app shell" (the real content is loaded by JavaScript).
+            if ctype != "text/plain" and len(plain) < 100 and re.search(r"<script\b", text, re.I):
+                raise LinkError(BROWSER_ONLY.format(host=u.hostname))
+            return Fetched(url, "text", text=plain)
         raise LinkError(f"{u.hostname} sent something that isn't a PDF or a web page.")
     raise LinkError("Too many redirects.")
 

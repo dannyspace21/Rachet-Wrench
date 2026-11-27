@@ -230,6 +230,16 @@ export function showCarfaxReview(container, v, result, catalog) {
 // ===========================================================================
 // Owner's manual -> fluid specs
 // ===========================================================================
+/** Where specs usually are in an owner's manual (shown as a checklist). */
+export const MANUAL_SECTIONS = [
+  "Technical data / Specifications — engine, weights, dimensions, fuel",
+  "Capacities / Fluids and lubricants — oil, coolant, transmission, brake and differential fluid",
+  "Light bulbs / Replacing bulbs — bulb numbers for each light",
+  "Tires and wheels / Tire pressure — sizes and cold pressures",
+  "Wiper blades, Battery, Spark plugs — sizes and part numbers",
+  "Air conditioning — refrigerant type and amount",
+];
+
 export async function manualView(main, { params }) {
   const [id] = params;
   const [v, catalog, atts, links] = await Promise.all([api(`/api/vehicles/${id}`), getCatalog(), api(`/api/attachments?vehicle_id=${id}`),
@@ -243,7 +253,9 @@ export async function manualView(main, { params }) {
     links.owners
       ? h("p", {}, `${v.make}'s owner website has the manuals. Sign in if asked, then download the PDF, or copy the link(s) to the manual's pages.`)
       : h("p", {}, `Search the web for “${[v.year, v.make, v.model].filter(Boolean).join(" ")} owner's manual” on the manufacturer's website.`),
-    links.owners ? h("div", {}, h("a", { class: "btn", href: links.owners, target: "_blank", rel: "noopener noreferrer" }, icon("u-external"), `Open ${v.make} owner website`)) : null);
+    links.owners ? h("div", {}, h("a", { class: "btn", href: links.owners, target: "_blank", rel: "noopener noreferrer" }, icon("u-external"), `Open ${v.make} owner website`)) : null,
+    h("details", { class: "manual-tips" }, h("summary", {}, "Which parts of the manual have the specs?"),
+      h("ul", { class: "small" }, MANUAL_SECTIONS.map((x) => h("li", {}, x)))));
 
   // How to give it to us: a PDF, links, or pasted text.
   const mode = { value: manuals.length ? "saved" : "pdf" };
@@ -254,13 +266,23 @@ export async function manualView(main, { params }) {
   });
   const picker = filePicker({ accept: "application/pdf", multiple: false, label: "Owner's manual (PDF)" });
   const urls = h("textarea", { class: "input", rows: 4, maxlength: 8000, placeholder: "https://…/owners-manual.pdf\nor several pages, one link per line", "aria-label": "Links to the manual" });
-  const pasted = h("textarea", { class: "input", rows: 8, maxlength: 300000, placeholder: "Copy the “Specifications” / “Capacities” section of the manual and paste it here", "aria-label": "Manual text" });
+  // Paste one or more sections (web manuals like Audi's split them over many pages).
+  const pastedBox = h("div", { class: "stack" });
+  const pastes = [];
+  const addPaste = () => {
+    const ta = h("textarea", { class: "input", rows: 7, maxlength: 150000, "aria-label": `Manual text, section ${pastes.length + 1}`,
+      placeholder: pastes.length ? "Paste another section (e.g. Light bulbs, Tires, Wiper blades)" : "Copy the “Technical data” / “Specifications” section of the manual and paste it here" });
+    pastes.push(ta); pastedBox.append(ta); return ta;
+  };
+  addPaste();
+  const addPasteBtn = h("button", { class: "btn small", type: "button", onclick: () => addPaste().focus() }, icon("u-plus"), "Add another section");
   const panes = {
     saved: choices.length ? h("div", { class: "stack" }, choices.map((c) => c.el)) : null,
     pdf: h("div", { class: "stack" }, picker.el, h("p", { class: "muted small" }, "Saved with the vehicle's documents. Scanned paper pages (photos, no text) can't be read — use links or paste the text instead.")),
     links: h("div", { class: "stack" }, urls, h("p", { class: "muted small" },
       "Your Ratchet Wrench server downloads only these links (public https websites — never your home network). A PDF is saved with the vehicle's documents; web pages are just read. If the site needs you to sign in, download the PDF and upload it instead.")),
-    text: h("div", { class: "stack" }, pasted, h("p", { class: "muted small" }, "Works with any format: copy the specifications from the PDF, web page or app and paste it.")),
+    text: h("div", { class: "stack" }, pastedBox, h("div", {}, addPasteBtn),
+      h("p", { class: "muted small" }, "Works with any manual, including web manuals that only open in a browser (Audi, VW, Mercedes, BMW…): open it, select the text, copy, paste. Add as many sections as you like.")),
   };
   const tabs = [["saved", "Saved manual"], ["pdf", "Upload PDF"], ["links", "From links"], ["text", "Paste text"]].filter(([k]) => panes[k]);
   const paneBox = h("div", {});
@@ -279,8 +301,9 @@ export async function manualView(main, { params }) {
       if (!urls.value.trim()) { toast("Paste at least one link", "error"); return; }
       fd.append("urls", urls.value);
     } else {
-      if (!pasted.value.trim()) { toast("Paste the manual's text first", "error"); return; }
-      fd.append("text", pasted.value);
+      const texts = pastes.map((t) => t.value).filter((t) => t.trim());
+      if (!texts.length) { toast("Paste the manual's text first", "error"); return; }
+      for (const t of texts) fd.append("text", t);
     }
     readBtn.disabled = true;
     readBtn.replaceChildren("Reading… (a long manual can take a minute or two)");

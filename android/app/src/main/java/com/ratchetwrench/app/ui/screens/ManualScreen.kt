@@ -94,6 +94,34 @@ object ManualResult {
 
 private data class SavedManual(val id: String, val title: String)
 
+/** Where specs usually are in an owner's manual (same list as the web app). */
+val MANUAL_SECTIONS = listOf(
+    "Technical data / Specifications", "Capacities / Fluids and lubricants", "Light bulbs",
+    "Tires and wheels / Tire pressure", "Wiper blades, Battery, Spark plugs", "Air conditioning (refrigerant)",
+)
+
+/** "Share → Ratchet Wrench": which vehicle is this manual text for? */
+@Composable
+fun ShareManualScreen(nav: NavHostController) {
+    val repo = LocalRepo.current
+    val vehicles by repo.db.vehicles().observeAll().collectAsState(initial = null)
+    Scaffold(topBar = { TopBar("Read manual text", onBack = { com.ratchetwrench.app.SharedManualText.take(); nav.popBackStack() }) }) { pad ->
+        Column(Modifier.fillMaxSize().padding(pad).verticalScroll(rememberScrollState()).padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+            Text("Which vehicle is this owner's manual text for? Next you'll review every value before anything is saved.", color = LocalExtra.current.muted)
+            val list = vehicles
+            when {
+                list == null -> Unit
+                list.isEmpty() -> Text("Add a vehicle first, then share the text again.", color = LocalExtra.current.muted)
+                list.size == 1 -> LaunchedEffect(Unit) { nav.navigate("manual/${list[0].id}") { popUpTo("share-manual") { inclusive = true } } }
+                else -> list.forEach { v ->
+                    SecondaryButton(listOfNotNull(v.nickname.ifBlank { null }, listOfNotNull(v.year?.toString(), v.make, v.model).joinToString(" ")).joinToString(" — "),
+                        "car", Modifier.fillMaxWidth()) { nav.navigate("manual/${v.id}") { popUpTo("share-manual") { inclusive = true } } }
+                }
+            }
+        }
+    }
+}
+
 @Composable
 fun ManualScreen(nav: NavHostController, vehicleId: String) {
     val repo = LocalRepo.current
@@ -104,7 +132,8 @@ fun ManualScreen(nav: NavHostController, vehicleId: String) {
     val vehicle by repo.db.vehicles().observe(vehicleId).collectAsState(initial = null)
     var how by remember { mutableStateOf("pdf") }
     var links by remember { mutableStateOf("") }
-    var pasted by remember { mutableStateOf("") }
+    // One or more pasted sections (web manuals split the specs over many pages).
+    val pastes = remember { mutableStateListOf("") }
     var picked by remember { mutableStateOf<String?>(null) }
     var status by remember { mutableStateOf<String?>(null) }
     var busy by remember { mutableStateOf(false) }
@@ -126,7 +155,7 @@ fun ManualScreen(nav: NavHostController, vehicleId: String) {
         loaded = true
     }
 
-    fun read(fields: Map<String, String>, file: File?) {
+    fun read(fields: List<Pair<String, String>>, file: File?) {
         busy = true; status = "Reading the manual on your computer… a long manual can take a minute or two."
         scope.launch {
             try {
@@ -142,6 +171,14 @@ fun ManualScreen(nav: NavHostController, vehicleId: String) {
             } catch (e: Exception) { status = "Couldn't read the manual: ${e.message}" } finally { busy = false; file?.delete() }
         }
     }
+    // Text shared from a browser ("Share → Ratchet Wrench"): put it in the paste box and read it.
+    LaunchedEffect(Unit) {
+        com.ratchetwrench.app.SharedManualText.take()?.let { text ->
+            how = "text"; pastes[0] = text
+            if (server) read(listOf("text" to text), null)
+        }
+    }
+
     val pickPdf = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
         if (uri == null) return@rememberLauncherForActivityResult
         scope.launch {
@@ -150,7 +187,7 @@ fun ManualScreen(nav: NavHostController, vehicleId: String) {
                     File(ctx.cacheDir, "manual-upload.pdf").also { out -> ctx.contentResolver.openInputStream(uri)!!.use { i -> out.outputStream().use { i.copyTo(it) } } }
                 }.getOrNull()
             }
-            if (f == null) status = "Couldn't open that file." else read(emptyMap(), f)
+            if (f == null) status = "Couldn't open that file." else read(emptyList(), f)
         }
     }
 
@@ -173,6 +210,7 @@ fun ManualScreen(nav: NavHostController, vehicleId: String) {
                         Text(if (owners.isNotBlank()) "${v.make}'s owner website has the manuals. Download the PDF, or copy the link(s) to the manual's pages."
                              else "Search the web for the ${listOfNotNull(v.year?.toString(), v.make, v.model).joinToString(" ")} owner's manual on the manufacturer's website.",
                             color = LocalExtra.current.muted)
+                        Text("Specs are usually in: " + MANUAL_SECTIONS.joinToString("; "), style = MaterialTheme.typography.bodySmall, color = LocalExtra.current.muted)
                         if (owners.isNotBlank()) SecondaryButton("Open ${v.make} owner website", "external", Modifier.fillMaxWidth()) { openLink(ctx, owners) }
                     }
                 }
@@ -184,13 +222,18 @@ fun ManualScreen(nav: NavHostController, vehicleId: String) {
                             Field("Links (one per line)", links, { links = it })
                             Text("Your computer downloads only these links (public https websites — never your home network). If the site needs you to sign in, download the PDF instead.",
                                 style = MaterialTheme.typography.bodySmall, color = LocalExtra.current.muted)
-                            PrimaryButton("Read manual", "book", Modifier.fillMaxWidth(), enabled = !busy && links.isNotBlank()) { read(mapOf("urls" to links), null) }
+                            PrimaryButton("Read manual", "book", Modifier.fillMaxWidth(), enabled = !busy && links.isNotBlank()) { read(listOf("urls" to links), null) }
                         }
                         "text" -> {
-                            Field("Manual text", pasted, { pasted = it })
-                            Text("Copy the Specifications / Capacities section from the manual (PDF, web page or app) and paste it here.",
+                            pastes.forEachIndexed { i, t ->
+                                Field(if (pastes.size == 1) "Manual text" else "Manual text — section ${i + 1}", t, { pastes[i] = it })
+                            }
+                            SecondaryButton("Add another section", "plus", Modifier.fillMaxWidth()) { pastes.add("") }
+                            Text("Works with any manual, including web manuals that only open in a browser (Audi, VW, Mercedes, BMW…): select the text there and paste it, or use Share → Ratchet Wrench.",
                                 style = MaterialTheme.typography.bodySmall, color = LocalExtra.current.muted)
-                            PrimaryButton("Read text", "book", Modifier.fillMaxWidth(), enabled = !busy && pasted.isNotBlank()) { read(mapOf("text" to pasted), null) }
+                            PrimaryButton("Read text", "book", Modifier.fillMaxWidth(), enabled = !busy && pastes.any { it.isNotBlank() }) {
+                                read(pastes.filter { it.isNotBlank() }.map { "text" to it }, null)
+                            }
                         }
                         else -> {
                             if (manuals.isNotEmpty()) {
@@ -200,7 +243,7 @@ fun ManualScreen(nav: NavHostController, vehicleId: String) {
                                         RadioButton(picked == m.id, { picked = m.id }); Text(m.title)
                                     }
                                 }
-                                PrimaryButton("Read manual", "book", Modifier.fillMaxWidth(), enabled = !busy && picked != null) { read(mapOf("attachment_id" to picked!!), null) }
+                                PrimaryButton("Read manual", "book", Modifier.fillMaxWidth(), enabled = !busy && picked != null) { read(listOf("attachment_id" to picked!!), null) }
                             } else if (loaded) {
                                 Text("No owner's manual saved for this vehicle yet.", color = LocalExtra.current.muted)
                             }

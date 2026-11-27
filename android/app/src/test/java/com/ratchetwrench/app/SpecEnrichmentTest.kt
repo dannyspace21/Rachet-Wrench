@@ -50,6 +50,12 @@ class SpecEnrichmentTest {
         }
     }
 
+    @Test fun sharedTextIsPlainAndCapped() {
+        assertEquals("Low beam H7\nHigh beam H15", com.ratchetwrench.app.SharedManualText.clean("Low beam H7\u0000\nHigh beam H15\u0007"))
+        assertEquals(null, com.ratchetwrench.app.SharedManualText.clean("   "))
+        assertEquals(com.ratchetwrench.app.SharedManualText.MAX_CHARS, com.ratchetwrench.app.SharedManualText.clean("x".repeat(200_000))!!.length)
+    }
+
     @Test fun manualAnswerBecomesReviewRows() {
         val body = """{"pages": 400, "readable_pages": 398, "attachment": {}, "specs": [
             {"key": "oil_type", "label": "Engine oil", "current": null, "options": [

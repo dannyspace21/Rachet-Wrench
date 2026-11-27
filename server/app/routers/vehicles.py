@@ -213,7 +213,7 @@ def sticker_apply(vehicle_id: str, body: schemas.StickerApplyIn, user: User = De
 # ---------------------------------------------------------------------------
 @router.post("/vehicles/{vehicle_id}/manual/scan")
 async def manual_scan(vehicle_id: str, attachment_id: str | None = Form(None), file: UploadFile | None = File(None),
-                      urls: str | None = Form(None, max_length=8000), text: str | None = Form(None, max_length=300_000),
+                      urls: str | None = Form(None, max_length=8000), text: list[str] | None = Form(None),
                       user: User = Depends(current_user), db: Session = Depends(get_db)) -> dict:
     """Read the owner's manual and PROPOSE fluid specs and capacities, each
     with where it was found.  The manual can be: a PDF saved on the vehicle
@@ -280,9 +280,14 @@ async def manual_scan(vehicle_id: str, attachment_id: str | None = Form(None), f
             else:
                 pages.append(got.text)
                 where.append(f"link {n} ({host})" if len(links) > 1 else host)
-    elif text and text.strip():
-        pages.append(text)
-        where.append("pasted text")
+    elif text and any(t.strip() for t in text):
+        # One or more pasted sections ("Technical data", then "Light bulbs"…), each read as a page.
+        sections = [t for t in text if t.strip()][:20]
+        if sum(len(t) for t in sections) > 300_000:
+            raise HTTPException(status.HTTP_400_BAD_REQUEST, "That's too much text — paste just the specification sections.")
+        for n, t in enumerate(sections, start=1):
+            pages.append(t)
+            where.append("pasted text" if len(sections) == 1 else f"pasted section {n}")
     else:
         raise HTTPException(status.HTTP_400_BAD_REQUEST, "Choose the owner's manual: a PDF, links to it, or pasted text.")
 
