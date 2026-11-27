@@ -40,6 +40,16 @@ class SpecEnrichmentTest {
         }
     }
 
+    @Test fun specPartNumbersSameAsTheServer() {
+        val maps = catalog.spec_parts.associateBy { it.spec }
+        val cases = Json.parseToJsonElement(File(root, "catalog/spec_parts_tests.json").readText()).jsonObject["cases"]!!.jsonArray
+        for (c in cases) {
+            val o = c.jsonObject
+            val expect = o["expect"]!!.let { if (it is JsonNull) null else it.jsonPrimitive.content }
+            assertEquals(o.toString(), expect, com.ratchetwrench.app.data.Repository.partNumber(maps[o["spec"]!!.jsonPrimitive.content]!!, o["value"]!!.jsonPrimitive.content))
+        }
+    }
+
     @Test fun manualAnswerBecomesReviewRows() {
         val body = """{"pages": 400, "readable_pages": 398, "attachment": {}, "specs": [
             {"key": "oil_type", "label": "Engine oil", "current": null, "options": [

@@ -672,10 +672,34 @@
       "hint": "e.g. DOT 4"
     },
     {
-      "key": "differential_fluid_type",
-      "label": "Differential fluid type",
+      "key": "manual_transmission_oil_type",
+      "label": "Manual transmission oil type",
       "group": "Fluids & capacities",
-      "hint": ""
+      "hint": "e.g. 75W-90 GL-4"
+    },
+    {
+      "key": "manual_transmission_oil_capacity",
+      "label": "Manual transmission oil capacity",
+      "group": "Fluids & capacities",
+      "hint": "qt or L"
+    },
+    {
+      "key": "differential_fluid_type",
+      "label": "Differential fluid type (rear, or the only one)",
+      "group": "Fluids & capacities",
+      "hint": "e.g. 75W-85 GL-5"
+    },
+    {
+      "key": "front_differential_fluid_type",
+      "label": "Front differential fluid type",
+      "group": "Fluids & capacities",
+      "hint": "AWD / 4x4"
+    },
+    {
+      "key": "transfer_case_fluid_type",
+      "label": "Transfer case fluid type",
+      "group": "Fluids & capacities",
+      "hint": "AWD / 4x4"
     },
     {
       "key": "power_steering_fluid_type",
@@ -694,6 +718,18 @@
       "label": "Fuel tank capacity",
       "group": "Fluids & capacities",
       "hint": "gal or L"
+    },
+    {
+      "key": "washer_fluid_capacity",
+      "label": "Washer fluid capacity",
+      "group": "Fluids & capacities",
+      "hint": "qt or L"
+    },
+    {
+      "key": "ac_refrigerant",
+      "label": "A/C refrigerant (type and amount)",
+      "group": "Fluids & capacities",
+      "hint": "e.g. R-1234yf, 450 g"
     },
     {
       "key": "tire_size_front",
@@ -852,10 +888,28 @@
       "hint": ""
     },
     {
+      "key": "towing_capacity",
+      "label": "Towing capacity",
+      "group": "Body & build",
+      "hint": "lb"
+    },
+    {
+      "key": "payload_capacity",
+      "label": "Payload / load capacity",
+      "group": "Body & build",
+      "hint": "lb (people + cargo)"
+    },
+    {
       "key": "battery_group",
       "label": "Battery group size",
       "group": "Electrical",
-      "hint": ""
+      "hint": "e.g. Group 35 or 55D23L"
+    },
+    {
+      "key": "battery_cca",
+      "label": "Battery cold-cranking amps (CCA)",
+      "group": "Electrical",
+      "hint": "e.g. 650 CCA"
     },
     {
       "key": "tpms_type",
@@ -894,6 +948,60 @@
       "hint": ""
     },
     {
+      "key": "spark_plug_gap",
+      "label": "Spark plug gap",
+      "group": "Electrical",
+      "hint": "e.g. 1.0–1.1 mm"
+    },
+    {
+      "key": "bulb_low_beam",
+      "label": "Headlight bulb — low beam",
+      "group": "Lights & bulbs",
+      "hint": "e.g. H11"
+    },
+    {
+      "key": "bulb_high_beam",
+      "label": "Headlight bulb — high beam",
+      "group": "Lights & bulbs",
+      "hint": "e.g. 9005"
+    },
+    {
+      "key": "bulb_fog",
+      "label": "Fog light bulb",
+      "group": "Lights & bulbs",
+      "hint": "e.g. H16"
+    },
+    {
+      "key": "bulb_turn_front",
+      "label": "Turn signal bulb — front",
+      "group": "Lights & bulbs",
+      "hint": "e.g. 7444NA"
+    },
+    {
+      "key": "bulb_turn_rear",
+      "label": "Turn signal bulb — rear",
+      "group": "Lights & bulbs",
+      "hint": "e.g. 7440A"
+    },
+    {
+      "key": "bulb_brake_tail",
+      "label": "Brake / tail light bulb",
+      "group": "Lights & bulbs",
+      "hint": "e.g. 7443"
+    },
+    {
+      "key": "bulb_reverse",
+      "label": "Reverse (back-up) light bulb",
+      "group": "Lights & bulbs",
+      "hint": "e.g. 921"
+    },
+    {
+      "key": "bulb_license",
+      "label": "License plate light bulb",
+      "group": "Lights & bulbs",
+      "hint": "e.g. 168"
+    },
+    {
       "key": "chain_size",
       "label": "Drive chain size",
       "group": "Motorcycle",
@@ -914,6 +1022,48 @@
     {
       "key": "chain_slack",
       "label": "Chain slack",
+      "group": "Motorcycle",
+      "hint": "mm"
+    },
+    {
+      "key": "front_axle_torque",
+      "label": "Front axle torque",
+      "group": "Motorcycle",
+      "hint": "ft-lb"
+    },
+    {
+      "key": "rear_axle_torque",
+      "label": "Rear axle nut torque",
+      "group": "Motorcycle",
+      "hint": "ft-lb"
+    },
+    {
+      "key": "drain_bolt_torque",
+      "label": "Oil drain bolt torque",
+      "group": "Motorcycle",
+      "hint": "ft-lb"
+    },
+    {
+      "key": "valve_clearance_intake",
+      "label": "Valve clearance — intake",
+      "group": "Motorcycle",
+      "hint": "mm (cold)"
+    },
+    {
+      "key": "valve_clearance_exhaust",
+      "label": "Valve clearance — exhaust",
+      "group": "Motorcycle",
+      "hint": "mm (cold)"
+    },
+    {
+      "key": "idle_speed",
+      "label": "Idle speed",
+      "group": "Motorcycle",
+      "hint": "rpm"
+    },
+    {
+      "key": "brake_pad_wear_limit",
+      "label": "Brake pad wear limit",
       "group": "Motorcycle",
       "hint": "mm"
     }
@@ -963,7 +1113,32 @@
     "chain_size",
     "sprocket_front",
     "sprocket_rear",
-    "chain_slack"
+    "chain_slack",
+    "manual_transmission_oil_type",
+    "manual_transmission_oil_capacity",
+    "front_differential_fluid_type",
+    "transfer_case_fluid_type",
+    "washer_fluid_capacity",
+    "ac_refrigerant",
+    "towing_capacity",
+    "payload_capacity",
+    "battery_cca",
+    "spark_plug_gap",
+    "bulb_low_beam",
+    "bulb_high_beam",
+    "bulb_fog",
+    "bulb_turn_front",
+    "bulb_turn_rear",
+    "bulb_brake_tail",
+    "bulb_reverse",
+    "bulb_license",
+    "front_axle_torque",
+    "rear_axle_torque",
+    "drain_bolt_torque",
+    "valve_clearance_intake",
+    "valve_clearance_exhaust",
+    "idle_speed",
+    "brake_pad_wear_limit"
   ],
   "makes": {
     "Acura": {
@@ -1506,7 +1681,8 @@
       "spec": "battery_group",
       "type_key": "battery",
       "name": "Battery",
-      "format": "Group {v}"
+      "format": "Group {v}",
+      "as_is": "^(?:group\\b|\\d{2,3}[A-H]\\d{2})"
     },
     {
       "spec": "wiper_size_driver",
@@ -1525,6 +1701,92 @@
       "type_key": "chain_replacement",
       "name": "Drive chain",
       "format": "{v}"
+    },
+    {
+      "spec": "tire_size_spare",
+      "type_key": "tire_replacement",
+      "name": "Spare tire",
+      "format": "{v}"
+    },
+    {
+      "spec": "manual_transmission_oil_type",
+      "type_key": "transmission_fluid",
+      "name": "Manual transmission oil",
+      "format": "{v}"
+    },
+    {
+      "spec": "front_differential_fluid_type",
+      "type_key": "differential_fluid",
+      "name": "Front differential fluid",
+      "format": "{v}"
+    },
+    {
+      "spec": "transfer_case_fluid_type",
+      "type_key": "transfer_case_fluid",
+      "name": "Transfer case fluid",
+      "format": "{v}"
+    },
+    {
+      "spec": "ac_refrigerant",
+      "type_key": "ac_service",
+      "name": "A/C refrigerant",
+      "format": "{v}"
+    },
+    {
+      "spec": "bulb_low_beam",
+      "type_key": "lights_bulbs",
+      "name": "Headlight bulb — low beam",
+      "format": "{v}",
+      "skip": "^led$"
+    },
+    {
+      "spec": "bulb_high_beam",
+      "type_key": "lights_bulbs",
+      "name": "Headlight bulb — high beam",
+      "format": "{v}",
+      "skip": "^led$"
+    },
+    {
+      "spec": "bulb_fog",
+      "type_key": "lights_bulbs",
+      "name": "Fog light bulb",
+      "format": "{v}",
+      "skip": "^led$"
+    },
+    {
+      "spec": "bulb_turn_front",
+      "type_key": "lights_bulbs",
+      "name": "Turn signal bulb — front",
+      "format": "{v}",
+      "skip": "^led$"
+    },
+    {
+      "spec": "bulb_turn_rear",
+      "type_key": "lights_bulbs",
+      "name": "Turn signal bulb — rear",
+      "format": "{v}",
+      "skip": "^led$"
+    },
+    {
+      "spec": "bulb_brake_tail",
+      "type_key": "lights_bulbs",
+      "name": "Brake / tail light bulb",
+      "format": "{v}",
+      "skip": "^led$"
+    },
+    {
+      "spec": "bulb_reverse",
+      "type_key": "lights_bulbs",
+      "name": "Reverse light bulb",
+      "format": "{v}",
+      "skip": "^led$"
+    },
+    {
+      "spec": "bulb_license",
+      "type_key": "lights_bulbs",
+      "name": "License plate bulb",
+      "format": "{v}",
+      "skip": "^led$"
     }
   ],
   "metric_groups": [

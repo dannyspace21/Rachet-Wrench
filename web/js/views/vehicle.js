@@ -130,8 +130,8 @@ export function entryItem(e, label, photos, v) {
 async function specsTab(body, v, { catalog }) {
   // Hide fields that can't apply to this kind of vehicle (but always show a
   // field that already has a value).
-  const CAR_ONLY = new Set(["power_steering_fluid_type", "differential_fluid_type", "seating_capacity", "wiper_size_driver", "wiper_size_passenger", "tire_size_spare", "tire_pressure_spare"]);
-  const BIKE_ONLY = new Set(["fork_oil_type", "chain_size", "sprocket_front", "sprocket_rear", "chain_slack"]);
+  const CAR_ONLY = new Set(["power_steering_fluid_type", "differential_fluid_type", "seating_capacity", "wiper_size_driver", "wiper_size_passenger", "tire_size_spare", "tire_pressure_spare", "front_differential_fluid_type", "transfer_case_fluid_type", "washer_fluid_capacity", "ac_refrigerant", "towing_capacity", "payload_capacity", "bulb_fog"]);
+  const BIKE_ONLY = new Set(["fork_oil_type", "chain_size", "sprocket_front", "sprocket_rear", "chain_slack", "front_axle_torque", "rear_axle_torque", "drain_bolt_torque", "valve_clearance_intake", "valve_clearance_exhaust", "idle_speed", "brake_pad_wear_limit"]);
   const rows = (await api(`/api/vehicles/${v.id}/specs-table`)).filter((r) =>
     r.value || (v.kind === "motorcycle" ? !CAR_ONLY.has(r.key) : !BIKE_ONLY.has(r.key)));
   const groups = {};

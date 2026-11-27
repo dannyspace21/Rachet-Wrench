@@ -274,8 +274,8 @@ private fun SpecsTab(nav: NavHostController, v: Vehicle) {
     val specs by repo.db.specs().observeFor(v.id).collectAsState(initial = emptyList())
     val byKey = specs.associateBy { it.key }
     var editing by remember { mutableStateOf<Pair<String, Spec?>?>(null) }
-    val carOnly = setOf("power_steering_fluid_type", "differential_fluid_type", "seating_capacity", "wiper_size_driver", "wiper_size_passenger", "tire_size_spare", "tire_pressure_spare")
-    val bikeOnly = setOf("fork_oil_type", "chain_size", "sprocket_front", "sprocket_rear", "chain_slack")
+    val carOnly = setOf("power_steering_fluid_type", "differential_fluid_type", "seating_capacity", "wiper_size_driver", "wiper_size_passenger", "tire_size_spare", "tire_pressure_spare", "front_differential_fluid_type", "transfer_case_fluid_type", "washer_fluid_capacity", "ac_refrigerant", "towing_capacity", "payload_capacity", "bulb_fog")
+    val bikeOnly = setOf("fork_oil_type", "chain_size", "sprocket_front", "sprocket_rear", "chain_slack", "front_axle_torque", "rear_axle_torque", "drain_bolt_torque", "valve_clearance_intake", "valve_clearance_exhaust", "idle_speed", "brake_pad_wear_limit")
     val fromManual = Catalog.get(ctx).manual_specs.toSet()
     val defs = Catalog.get(ctx).specs.filter { byKey.containsKey(it.key) || (if (v.kind == "motorcycle") it.key !in carOnly else it.key !in bikeOnly) }
     LazyColumn(contentPadding = androidx.compose.foundation.layout.PaddingValues(16.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {

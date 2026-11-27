@@ -29,6 +29,20 @@ from .catalog import load_catalog
 from .models import Part, VehicleSpec, utcnow
 
 
+def part_number(m: dict, value: str) -> str | None:
+    """The part number to save for a spec value (same rule as Android's
+    Repository.partNumber; shared cases in catalog/spec_parts_tests.json).
+    None = not a part to buy (the mapping's "skip" pattern, e.g. "LED")."""
+    import re as _re
+
+    value = value.strip()
+    if m.get("skip") and _re.search(m["skip"], value, _re.IGNORECASE):
+        return None
+    if m.get("as_is") and _re.search(m["as_is"], value, _re.IGNORECASE):
+        return value[:64]
+    return m["format"].replace("{v}", value)[:64]
+
+
 def name_uuid(name: str) -> str:
     """A fixed id for a name: same result as Java UUID.nameUUIDFromBytes(name)."""
     b = bytearray(hashlib.md5(name.encode(), usedforsecurity=False).digest())
@@ -64,7 +78,12 @@ def apply_spec(db: Session, spec: VehicleSpec) -> None:
         if part is not None and part.deleted_at is None:
             part.deleted_at = part.updated_at = part.server_modified_at = now
         return
-    number = m["format"].replace("{v}", value)[:64]
+    number = part_number(m, value)
+    if number is None:
+        # e.g. an "LED" headlight: nothing to buy, so no part (remove an old one).
+        if part is not None and part.deleted_at is None:
+            part.deleted_at = part.updated_at = part.server_modified_at = now
+        return
     if part is None:
         # Already saved by hand (same kind of part, same number)? Don't add it twice.
         same = db.scalar(select(Part).where(Part.owner_id == spec.owner_id, Part.vehicle_id == spec.vehicle_id,

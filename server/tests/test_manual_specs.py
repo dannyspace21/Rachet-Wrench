@@ -230,3 +230,58 @@ def test_motorcycle_manual():
     assert got["chain_slack"] == ["25 - 35 mm"]
     assert got["fork_oil_type"] == ["10W"]               # not the tire's "58W" on the next line
     assert got["tire_size_rear"] == ["180/55ZR17 73W"]
+
+
+CAR_EXTRAS = """Specifications
+Light bulbs
+Headlights Low beam H11 55W  High beam 9005 60W
+Front fog lights H16 19W
+Front turn signal lights 7444NA 28/8W
+Rear turn signal lights 7440A 21W
+Stop/tail lights 7443 21/5W
+Back-up lights 921 16W
+License plate lights 168 5W
+Interior light LED
+Air conditioning system refrigerant: HFO-1234yf (R-1234yf), 450 ± 25 g (15.9 ± 0.9 oz)
+Spark plug: DENSO FK20HBR11, gap 1.0 - 1.1 mm
+Battery: Group 24F, 650 CCA
+Washer fluid capacity 4.5 L (4.8 qt)
+Manual transmission oil: 75W-90 GL-4, capacity 2.2 L (2.3 qt)
+Automatic transmission fluid ATF WS
+Front differential oil 75W-85 GL-5
+Rear differential oil 75W-90 GL-5
+Transfer case oil 75W GL-5
+Maximum trailer weight 3,500 lb (1,588 kg)
+Vehicle capacity weight 850 lbs (385 kg)"""
+
+BIKE_TORQUES = """Specifications
+Valve clearance (cold) IN 0.10 - 0.20 mm EX 0.20 - 0.30 mm
+Idle speed 1,300 ± 100 r/min
+Torque
+Front axle 108 N·m (80 ft·lbf)
+Rear axle nut 127 N·m (94 ft·lbf)
+Engine oil drain bolt 30 N·m (22 ft·lbf)
+Brake pad lining wear limit 1 mm"""
+
+
+def test_bulbs_refrigerant_and_drivetrain_oils():
+    got = _all([CAR_EXTRAS])
+    bulbs = {k: got[k][0] for k in got if k.startswith("bulb_")}
+    assert bulbs == {"bulb_low_beam": "H11", "bulb_high_beam": "9005", "bulb_fog": "H16", "bulb_turn_front": "7444NA",
+                     "bulb_turn_rear": "7440A", "bulb_brake_tail": "7443", "bulb_reverse": "921", "bulb_license": "168"}
+    assert got["ac_refrigerant"] == ["R-1234yf, 450 g"]
+    assert got["spark_plug_gap"] == ["1.0–1.1 mm"] and got["battery_cca"] == ["650 CCA"]
+    assert got["washer_fluid_capacity"] == ["4.5 L (4.8 qt)"]
+    assert got["manual_transmission_oil_type"] == ["75W-90 GL-4"] and got["manual_transmission_oil_capacity"] == ["2.2 L (2.3 qt)"]
+    assert got["transmission_fluid_type"] == ["ATF WS"]                     # the manual gearbox isn't mixed in
+    assert got["front_differential_fluid_type"] == ["75W-85 GL-5"]
+    assert got["differential_fluid_type"] == ["75W-90 GL-5"]               # rear, not the front one
+    assert got["transfer_case_fluid_type"] == ["75W GL-5"]
+    assert got["towing_capacity"] == ["3500 lb"] and got["payload_capacity"] == ["850 lb"]
+
+
+def test_motorcycle_torques_valves_and_idle():
+    got = _first([BIKE_TORQUES])
+    assert (got["front_axle_torque"], got["rear_axle_torque"], got["drain_bolt_torque"]) == ("80 ft-lb", "94 ft-lb", "22 ft-lb")
+    assert got["valve_clearance_intake"] == "0.10–0.20 mm" and got["valve_clearance_exhaust"] == "0.20–0.30 mm"
+    assert got["idle_speed"] == "1300 ± 100 rpm" and got["brake_pad_wear_limit"] == "1 mm"

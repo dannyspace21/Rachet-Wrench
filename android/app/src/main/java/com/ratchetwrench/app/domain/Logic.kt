@@ -100,7 +100,8 @@ object Reminders {
 
 @Serializable data class MetricGroup(val key: String, val label: String, val categories: List<String> = emptyList(), val types: List<String> = emptyList())
 
-@Serializable data class SpecPart(val spec: String, val type_key: String, val name: String, val format: String = "{v}")
+@Serializable data class SpecPart(val spec: String, val type_key: String, val name: String, val format: String = "{v}",
+                                  val as_is: String = "", val skip: String = "")
 
 /** Affiliate set-up for one retailer (catalog/affiliates.json; OFF unless an approved program was configured). */
 @Serializable data class Affiliate(val program: String = "", val enabled: Boolean = false, val platforms: List<String> = emptyList(),

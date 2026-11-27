@@ -46,6 +46,27 @@ SLACK_RE = re.compile(r"(\d{1,2}(?:\.\d)?\s*(?:[–-]|to)\s*\d{1,2}(?:\.\d)?\s*m
 FORK_RE = re.compile(r"\b(\d{1,2}W(?:-\d{2})?|G\s?\d{1,2}|SS-\d{1,2}|#\s?\d{1,2})\b", re.IGNORECASE)
 SEATS_RE = re.compile(r"(\d{1,2})\s*(?:persons?|people|passengers?|occupants|seats?)\b|\bcapacity[^0-9]{0,15}(\d{1,2})\b", re.IGNORECASE)
 
+BULB_RE = re.compile(r"\b(H\d{1,2}[A-Z]?|HB[1-5]|HIR[12]|D[1-8][SR]|9\d{3}(?:LL|XS|HP)?|[1-9]\d{2,3}(?:[A-Z]{1,3})?|WY?\d{1,2}W|P\d{2}(?:/\d{1,2})?W|PY\d{2}W|LED)\b")
+REFRIGERANT_RE = re.compile(r"\b(?:R|HFO|HFC)\s?-?\s?(1234yf|134a|744)\b", re.IGNORECASE)
+REFRIG_AMOUNT_RE = re.compile(r"(\d{3,4})\s*(?:±\s*\d{1,3}\s*)?g\b|(\d{1,2}(?:\.\d{1,2})?)\s*oz\b", re.IGNORECASE)
+GAP_RE = re.compile(r"(\d\.\d{1,2})\s*(?:(?:[–-]|to)\s*(\d\.\d{1,2}))?\s*mm", re.IGNORECASE)
+CCA_RE = re.compile(r"(\d{3,4})\s*(?:CCA\b|A?\s*\(?\s*CCA|cold[\s-]+cranking)", re.IGNORECASE)
+RPM_RE = re.compile(r"(\d{1,2},?\d{3})\s*(?:±\s*(\d{2,3})\s*)?(?:r/min|rpm|min-1|min⁻¹)", re.IGNORECASE)
+MM_SMALL_RE = re.compile(r"(\d{1,2}(?:\.\d{1,2})?(?:\s*(?:[–-]|to)\s*\d{1,2}(?:\.\d{1,2})?)?)\s*mm\b", re.IGNORECASE)
+
+# Lights in a bulb table: each label's value is the bulb number after it.
+BULB_WORDS = {
+    "bulb_low_beam": r"low[\s-]*beam|dipped\s+beam",
+    "bulb_high_beam": r"high[\s-]*beam|main\s+beam",
+    "bulb_fog": r"fog\s+(?:lights?|lamps?)",
+    "bulb_turn_front": r"front\s+(?:side\s+)?turn\s+signal|turn\s+signal\s+lights?\s*\(?front|front\s+direction",
+    "bulb_turn_rear": r"rear\s+(?:side\s+)?turn\s+signal|turn\s+signal\s+lights?\s*\(?rear|rear\s+direction",
+    "bulb_brake_tail": r"(?:stop|brake)\s*(?:/|and|&)\s*tail|tail\s*(?:/|and|&)\s*(?:stop|brake)|(?:stop|brake)\s+lights?|tail\s+lights?",
+    "bulb_reverse": r"back[\s-]*up\s+lights?|reverse\s+lights?|reversing\s+lights?",
+    "bulb_license": r"licen[cs]e\s+plate\s+lights?",
+}
+ANY_LIGHT_RE = re.compile("|".join(f"(?:{w})" for w in BULB_WORDS.values()) + r"|\bturn\s+signal|\bside\s+marker|\binterior\b|\bdome\b|\bmap\s+light", re.IGNORECASE)
+
 # Words that say which side / position a value is for ("Front 33 psi  Rear 35 psi").
 SIDE_RE = re.compile(r"\b(front|rear|driver(?:'?s)?(?:\s+side)?|passenger(?:'?s)?(?:\s+side)?|spare|temporary|compact|left|right)\b", re.IGNORECASE)
 SIDE_OF = {"front": "front", "rear": "rear", "driver": "driver", "left": "driver", "passenger": "passenger", "right": "passenger",
@@ -59,10 +80,10 @@ RULES: dict[str, tuple[re.Pattern, str]] = {
     "oil_capacity": (re.compile(r"(?:engine\s+oil|oil\s+capacity|oil\s+change)[^.]{0,60}(?:filter|capacit|drain|refill)|with\s+(?:oil\s+)?filter", re.I), "qty"),
     "coolant_type": (re.compile(r"\bcoolant\b[^.]{0,40}(?:type|use|recommend|genuine|long\s*life|antifreeze|LLC)|\bantifreeze\b", re.I), "coolant"),
     "coolant_capacity": (re.compile(r"(?:engine\s+)?coolant[^.]{0,40}(?:capacit|system)|cooling\s+system", re.I), "qty"),
-    "transmission_fluid_type": (re.compile(r"(?:automatic\s+)?transmission\s+fluid|\bATF\b|\bCVT\b\s*fluid|transaxle\s+fluid", re.I), "atf"),
-    "transmission_fluid_capacity": (re.compile(r"(?:automatic\s+)?transmission(?:\s+fluid)?[^.]{0,40}capacit|transaxle[^.]{0,30}capacit|\bATF\b[^.]{0,30}capacit", re.I), "qty"),
+    "transmission_fluid_type": (re.compile(r"(?<!manual\s)(?:automatic\s+)?transmission\s+fluid|\bATF\b|\bCVT\b\s*fluid|transaxle\s+fluid", re.I), "atf"),
+    "transmission_fluid_capacity": (re.compile(r"(?<!manual\s)(?:automatic\s+)?transmission(?:\s+fluid)?[^.]{0,40}capacit|transaxle[^.]{0,30}capacit|\bATF\b[^.]{0,30}capacit", re.I), "qty"),
     "brake_fluid_type": (re.compile(r"brakes?(?:\s*(?:and|/)\s*clutch)?\s+fluid", re.I), "brake"),
-    "differential_fluid_type": (re.compile(r"differential(?:\s+(?:gear\s+)?oil|\s+fluid)?", re.I), "gear"),
+    "differential_fluid_type": (re.compile(r"(?<!front\s)differential(?:\s+(?:gear\s+)?oil|\s+fluid)?", re.I), "gear"),
     "fuel_capacity": (re.compile(r"fuel\s+tank|fuel\s+capacit", re.I), "qty"),
     "spark_plug_part": (re.compile(r"spark\s+plug", re.I), "plug"),
     "lug_nut_torque": (re.compile(r"(?:lug|wheel)\s+nut[^.]{0,40}torque|torque[^.]{0,30}(?:lug|wheel)\s+nut", re.I), "torque"),
@@ -88,6 +109,24 @@ RULES: dict[str, tuple[re.Pattern, str]] = {
     "sprocket_front": (re.compile(r"sprocket|gear\s+ratio", re.I), "teeth@front"),
     "sprocket_rear": (re.compile(r"sprocket|gear\s+ratio", re.I), "teeth@rear"),
     "chain_slack": (re.compile(r"chain\s+(?:slack|free\s*play|play|deflection)", re.I), "slack"),
+    "manual_transmission_oil_type": (re.compile(r"manual\s+trans(?:mission|axle)", re.I), "gear"),
+    "manual_transmission_oil_capacity": (re.compile(r"manual\s+trans(?:mission|axle)", re.I), "qty"),
+    "front_differential_fluid_type": (re.compile(r"front\s+differential", re.I), "gear"),
+    "transfer_case_fluid_type": (re.compile(r"transfer\s+(?:case|unit|gear)", re.I), "gearatf"),
+    "washer_fluid_capacity": (re.compile(r"washer\s+(?:fluid|reservoir|tank)", re.I), "qty"),
+    "ac_refrigerant": (re.compile(r"refrigerant|air\s+condition(?:ing|er)\s+(?:system|gas)|\bA/C\b", re.I), "refrigerant"),
+    "towing_capacity": (re.compile(r"towing\s+capacity|maximum\s+trailer|trailer\s+(?:weight|towing)", re.I), "lb"),
+    "payload_capacity": (re.compile(r"payload|load\s+capacity|vehicle\s+capacity\s+weight|occupants\s+and\s+cargo|maximum\s+load", re.I), "lb"),
+    "battery_cca": (re.compile(r"\bbattery\b|cold[\s-]+cranking", re.I), "cca"),
+    "spark_plug_gap": (re.compile(r"plug[^.]{0,40}\bgap\b|\bgap\b[^.]{0,30}plug", re.I), "gap"),
+    **{key: (re.compile(words, re.I), "bulb") for key, words in BULB_WORDS.items()},
+    "front_axle_torque": (re.compile(r"front\s+axle", re.I), "torque"),
+    "rear_axle_torque": (re.compile(r"rear\s+axle", re.I), "torque"),
+    "drain_bolt_torque": (re.compile(r"drain\s+(?:bolt|plug)", re.I), "torque"),
+    "valve_clearance_intake": (re.compile(r"valve\s+clearance", re.I), "valve@intake"),
+    "valve_clearance_exhaust": (re.compile(r"valve\s+clearance", re.I), "valve@exhaust"),
+    "idle_speed": (re.compile(r"idl(?:e|ing)\s+speed", re.I), "rpm"),
+    "brake_pad_wear_limit": (re.compile(r"pad[^.]{0,30}(?:wear\s+limit|service\s+limit|minimum\s+thickness)|lining\s+(?:wear\s+)?limit", re.I), "padmm"),
     "gvwr": (re.compile(r"gross\s+vehicle\s+weight(?:\s+rating)?|\bG\.?V\.?W\.?R\b", re.I), "weight"),
     "gawr_front": (re.compile(r"(?:gross\s+axle\s+weight(?:\s+rating)?|\bG\.?A\.?W\.?R\b)[^.]{0,25}\bfront\b|\bfront\b[^.]{0,15}(?:gross\s+axle\s+weight|\bGAWR\b)", re.I), "weight"),
     "gawr_rear": (re.compile(r"(?:gross\s+axle\s+weight(?:\s+rating)?|\bG\.?A\.?W\.?R\b)[^.]{0,25}\brear\b|\brear\b[^.]{0,15}(?:gross\s+axle\s+weight|\bGAWR\b)", re.I), "weight"),
@@ -107,6 +146,16 @@ LABELS = {
     "wiper_size_driver": "Wiper size — driver", "wiper_size_passenger": "Wiper size — passenger", "seating_capacity": "Seating capacity",
     "curb_weight": "Curb weight", "wheelbase": "Wheelbase", "chain_size": "Drive chain size", "sprocket_front": "Front sprocket teeth",
     "sprocket_rear": "Rear sprocket teeth", "chain_slack": "Chain slack",
+    "manual_transmission_oil_type": "Manual transmission oil type", "manual_transmission_oil_capacity": "Manual transmission oil capacity",
+    "front_differential_fluid_type": "Front differential fluid type", "transfer_case_fluid_type": "Transfer case fluid type",
+    "washer_fluid_capacity": "Washer fluid capacity", "ac_refrigerant": "A/C refrigerant", "towing_capacity": "Towing capacity",
+    "payload_capacity": "Payload / load capacity", "battery_cca": "Battery CCA", "spark_plug_gap": "Spark plug gap",
+    "bulb_low_beam": "Low beam bulb", "bulb_high_beam": "High beam bulb", "bulb_fog": "Fog light bulb",
+    "bulb_turn_front": "Front turn signal bulb", "bulb_turn_rear": "Rear turn signal bulb", "bulb_brake_tail": "Brake / tail bulb",
+    "bulb_reverse": "Reverse light bulb", "bulb_license": "License plate bulb", "front_axle_torque": "Front axle torque",
+    "rear_axle_torque": "Rear axle nut torque", "drain_bolt_torque": "Oil drain bolt torque",
+    "valve_clearance_intake": "Valve clearance — intake", "valve_clearance_exhaust": "Valve clearance — exhaust",
+    "idle_speed": "Idle speed", "brake_pad_wear_limit": "Brake pad wear limit",
 }
 
 _PLUG_NOT = {"FOR", "TYPE", "AND", "THE", "WITH", "NGK", "DENSO", "SAE", "API", "DOT", "LF", "RF", "MPH"}
@@ -131,6 +180,11 @@ def _value(kind: str, text: str) -> str | None:
         m = ATF_RE.search(text)
         return re.sub(r"\s+", " ", m.group(1)).strip(" -") if m else None
     if kind == "gear":
+        # Gear oil = viscosity + API GL rating when both are given ("75W-90 GL-4").
+        visc = re.search(r"\b(\d{2}W(?:-\d{2,3})?)\b", text)
+        gl = re.search(r"\b(?:API\s+)?(GL-[3-5])\b", text, re.I)
+        if visc or gl:
+            return " ".join(x for x in (visc.group(1) if visc else "", gl.group(1).upper() if gl else "") if x)
         m = GEAR_RE.search(text)
         return re.sub(r"\s+", " ", m.group(1)).strip() if m else None
     if kind == "coolant":
@@ -215,6 +269,37 @@ def _value(kind: str, text: str) -> str | None:
     if kind == "slack":
         m = SLACK_RE.search(text)
         return re.sub(r"\s+", " ", m.group(1)) if m else None
+    if kind == "gearatf":
+        return _value("gear", text) or _value("atf", text)
+    if kind == "bulb":
+        m = BULB_RE.search(text)
+        return m.group(1).upper() if m else None
+    if kind == "refrigerant":
+        m = REFRIGERANT_RE.search(text)
+        if not m:
+            return None
+        v = "R-" + m.group(1).lower().replace("yf", "yf").replace("A", "a")
+        a = REFRIG_AMOUNT_RE.search(text[m.end():]) or REFRIG_AMOUNT_RE.search(text)
+        if a:
+            v += f", {a.group(1)} g" if a.group(1) else f", {a.group(2)} oz"
+        return v
+    if kind == "gap":
+        m = GAP_RE.search(text)
+        return (f"{m.group(1)}–{m.group(2)} mm" if m.group(2) else f"{m.group(1)} mm") if m else None
+    if kind == "cca":
+        m = CCA_RE.search(text)
+        return f"{m.group(1)} CCA" if m else None
+    if kind == "rpm":
+        m = RPM_RE.search(text)
+        if not m:
+            return None
+        return f"{m.group(1).replace(',', '')} ± {m.group(2)} rpm" if m.group(2) else f"{m.group(1).replace(',', '')} rpm"
+    if kind == "padmm":
+        m = MM_SMALL_RE.search(text)
+        return re.sub(r"\s+", " ", m.group(1)) + " mm" if m else None
+    if kind == "valve":
+        m = re.search(r"(\d\.\d{2}(?:\s*(?:[–-]|to)\s*\d\.\d{2})?)\s*mm", text, re.I)
+        return re.sub(r"\s*(?:[–-]|to)\s*", "–", m.group(1)) + " mm" if m else None
     if kind == "lb":
         v = _value("weight", text)
         return f"{v} lb" if v else None
@@ -267,6 +352,16 @@ def _side_segment(text: str, side: str) -> str | None:
 def _values(kind: str, line: str, window: str) -> list[str]:
     """All values of this kind on the line (oil can list several grades);
     if the line has none, the first one in the next couple of lines."""
+    if kind.startswith("valve@"):
+        side = kind.split("@")[1]
+        for text in (line, window):
+            m = re.search(r"\b(intake|inlet|IN)\b" if side == "intake" else r"\b(exhaust|EX)\b", text)
+            if m:
+                other = re.search(r"\b(exhaust|EX)\b" if side == "intake" else r"\b(intake|inlet|IN)\b", text[m.end():])
+                v = _value("valve", text[m.end(): m.end() + other.start()] if other else text[m.end():])
+                if v:
+                    return [v]
+        return []
     if "@" in kind:
         base, side = kind.split("@")
         found = []
@@ -316,7 +411,14 @@ def find_specs(pages: list[str]) -> list[dict]:
                 # of its own ("Fork oil: … (10W)" doesn't apply to the next line).
                 if not own and _value(kind.split("@")[0], lines[i - 1]):
                     continue
-                for value in (_values(kind, line, window) if own else _values(kind, line, line)):
+                if kind == "bulb":
+                    m = words.search(line)
+                    seg = line[m.end():] if m else line
+                    nxt = ANY_LIGHT_RE.search(seg)
+                    vals = [v for v in [_value("bulb", seg[:nxt.start()] if nxt else seg)] if v]
+                else:
+                    vals = _values(kind, line, window) if own else _values(kind, line, line)
+                for value in vals:
                     opts = found.setdefault(key, {})
                     o = opts.get(value.lower())
                     if o is None:

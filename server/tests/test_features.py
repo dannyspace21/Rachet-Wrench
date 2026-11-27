@@ -550,3 +550,32 @@ def test_vin_decode_fills_every_field_nhtsa_returns():
         got = parse_nhtsa_result(dict(c["result"]))
         assert got["specs"] == c["specs"], c["name"]
         assert got["vehicle"] == c["vehicle"], c["name"]
+
+
+def test_spec_part_numbers_same_as_android():
+    """Shared cases (catalog/spec_parts_tests.json): "Group 47" isn't doubled, LED bulbs aren't parts."""
+    from pathlib import Path
+
+    from app.catalog import load_catalog
+    from app.spec_parts import part_number
+
+    maps = {m["spec"]: m for m in load_catalog()["spec_parts"]}
+    cases = json.loads((Path(__file__).resolve().parents[2] / "catalog" / "spec_parts_tests.json").read_text())["cases"]
+    for c in cases:
+        assert part_number(maps[c["spec"]], c["value"]) == c["expect"], c
+
+
+def test_bulb_and_wiper_specs_become_parts_and_led_removes_it(client, admin):
+    from conftest import make_vehicle
+
+    v = make_vehicle(client, admin)
+    for key, value in (("bulb_low_beam", "H11"), ("wiper_size_driver", "26 in"), ("wiper_size_passenger", "16 in"), ("battery_group", "Group 47")):
+        assert client.post("/api/specs", headers=admin, json={"vehicle_id": v["id"], "key": key, "value": value, "source": "manual"}).status_code in (200, 201)
+    parts = {p["name"]: p["part_number"] for p in client.get(f"/api/parts?vehicle_id={v['id']}", headers=admin).json()}
+    assert parts["Headlight bulb — low beam"] == "H11"
+    assert parts["Wiper blade — driver"] == "26 in" and parts["Wiper blade — passenger"] == "16 in"
+    assert parts["Battery"] == "Group 47"
+    spec = next(s for s in client.get(f"/api/specs?vehicle_id={v['id']}", headers=admin).json() if s["key"] == "bulb_low_beam")
+    client.patch(f"/api/specs/{spec['id']}", headers=admin, json={"value": "LED", "source": "user"})
+    parts = {p["name"] for p in client.get(f"/api/parts?vehicle_id={v['id']}", headers=admin).json()}
+    assert "Headlight bulb — low beam" not in parts

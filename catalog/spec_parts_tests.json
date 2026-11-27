@@ -1,0 +1,16 @@
+{
+  "_comment": "Spec value -> part number for the part made from it (Parts tab). server/app/spec_parts.py part_number and Android Repository.partNumber must both pass. null = no part (nothing to buy).",
+  "cases": [
+    {"spec": "battery_group", "value": "35", "expect": "Group 35"},
+    {"spec": "battery_group", "value": "Group 47", "expect": "Group 47"},
+    {"spec": "battery_group", "value": "group 24F", "expect": "group 24F"},
+    {"spec": "battery_group", "value": "55D23L", "expect": "55D23L"},
+    {"spec": "wiper_size_driver", "value": "26 in", "expect": "26 in"},
+    {"spec": "wiper_size_passenger", "value": "16 in", "expect": "16 in"},
+    {"spec": "bulb_low_beam", "value": "H11", "expect": "H11"},
+    {"spec": "bulb_low_beam", "value": "LED", "expect": null},
+    {"spec": "bulb_brake_tail", "value": "7443", "expect": "7443"},
+    {"spec": "ac_refrigerant", "value": "R-1234yf, 450 g", "expect": "R-1234yf, 450 g"},
+    {"spec": "tire_size_spare", "value": "T155/70D18", "expect": "T155/70D18"}
+  ]
+}

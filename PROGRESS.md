@@ -107,6 +107,8 @@ Build-sandbox notes: the sandbox blocks dl.google.com, api.osv.dev, semgrep.dev 
 
 - v1.0.40: issue #6 — the owner's-manual reader finds every manual-listed spec (tires, pressures, wipers, battery, filter part, octane, weights, motorcycle chain…) (D71).
 
+- v1.0.41: 25 more manual-readable specs (bulbs, A/C, drivetrain oils, capacities, motorcycle torques/valves); bulbs, spare tire, refrigerant and oils added to Parts; battery "Group Group" fix (D72).
+
 ## Ideas for later (not started)
 - Code-sign the desktop app (paid Apple/Microsoft certificates) to remove first-launch warnings; add an Intel-Mac build if needed.
 - Database migrations with Alembic once the schema needs to change.

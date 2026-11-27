@@ -47,6 +47,16 @@ class Repository(private val context: Context) {
         requestSync()
     }
 
+    companion object {
+        /** Part number for a spec value — same rule as the server (spec_parts.part_number); null = nothing to buy (e.g. LED). */
+        fun partNumber(m: com.ratchetwrench.app.domain.SpecPart, value: String): String? {
+            val v = value.trim()
+            if (m.skip.isNotEmpty() && Regex(m.skip, RegexOption.IGNORE_CASE).containsMatchIn(v)) return null
+            if (m.as_is.isNotEmpty() && Regex(m.as_is, RegexOption.IGNORE_CASE).containsMatchIn(v)) return v.take(64)
+            return m.format.replace("{v}", v).take(64)
+        }
+    }
+
     /** The fixed ID of the part made from a spec — the same one the server uses (spec_parts.py). */
     fun specPartId(vehicleId: String, key: String): String =
         java.util.UUID.nameUUIDFromBytes("ratchet-wrench:spec-part:$vehicleId:$key".toByteArray(Charsets.UTF_8)).toString()
@@ -68,7 +78,12 @@ class Repository(private val context: Context) {
             if (part != null && part.deleted_at == null) db.parts().upsert(part.copy(deleted_at = now, updated_at = now, dirty = true))
             return
         }
-        val number = m.format.replace("{v}", v).take(64)
+        val number = partNumber(m, v)
+        if (number == null) {
+            // e.g. an "LED" headlight: nothing to buy, so no part (remove an old one).
+            if (part != null && part.deleted_at == null) db.parts().upsert(part.copy(deleted_at = now, updated_at = now, dirty = true))
+            return
+        }
         when {
             // Already saved by hand (same kind of part, same number)? Don't add it twice.
             part == null && db.parts().forVehicle(vehicleId).any { it.type_key == m.type_key && it.part_number == number } -> Unit
