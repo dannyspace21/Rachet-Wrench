@@ -2,6 +2,16 @@
   "_comment": "Release notes shown in the app ('What's new' pop-up after an update, and Settings > Release notes) and on the GitHub release page. Newest first. EVERY Android release needs an entry here whose version matches the release (1.0.<workflow run number>); the release workflow refuses to publish otherwise. Keep it high level and in plain English.",
   "releases": [
     {
+      "version": "1.0.40",
+      "date": "2026-11-27",
+      "new": [],
+      "improved": [
+        "Fill from owner's manual now looks for every spec a manual lists, not just fluids: tire sizes and cold pressures (front, rear and spare), wheel size, wiper blade sizes (driver and passenger), battery group, oil filter part number, power steering fluid, fuel octane, seating capacity, curb weight, wheelbase, and for motorcycles chain size, sprockets, chain slack and fork oil.",
+        "Lug nut torque from the manual is given in ft-lb when the manual lists it, and curb weight in lb, matching the rest of the app."
+      ],
+      "fixed": []
+    },
+    {
       "version": "1.0.39",
       "date": "2026-11-26",
       "new": [],

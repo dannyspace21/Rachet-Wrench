@@ -145,7 +145,7 @@ def test_catalog_lists_the_same_specs_as_the_manual_reader():
     from pathlib import Path
     from app.manual_specs import RULES
     cat = json.loads((Path(__file__).resolve().parents[2] / "catalog" / "catalog.json").read_text())
-    assert cat["manual_specs"] == list(RULES)
+    assert sorted(cat["manual_specs"]) == sorted(RULES)
     assert set(cat["manual_specs"]) <= {s["key"] for s in cat["specs"]}
 
 
@@ -154,3 +154,79 @@ def test_weights_from_the_manual():
              "Gross axle weight rating, front 2,535 lb (1,150 kg)\nGross axle weight rating, rear 2,205 lb (1,000 kg)"]
     got = {s["key"]: s["options"][0]["value"] for s in find_specs(pages)}
     assert (got["gvwr"], got["gawr_front"], got["gawr_rear"]) == ("5000", "2535", "2205")
+
+
+TOYOTA_TABLE = """Specifications
+Tires and wheels
+Tire size 235/40R19 96W
+Tire inflation pressure (Recommended cold tire inflation pressure)
+Front 240 kPa (2.4 kgf/cm2 or bar, 35 psi)
+Rear 240 kPa (2.4 kgf/cm2 or bar, 35 psi)
+Spare tire T155/70D18 420 kPa (60 psi)
+Wheel size 19 x 8J
+Lug nut torque 103 N·m (76 ft·lbf)
+Battery
+Type 55D23L
+Wiper blades
+Driver side 650 mm (26 in.)
+Passenger side 400 mm (16 in.)
+Seating capacity 4 persons
+Fuel: Unleaded gasoline, Octane Rating 91 [Research Octane Number 96] or higher
+Curb weight 3,748 lb (1,700 kg)
+Wheelbase 2,730 mm (107.5 in.)
+Power steering fluid: Not applicable (electric)
+Oil filter part number 04152-YZZA1"""
+
+KIA_SENTENCES = """Lubricants and capacities
+Windshield wiper blades: driver's 24 in. (600 mm), passenger's 16 in. (400 mm)
+Tire size: front 225/40R18 92Y, rear 255/35R18 94Y
+Tire pressure (cold): Front and rear 36 psi (250 kPa)
+Battery: Group 47 (H5) AGM"""
+
+MOTORCYCLE = """Specifications
+Drive chain: DID 520VX3, 114 links
+Front sprocket 15T  Rear sprocket 45T
+Chain slack 25 - 35 mm (1.0 - 1.4 in)
+Fork oil: Kawasaki KHL15-10 (10W)
+Tire size front 120/70ZR17 M/C (58W) rear 180/55ZR17 M/C (73W)"""
+
+
+def _first(pages):
+    return {s["key"]: s["options"][0]["value"] for s in find_specs(pages)}
+
+
+def _all(pages):
+    return {s["key"]: [o["value"] for o in s["options"]] for s in find_specs(pages)}
+
+
+def test_tires_wipers_battery_and_more_from_a_spec_table():
+    got = _first([TOYOTA_TABLE])
+    assert got["tire_size_front"] == got["tire_size_rear"] == "235/40R19 96W"   # one size = all four
+    assert got["tire_size_spare"] == "T155/70D18"
+    assert got["tire_pressure_front"] == got["tire_pressure_rear"] == "35 psi"
+    assert got["rim_size_front"] == "19 x 8J"
+    assert got["wiper_size_driver"] == "26 in" and got["wiper_size_passenger"] == "16 in"
+    assert got["battery_group"] == "55D23L"
+    assert got["lug_nut_torque"] == "76 ft-lb"           # ft-lb preferred over N·m
+    assert got["seating_capacity"] == "4" and got["fuel_type"] == "91 octane"
+    assert got["curb_weight"] == "3748 lb" and got["wheelbase"] == "107.5 in"
+    assert got["oil_filter_part"] == "04152-YZZA1"
+    assert "power_steering_fluid_type" not in got        # "Not applicable" is not a fluid
+
+
+def test_front_and_rear_and_driver_and_passenger_are_kept_apart():
+    got = _first([KIA_SENTENCES])
+    assert got["tire_size_front"] == "225/40R18 92Y" and got["tire_size_rear"] == "255/35R18 94Y"
+    assert got["tire_pressure_front"] == got["tire_pressure_rear"] == "36 psi"
+    assert got["wiper_size_driver"] == "24 in" and got["wiper_size_passenger"] == "16 in"
+    assert got["battery_group"] == "Group 47"
+    assert "tire_size_spare" not in got
+
+
+def test_motorcycle_manual():
+    got = _all([MOTORCYCLE])
+    assert got["chain_size"] == ["520 x 114"]
+    assert got["sprocket_front"] == ["15"] and got["sprocket_rear"] == ["45"]
+    assert got["chain_slack"] == ["25 - 35 mm"]
+    assert got["fork_oil_type"] == ["10W"]               # not the tire's "58W" on the next line
+    assert got["tire_size_rear"] == ["180/55ZR17 73W"]

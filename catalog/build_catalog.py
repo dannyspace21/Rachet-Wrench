@@ -448,7 +448,12 @@ METRIC_GROUPS = [
 # ---------------------------------------------------------------------------
 MANUAL_SPECS = ["oil_type", "oil_capacity", "coolant_type", "coolant_capacity", "transmission_fluid_type",
                 "transmission_fluid_capacity", "brake_fluid_type", "differential_fluid_type", "fuel_capacity",
-                "spark_plug_part", "lug_nut_torque", "gvwr", "gawr_front", "gawr_rear"]
+                "spark_plug_part", "lug_nut_torque", "gvwr", "gawr_front", "gawr_rear",
+                "oil_filter_part", "power_steering_fluid_type", "fork_oil_type", "fuel_type", "tire_size_front",
+                "tire_size_rear", "tire_size_spare", "tire_pressure_front", "tire_pressure_rear", "tire_pressure_spare",
+                "rim_size_front", "rim_size_rear", "battery_group", "wiper_size_driver", "wiper_size_passenger",
+                "seating_capacity", "curb_weight", "wheelbase", "chain_size", "sprocket_front", "sprocket_rear",
+                "chain_slack"]
 
 PAINT_CODES = {
     "lexus": {
