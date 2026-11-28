@@ -136,17 +136,17 @@ export function showError(err) {
  * modal({title, body, actions:[{label, primary, danger, value}]}) -> Promise
  * Resolves with the chosen action's value (or null if dismissed).
  */
-export function modal({ title, body, actions = [{ label: "OK", primary: true, value: true }] }) {
+export function modal({ title, body, actions = [{ label: "OK", primary: true, value: true }], dismissOnBackdrop = true, dismissOnEscape = true }) {
   return new Promise((resolve) => {
     const prev = document.activeElement;
     const close = (value) => { back.remove(); document.removeEventListener("keydown", onKey); prev?.focus?.(); resolve(value); };
-    const onKey = (e) => { if (e.key === "Escape") close(null); };
+    const onKey = (e) => { if (dismissOnEscape && e.key === "Escape") close(null); };
     const dialog = h("div", { class: "modal", role: "dialog", "aria-modal": "true", "aria-label": title },
       h("h2", {}, title), body,
       h("div", { class: "actions" }, actions.map((a) =>
         h("button", { class: "btn" + (a.primary ? " primary" : "") + (a.danger ? " danger" : ""), type: "button",
           onclick: () => close(typeof a.value === "function" ? a.value() : a.value) }, a.label))));
-    const back = h("div", { class: "modal-back", onclick: (e) => { if (e.target === back) close(null); } }, dialog);
+    const back = h("div", { class: "modal-back", onclick: (e) => { if (dismissOnBackdrop && e.target === back) close(null); } }, dialog);
     document.body.append(back);
     document.addEventListener("keydown", onKey);
     (dialog.querySelector("input, select, textarea, button.primary") || dialog).focus();
