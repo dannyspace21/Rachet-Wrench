@@ -70,12 +70,12 @@ export function reminderShopButton(r, ctx, catalog, labelText = null) {
     onkeydown: (e) => e.stopPropagation() }, icon("u-cart"), labelText);
 }
 
-/** "Shop" for one saved part (the exact part number when there is one). */
+/** "Find Products" for one saved part (the exact part number when there is one). */
 export function partShopButton(p, v, catalog) {
   if (!shoppingOn(catalog)) return null;
   const typeLabel = (catalog.types.find((t) => t.key === p.type_key) || {}).label || "Part";
   const { query, exact } = partQuery(p, v, typeLabel);
   return h("button", { class: "btn small", type: "button", "aria-label": `Shop for ${p.name || typeLabel}`,
     onclick: () => openShopping(`Shop — ${p.name || typeLabel}`, [{ label: p.name || typeLabel, query, exact, hint: null }], catalog) },
-  icon("u-cart"), "Shop");
+  icon("u-search"), "Find Products");
 }
