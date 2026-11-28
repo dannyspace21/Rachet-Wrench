@@ -100,7 +100,7 @@ fun ShoppingListScreen(nav: NavHostController) {
 
     Scaffold(
         topBar = {
-            TopBar("Shopping list", onBack = { nav.popBackStack() }) {
+            TopBar("Shopping Cart", onBack = { nav.popBackStack() }) {
                 if (bought > 0) TextButton({ confirmClear = true }) { Text("Remove bought") }
             }
         },
@@ -146,7 +146,7 @@ fun ShoppingListScreen(nav: NavHostController) {
                             val v = i.vehicle_id?.let { byId[it] }
                             val (q, exact) = Shopping.listItemQuery(i.description, i.part_number, i.spec,
                                 v?.let { ShopContext(it.year, it.make, it.model, emptyMap(), emptyList()) })
-                            searching = "Search — ${i.description}" to listOf(ShopItem(i.description, q, exact, null))
+                            searching = "Find Products — ${i.description}" to listOf(ShopItem(i.description, q, exact, null))
                         },
                         onRemove = { scope.launch { repo.deleteShoppingItem(i.id) } })
                 }
@@ -181,7 +181,7 @@ private fun ShoppingRow(i: ShoppingItem, rem: Reminder?, shopOn: Boolean, onTogg
                 style = MaterialTheme.typography.bodySmall) }
             if (i.notes.isNotBlank()) Text(i.notes, color = LocalExtra.current.muted, style = MaterialTheme.typography.bodySmall)
         }
-        if (shopOn) ShopIconButton("Search for ${i.description}", onSearch)
+        if (shopOn) ShopIconButton("Find Products for ${i.description}", onSearch)
         IconButton(onRemove) { UiIcon("trash", Modifier.size(20.dp), LocalExtra.current.muted, description = "Remove ${i.description}") }
     }
 }

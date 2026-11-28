@@ -285,7 +285,7 @@ async function reminderActions(v, r, catalog, shopCtx, label) {
     h("div", { class: "form-grid" }, date, miles),
     h("label", { class: "check" }, addHist, " Also add it to the vehicle's history"),
     shop ? h("div", {}, shop) : null),
-    actions: [{ label: "Edit schedule", value: "edit" }, { label: "Add to shopping list", value: "list" },
+    actions: [{ label: "Edit schedule", value: "edit" }, { label: "Add to List", value: "list" },
       { label: "Close", value: null }, { label: "Mark as done", primary: true, value: "done" }] });
   if (choice === "edit") return editReminder(v, r, catalog, shopCtx);
   if (choice === "list") {
@@ -357,7 +357,7 @@ async function partsTab(body, v, { catalog, label }) {
         links.parts && p.part_number ? h("a", { class: "btn small", href: links.parts, target: "_blank", rel: "noopener noreferrer" }, icon("u-external"), "Find") : null,
         partShopButton(p, v, catalog),
         h("button", { class: "btn small", type: "button", "aria-label": `Add ${p.name || label[p.type_key]} to the shopping list`,
-          onclick: () => addPartToList(v, p, label[p.type_key] || "Part").catch(showError) }, icon("u-list"), "Add to list"),
+          onclick: () => addPartToList(v, p, label[p.type_key] || "Part").catch(showError) }, icon("u-list"), "Add to List"),
         h("button", { class: "btn small ghost", type: "button", "aria-label": "Edit part", onclick: () => editPart(v, p, catalog) }, icon("u-edit")))))))
       : emptyState("u-part", "No parts saved", "Add your oil filter, air filter, spark plugs, brake pads…")));
 }

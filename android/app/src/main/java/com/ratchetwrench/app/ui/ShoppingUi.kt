@@ -1,4 +1,4 @@
-// ShoppingUi.kt — Smart Shopping on the phone: the "Find supplies" / "Shop"
+// ShoppingUi.kt — Smart Shopping on the phone: the "Find Products" actions
 // buttons and the small dialog that lists what to buy with one button per
 // retailer.  A button opens the retailer's own app or website (Android picks
 // which); nothing is embedded, sent or saved, and records don't change.
@@ -50,10 +50,10 @@ fun shoppingOn(): Boolean {
         Shopping.activeRetailers(Catalog.get(ctx), repo.store.shoppingDisabled, repo.store.shoppingPreferred).isNotEmpty()
 }
 
-/** Small cart button used on reminder and part rows. */
+/** Compact Find Products action used where a full text button would not fit. */
 @Composable
 fun ShopIconButton(description: String, onClick: () -> Unit) {
-    IconButton(onClick) { UiIcon("cart", Modifier.size(22.dp), MaterialTheme.colorScheme.primary, description = description) }
+    IconButton(onClick) { UiIcon("search", Modifier.size(22.dp), MaterialTheme.colorScheme.primary, description = description) }
 }
 
 /** The dialog: each item with its search text and one button per retailer. */

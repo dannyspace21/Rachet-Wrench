@@ -65,7 +65,7 @@ export async function shoppingListView(main, { query }) {
   draw();
 
   mount(main,
-    h("div", { class: "page-head" }, h("div", {}, h("h1", {}, "Shopping list"),
+    h("div", { class: "page-head" }, h("div", {}, h("h1", {}, "Shopping Cart"),
       h("p", { class: "muted" }, "Everything you need before doing the work.")), h("div", { class: "btn-row" }, clear, add)),
     vehicles.length ? h("div", { class: "shop-filter" }, pick) : null,
     list,
@@ -79,11 +79,11 @@ function itemRow(i, v, rem, label, catalog, onEdit, refresh) {
     try { await api(`/api/shopping/${i.id}`, { method: "PATCH", body: { purchased: box.checked } }); refresh(); }
     catch (e) { box.checked = !box.checked; showError(e); }
   });
-  const search = shoppingOn(catalog) ? h("button", { class: "btn small", type: "button", "aria-label": `Search for ${i.description}`,
+  const search = shoppingOn(catalog) ? h("button", { class: "btn small", type: "button", "aria-label": `Find Products for ${i.description}`,
     onclick: () => {
       const { query, exact } = listItemQuery(i, v);
-      openShopping(`Search — ${i.description}`, [{ label: i.description, query, exact, hint: null }], catalog);
-    } }, icon("u-cart"), "Search") : null;
+      openShopping(`Find Products — ${i.description}`, [{ label: i.description, query, exact, hint: null }], catalog);
+    } }, icon("u-search"), "Find Products") : null;
   const remove = h("button", { class: "btn small ghost", type: "button", "aria-label": `Remove ${i.description}`,
     onclick: async () => {
       try { await api(`/api/shopping/${i.id}`, { method: "DELETE" }); toast("Removed from the list"); refresh(); } catch (e) { showError(e); }

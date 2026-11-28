@@ -175,7 +175,8 @@ async function reportBug(me, platform, details) {
       "Reminder for the owner: bug reports currently use a GitHub key built into the app. Move them to the relay service (option 1) — see docs/BUG-REPORTS.md.") : null,
     ready ? null : h("p", { class: "small" }, "Sending from here isn't set up on this computer yet, so this will open the report on GitHub instead."));
   for (;;) {
-    const choice = await modal({ title: "Report a bug", body, actions: [{ label: "Cancel", value: null }, { label: ready ? "Send report" : "Continue on GitHub", primary: true, value: "send" }] });
+    const choice = await modal({ title: "Report a bug", body, dismissOnBackdrop: false, dismissOnEscape: false,
+      actions: [{ label: "Cancel", value: null }, { label: ready ? "Send report" : "Continue on GitHub", primary: true, value: "send" }] });
     if (choice !== "send") return;
     const text = summary.input.value.trim();
     if (text.length < 5) { toast("Please describe the problem in a few words.", "error"); continue; }
@@ -227,7 +228,7 @@ async function shoppingCard() {
         "Prices and search results are the same either way, and commissions never affect what's suggested. Turn this off for ordinary links."));
   }
   return h("section", { class: "card stack" }, h("h2", {}, "Smart Shopping"),
-    h("p", { class: "muted" }, "Optional “Find supplies” and “Shop” buttons on reminders and parts. They open a search on the retailer's own website using your vehicle's specs and part numbers. You never have to buy anything, and nothing is sent from Ratchet Wrench."),
+    h("p", { class: "muted" }, "Optional “Find Products” buttons on reminders and parts. They open a search on the retailer's own website using your vehicle's specs and part numbers. You never have to buy anything, and nothing is sent from Ratchet Wrench."),
     h("label", { class: "row option-row" }, on, h("span", {}, "Show shopping buttons")),
     h("div", { class: "stack" }, h("strong", {}, "Retailers"), boxes), preferred, affiliate);
 }

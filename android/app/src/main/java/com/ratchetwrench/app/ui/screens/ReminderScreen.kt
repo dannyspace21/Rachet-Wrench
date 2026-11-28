@@ -137,10 +137,10 @@ fun ReminderScreen(nav: NavHostController, id: String) {
 
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 SecondaryButton("Edit schedule", "edit") { editing = true }
-                if (shopItems.isNotEmpty()) SecondaryButton("Find supplies", "cart") { shopping = shopItems }
+                if (shopItems.isNotEmpty()) SecondaryButton("Find Products", "search") { shopping = shopItems }
             }
             // Collect what this job needs on the shopping list (doesn't mark it done).
-            SecondaryButton("Add to shopping list", "list", Modifier.fillMaxWidth()) {
+            SecondaryButton("Add to List", "list", Modifier.fillMaxWidth()) {
                 scope.launch {
                     val added = repo.addToShoppingList(reminderLines(v, r, name, shopCtx, Catalog.get(ctx)))
                     listMessage = if (added == 0) "Already on your shopping list." else "Added $added item${if (added == 1) "" else "s"} to the shopping list."
