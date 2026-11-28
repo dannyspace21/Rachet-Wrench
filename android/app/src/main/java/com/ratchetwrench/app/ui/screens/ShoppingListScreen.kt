@@ -100,7 +100,7 @@ fun ShoppingListScreen(nav: NavHostController) {
 
     Scaffold(
         topBar = {
-            TopBar("Shopping list", onBack = { nav.popBackStack() }) {
+            TopBar("Shopping Cart", onBack = { nav.popBackStack() }) {
                 if (bought > 0) TextButton({ confirmClear = true }) { Text("Remove bought") }
             }
         },
