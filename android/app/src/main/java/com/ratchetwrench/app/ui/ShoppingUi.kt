@@ -50,10 +50,10 @@ fun shoppingOn(): Boolean {
         Shopping.activeRetailers(Catalog.get(ctx), repo.store.shoppingDisabled, repo.store.shoppingPreferred).isNotEmpty()
 }
 
-/** Small cart button used on reminder and part rows. */
+/** Compact Find Products action used where a full text button would not fit. */
 @Composable
 fun ShopIconButton(description: String, onClick: () -> Unit) {
-    IconButton(onClick) { UiIcon("cart", Modifier.size(22.dp), MaterialTheme.colorScheme.primary, description = description) }
+    IconButton(onClick) { UiIcon("search", Modifier.size(22.dp), MaterialTheme.colorScheme.primary, description = description) }
 }
 
 /** The dialog: each item with its search text and one button per retailer. */
