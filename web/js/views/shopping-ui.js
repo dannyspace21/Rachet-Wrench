@@ -67,7 +67,7 @@ export function reminderShopButton(r, ctx, catalog, labelText = "Find Products")
   const name = r.title || (catalog.types.find((t) => t.key === r.type_key) || {}).label || "this reminder";
   return h("button", { class: "btn small ghost shop-btn", type: "button", "aria-label": `Find supplies for ${name}`, title: "Find Products",
     onclick: (e) => { e.stopPropagation(); openShopping(`Find supplies — ${name}`, items, catalog); },
-    onkeydown: (e) => e.stopPropagation() }, icon("u-cart"), labelText);
+    onkeydown: (e) => e.stopPropagation() }, icon("u-search"), labelText);
 }
 
 /** "Find Products" for one saved part (the exact part number when there is one). */
