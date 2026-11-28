@@ -378,7 +378,7 @@ private fun RemindersTab(nav: NavHostController, v: Vehicle) {
                 // Smart Shopping: only reminders with something to buy get the button.
                 val items = shopItems(r)
                 val name = r.title.ifBlank { Catalog.typeLabel(ctx, r.type_key) }
-                if (items.isNotEmpty()) com.ratchetwrench.app.ui.ShopIconButton("Find supplies for $name") { shopping = "Find supplies — $name" to items }
+                if (items.isNotEmpty()) SecondaryButton("Find Products", "search") { shopping = "Find supplies — $name" to items }
                 StatusPill(st.status)
             }
         }
