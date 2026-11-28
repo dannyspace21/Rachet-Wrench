@@ -228,7 +228,7 @@ async function shoppingCard() {
         "Prices and search results are the same either way, and commissions never affect what's suggested. Turn this off for ordinary links."));
   }
   return h("section", { class: "card stack" }, h("h2", {}, "Smart Shopping"),
-    h("p", { class: "muted" }, "Optional “Find supplies” and “Shop” buttons on reminders and parts. They open a search on the retailer's own website using your vehicle's specs and part numbers. You never have to buy anything, and nothing is sent from Ratchet Wrench."),
+    h("p", { class: "muted" }, "Optional “Find Products” buttons on reminders and parts. They open a search on the retailer's own website using your vehicle's specs and part numbers. You never have to buy anything, and nothing is sent from Ratchet Wrench."),
     h("label", { class: "row option-row" }, on, h("span", {}, "Show shopping buttons")),
     h("div", { class: "stack" }, h("strong", {}, "Retailers"), boxes), preferred, affiliate);
 }
