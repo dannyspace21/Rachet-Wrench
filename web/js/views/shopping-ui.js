@@ -60,12 +60,12 @@ export function openShopping(title, items, catalog) {
 }
 
 /** "Find supplies" for a reminder — or null when this reminder has nothing to shop for. */
-export function reminderShopButton(r, ctx, catalog, labelText = null) {
+export function reminderShopButton(r, ctx, catalog, labelText = "Find Products") {
   if (!shoppingOn(catalog)) return null;
   const items = itemsFor(r.type_key, ctx, catalog);
   if (!items.length) return null;
   const name = r.title || (catalog.types.find((t) => t.key === r.type_key) || {}).label || "this reminder";
-  return h("button", { class: "btn small ghost shop-btn", type: "button", "aria-label": `Find supplies for ${name}`, title: "Find supplies",
+  return h("button", { class: "btn small ghost shop-btn", type: "button", "aria-label": `Find supplies for ${name}`, title: "Find Products",
     onclick: (e) => { e.stopPropagation(); openShopping(`Find supplies — ${name}`, items, catalog); },
     onkeydown: (e) => e.stopPropagation() }, icon("u-cart"), labelText);
 }
