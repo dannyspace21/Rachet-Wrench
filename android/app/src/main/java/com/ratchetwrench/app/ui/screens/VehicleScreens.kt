@@ -475,14 +475,14 @@ private fun PartsTab(v: Vehicle) {
                 // Smart Shopping: search this part (its exact part number when saved).
                 if (shopOn) {
                     val name = p.name.ifBlank { Catalog.typeLabel(ctx, p.type_key) }
-                    com.ratchetwrench.app.ui.ShopIconButton("Shop for $name") {
+                    SecondaryButton("Find Products", "search") {
                         val (q, exact) = com.ratchetwrench.app.domain.Shopping.partQuery(p.part_number, p.name, Catalog.typeLabel(ctx, p.type_key), shopCtx)
-                        shopping = "Shop — $name" to listOf(com.ratchetwrench.app.domain.ShopItem(name, q, exact, null))
+                        shopping = "Find Products — $name" to listOf(com.ratchetwrench.app.domain.ShopItem(name, q, exact, null))
                     }
                 }
                 // Put it on the shopping list (once).
                 val partName = p.name.ifBlank { Catalog.typeLabel(ctx, p.type_key) }
-                IconButton({
+                SecondaryButton("Add to List", "list") {
                     scope.launch {
                         val added = repo.addToShoppingList(listOf(com.ratchetwrench.app.data.ShoppingItem(vehicle_id = v.id, part_id = p.id,
                             type_key = p.type_key, description = partName, part_number = p.part_number)))
@@ -491,7 +491,7 @@ private fun PartsTab(v: Vehicle) {
                                 android.widget.Toast.LENGTH_SHORT).show()
                         }
                     }
-                }) { UiIcon("list", Modifier.size(22.dp), MaterialTheme.colorScheme.primary, description = "Add $partName to the shopping list") }
+                }
             }
         }
     }
