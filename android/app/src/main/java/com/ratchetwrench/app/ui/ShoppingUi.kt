@@ -1,4 +1,4 @@
-// ShoppingUi.kt — Smart Shopping on the phone: the "Find supplies" / "Shop"
+// ShoppingUi.kt — Smart Shopping on the phone: the "Find Products" actions
 // buttons and the small dialog that lists what to buy with one button per
 // retailer.  A button opens the retailer's own app or website (Android picks
 // which); nothing is embedded, sent or saved, and records don't change.
